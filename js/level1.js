@@ -39,10 +39,12 @@ function buildLevel1() {
   fill(181, 18, 183, 31);
   fill(187, 18, 192, 33);
 
-  // 6) Drop down, then the wall-jump shaft
+  // 6) Drop down, then double-jump up the ledges (no wall climbing!)
   fill(193, 30, 204, 33);
-  fill(200, 16, 200, 26);       // left side of the shaft
-  fill(205, 14, W - 1, 33);     // the upper path (right side of the shaft)
+  fill(199, 26, 203, 26, T.ONEWAY);
+  fill(195, 22, 199, 22, T.ONEWAY);
+  fill(199, 18, 204, 18, T.ONEWAY);
+  fill(205, 14, W - 1, 33);     // the upper path
 
   // 7) Final run: spike strips, fire, a raft over lava, then the finish portal
   fill(211, 14, 212, 14, T.SPIKE);
@@ -50,7 +52,30 @@ function buildLevel1() {
   fill(230, 14, 236, 32, T.EMPTY); fill(230, 30, 236, 32, T.LAVA);
   fill(W - 1, 0, W - 1, H - 1);   // right world edge
 
-  // Mini enemies — jump over them or fight them for souls.
+  // Shards to collect (tile coords). Small = 1 shard.
+  const shards = [
+    [8, 28], [9, 28], [10, 28],
+    [18, 26], [21, 25], [24, 24], [27, 24], [30, 25], [33, 26],
+    [40, 28], [43, 26], [47, 28], [48, 28],
+    [57, 25], [61, 25], [68, 24], [72, 24], [79, 26], [80, 26],
+    [86, 28], [87, 28], [92, 28],
+    [101, 26], [107, 26], [113, 26], [119, 26], [122, 24],
+    [128, 28], [132, 28], [135, 20], [136, 20], [139, 14], [140, 13], [141, 14],
+    [147, 16], [152, 16], [156, 16], [161, 16],
+    [169, 15], [170, 15], [173, 16], [182, 16], [185, 15],
+    [190, 16], [195, 28], [196, 28],
+    [202, 24], [197, 20], [202, 16],
+    [208, 12], [211, 11], [212, 11], [217, 12], [221, 11], [226, 12], [232, 10], [234, 10], [240, 12], [241, 12],
+  ];
+  // Big purple shards (worth 5) hidden in tricky spots.
+  const bigShards = [
+    [24, 20],   // high above the floating stones: double jump to grab it
+    [177, 14],  // over the big dash gap
+    [196, 15],  // high above the middle ledge: double jump
+    [233, 11],  // above the lava, ride the raft and jump
+  ];
+
+  // Mini enemies — jump over them or fight them for shards.
   const enemies = [
     { type: 'crawler', x: 44, y: 29 },
     { type: 'bat', x: 87, y: 24 },
@@ -79,15 +104,15 @@ function buildLevel1() {
 
   const signs = [
     { x: 4, y: 29, text: '← → to move. ↑ to jump (hold it to jump higher).' },
-    { x: 9, y: 29, text: 'Reach the glowing portal at the end! Spikes, lava and fire cost 1 health.' },
+    { x: 9, y: 29, text: 'Reach the glowing portal at the end! Collect shards to buy new heads. Big purple shards are worth 5!' },
     { x: 13, y: 29, text: 'Hop across the floating stones! Press ↑ again in the air to DOUBLE JUMP.' },
-    { x: 41, y: 29, text: 'Mini monsters! Jump over them, or press X to fight them for souls. They only knock you back.' },
+    { x: 41, y: 29, text: 'Mini monsters! Jump over them, or press X to fight them: they drop shards. They only knock you back.' },
     { x: 51, y: 29, text: 'Ride the moving rafts. Press ↓ on a raft to drop through it.' },
     { x: 96, y: 29, text: 'Cracked stones crumble soon after you step on them. Keep moving!' },
     { x: 130, y: 29, text: 'Bounce on the glowing mushrooms to reach the cliff!' },
     { x: 145, y: 17, text: 'Time your run past the spinning fire.' },
     { x: 165, y: 17, text: 'Press C or Shift to DASH across the big gaps. Dash in mid-air!' },
-    { x: 195, y: 29, text: 'Slide down a wall and press ↑ to WALL-JUMP up the shaft.' },
+    { x: 195, y: 29, text: 'Climb the ledges! Jump, then press ↑ again in the air to DOUBLE JUMP higher.' },
     { x: 228, y: 13, text: 'Almost there! Ride the raft over the lava.' },
   ];
 
@@ -105,7 +130,7 @@ function buildLevel1() {
     number: 1,
     w: W, h: H, tiles,
     spawn: { x: 3, y: 29 },
-    enemies, platforms, pads, firebars, signs, decor,
+    shards, bigShards, enemies, platforms, pads, firebars, signs, decor,
     checkpoints: [{ x: 48, y: 29 }, { x: 94, y: 29 }, { x: 128, y: 29 }, { x: 163, y: 17 }, { x: 190, y: 17 }, { x: 207, y: 13 }],
     finish: { x: 244, y: 13 },
   };

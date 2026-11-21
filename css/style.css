@@ -150,3 +150,5 @@ kbd {
 .menu.row button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .menu-foot .ver { color: #6a5a8a; }
+
+.lvl .info.shards { color: #7ae8ff; }

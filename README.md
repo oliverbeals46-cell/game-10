@@ -1,6 +1,6 @@
 # Hallow Heads
 
-A creepy 2D **obby** (obstacle-course platformer). No Halloween, just dark and scary. You play a little hooded wanderer whose **head** can be swapped. Buy creepy heads with the souls you earn. Run, jump, double jump, wall-jump and dash through each level to reach the glowing finish portal.
+A creepy 2D **obby** (obstacle-course platformer). No Halloween, just dark and scary. You play a little hooded wanderer whose **head** can be swapped. Buy creepy heads with the souls you earn. Run, jump, double jump and dash through each level to reach the glowing finish portal.
 
 ## Play
 
@@ -16,7 +16,6 @@ No build step is needed. It's plain HTML, CSS and JavaScript.
 | Move | ← / → (or A / D) |
 | Jump (hold for higher) | ↑ (or Space / Z) |
 | Double jump | Press ↑ again in the air |
-| Wall-jump | Slide on a wall, then press ↑ |
 | Fall faster / drop through rafts | ↓ (or S) |
 | Attack | X (or J). Hold ↑/↓ while attacking to aim up/down |
 | Pogo bounce | Down-attack a monster or spikes while in the air |
@@ -29,7 +28,8 @@ No build step is needed. It's plain HTML, CSS and JavaScript.
 - **Infinite health.** Spikes, lava and fire kill you instantly, and you respawn at your last **checkpoint** (numbered flags that turn green). Monsters only knock you back.
 - The **top-right** shows your death count, your time for the level, and your **best time** for that level.
 - **Signs** (the `?` posts) explain every obstacle and attack. Every level must have them.
-- **Souls** are earned, never picked up: 5 per monster, 100 for a first clear (40 for replays), +25 for a new best time, +25 for no deaths. Spend them on heads in the Heads Shop.
+- **Shards** are glowing crystals to collect in every level (small = 1, big purple = 5, monsters drop 3). Spend them on heads in the Heads Shop.
+- **No wall climbing.** If you miss a jump, only your double jump can save you.
 - **No Halloween anywhere.** Everything is creepy and scary instead.
 
 ## Level plan
@@ -50,20 +50,20 @@ No build step is needed. It's plain HTML, CSS and JavaScript.
 | 41–50 | Burning cathedral, orange embers | Ember Imp, Candle Wraith, Ash Bat | The Hollow Saint (L50) |
 
 ### Level 1 obstacles
-Floating stones over spikes → moving rafts → crumbling stones over lava → bounce mushrooms up a cliff → spinning fire bars → dash pillars → wall-jump shaft → spike strips → a raft over lava → **finish portal**. There are 6 checkpoints along the way.
+Floating stones over spikes → moving rafts → crumbling stones over lava → bounce mushrooms up a cliff → spinning fire bars → dash pillars → double-jump ledge climb → spike strips → a raft over lava → **finish portal**. There are 6 checkpoints along the way.
 
 ## Heads (Creepy Collection)
 
-| Head | Price (souls) | Perk |
+| Head | Price (shards) | Perk |
 | --- | --- | --- |
 | Hollow Mask | free | Balanced |
-| Bonesy | 150 | Monsters barely knock you back |
-| The Shade | 200 | Longer dash that recharges faster |
-| Stitches | 250 | Jumps higher and runs faster |
-| Count Fang | 300 | Wisp Bolt recharges twice as fast |
-| Wrapz | 350 | Slides down walls slowly |
-| The Rotter | 450 | +50% damage |
-| Wick | 500 | Longer slash reach |
+| Bonesy | 40 | Monsters barely knock you back |
+| The Shade | 60 | Longer dash that recharges faster |
+| Stitches | 80 | Jumps higher and runs faster |
+| Count Fang | 100 | Wisp Bolt recharges twice as fast |
+| Wrapz | 130 | Floaty: hold jump to fall slowly |
+| The Rotter | 160 | +50% damage |
+| Wick | 200 | Longer slash reach |
 
 ## Code layout
 

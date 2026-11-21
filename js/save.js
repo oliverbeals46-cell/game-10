@@ -1,16 +1,18 @@
-// Persistent progress (souls, owned heads, unlocked attacks, best times) stored in localStorage.
+// Persistent progress (shards, owned heads, unlocked attacks, best times) stored in localStorage.
 const Save = {
   key: 'hallowheads_save_v1',
   data: null,
   defaults() {
-    return { souls: 0, owned: ['mask'], equipped: 'mask', unlocks: {}, levels: {}, best: {} };
+    return { shards: 0, owned: ['mask'], equipped: 'mask', unlocks: {}, levels: {}, best: {} };
   },
   load() {
     let d = null;
     try { d = JSON.parse(localStorage.getItem(this.key)); } catch (e) { d = null; }
     this.data = Object.assign(this.defaults(), d || {});
     // v3: candy became souls
-    if (this.data.candy !== undefined) { this.data.souls = (this.data.souls || 0) + this.data.candy; delete this.data.candy; }
+    if (this.data.candy !== undefined) { this.data.shards = (this.data.shards || 0) + this.data.candy; delete this.data.candy; }
+    // v4: souls became shards
+    if (this.data.souls !== undefined) { this.data.shards = (this.data.shards || 0) + this.data.souls; delete this.data.souls; }
     // v3: Halloween heads were replaced by creepy ones — swap any old heads you owned
     const swap = { pip: 'mask', boo: 'shade', mittens: 'stitches', franky: 'rotter' };
     this.data.owned = [...new Set(this.data.owned.map((h) => swap[h] || h))];

@@ -3,18 +3,18 @@
 // All art is drawn with canvas paths and gradients, so there are no image files.
 const HEADS = [
   { id: 'mask',     name: 'Hollow Mask',   price: 0,   accent: '#d8d0c8', perk: 'Balanced. Always watching.', stats: {} },
-  { id: 'bonesy',   name: 'Bonesy',        price: 150, accent: '#e8e2d0', perk: 'Heavy bones: monsters barely knock you back', stats: { knock: 0.35 } },
-  { id: 'shade',    name: 'The Shade',     price: 200, accent: '#7aa0c0', perk: 'Longer dash that recharges faster', stats: { dash: 1.35, dashCd: 0.6 } },
-  { id: 'stitches', name: 'Stitches',      price: 250, accent: '#b08a50', perk: 'Jumps higher and runs faster', stats: { jump: 1.08, speed: 1.1 } },
-  { id: 'fang',     name: 'Count Fang',    price: 300, accent: '#d0213b', perk: 'Wisp Bolt recharges twice as fast', stats: { boltCd: 0.5 } },
-  { id: 'wrapz',    name: 'Wrapz',         price: 350, accent: '#7cf4ff', perk: 'Sticky bandages: slides down walls slowly', stats: { grip: 0.45 } },
-  { id: 'rotter',   name: 'The Rotter',    price: 450, accent: '#8aa070', perk: '+50% attack damage', stats: { dmg: 1.5 } },
-  { id: 'wick',     name: 'Wick',          price: 500, accent: '#ffb347', perk: 'Much longer slash reach', stats: { reach: 1.35 } },
+  { id: 'bonesy',   name: 'Bonesy',        price: 40, accent: '#e8e2d0', perk: 'Heavy bones: monsters barely knock you back', stats: { knock: 0.35 } },
+  { id: 'shade',    name: 'The Shade',     price: 60, accent: '#7aa0c0', perk: 'Longer dash that recharges faster', stats: { dash: 1.35, dashCd: 0.6 } },
+  { id: 'stitches', name: 'Stitches',      price: 80, accent: '#b08a50', perk: 'Jumps higher and runs faster', stats: { jump: 1.08, speed: 1.1 } },
+  { id: 'fang',     name: 'Count Fang',    price: 100, accent: '#d0213b', perk: 'Wisp Bolt recharges twice as fast', stats: { boltCd: 0.5 } },
+  { id: 'wrapz',    name: 'Wrapz',         price: 130, accent: '#7cf4ff', perk: 'Floaty: hold jump to fall slowly', stats: { floaty: 0.3 } },
+  { id: 'rotter',   name: 'The Rotter',    price: 160, accent: '#8aa070', perk: '+50% attack damage', stats: { dmg: 1.5 } },
+  { id: 'wick',     name: 'Wick',          price: 200, accent: '#ffb347', perk: 'Much longer slash reach', stats: { reach: 1.35 } },
 ];
 
 function headById(id) { return HEADS.find((h) => h.id === id) || HEADS[0]; }
 function headStats(id) {
-  return Object.assign({ dmg: 1, speed: 1, jump: 1, dash: 1, dashCd: 1, reach: 1, knock: 1, boltCd: 1, grip: 1 }, headById(id).stats);
+  return Object.assign({ dmg: 1, speed: 1, jump: 1, dash: 1, dashCd: 1, reach: 1, knock: 1, boltCd: 1, floaty: 1 }, headById(id).stats);
 }
 
 const Draw = {

@@ -59,6 +59,9 @@ const Game = {
     this.spawnPoint = { x: s.x * TILE + 6, y: (s.y + 1) * TILE - 30 };
     this.checkpoint = { ...this.spawnPoint };
     this.player = new Player(this.checkpoint.x, this.checkpoint.y, Save.data.equipped);
+    this.pickups = def.shards.map(([x, y]) => new Shard(x * TILE + 16, y * TILE + 16));
+    this.pickups.push(...(def.bigShards || []).map(([x, y]) => new Shard(x * TILE + 16, y * TILE + 16, { big: true })));
+    this.shardTotal = this.pickups.reduce((n, s) => n + s.value, 0);
     const D = difficultyForLevel(def.number);
     this.difficulty = D;
     this.enemies = def.enemies.map((e) => {
@@ -75,8 +78,8 @@ const Game = {
     this.projectiles = []; this.particles = []; this.afterimages = []; this.toasts = [];
     this.boss = null;
     this.finishT = 0; this.deathT = 0; this.titleT = 3.2; this.completed = false;
-    this.stats = { souls: 0, deaths: 0, time: 0 };
-    this.shake = 0; this.freeze = 0; this.flashRed = 0; this.time = 0; this.popups = [];
+    this.stats = { shards: 0, deaths: 0, time: 0 };
+    this.shake = 0; this.freeze = 0; this.flashRed = 0; this.time = 0; this.popups = []; this.lastShardSfx = 0;
     this.newUnlock = false;
     this.cam = { x: 0, y: 0 };
     this.updateCamera(1, true);
@@ -180,6 +183,8 @@ const Game = {
     }
     this.projectiles = this.projectiles.filter((pr) => !pr.dead);
 
+    for (const c of this.pickups) c.update(dt, this);
+    this.pickups = this.pickups.filter((c) => !c.dead);
     for (const q of this.popups) { q.t -= dt; q.y -= 30 * dt; }
     this.popups = this.popups.filter((q) => q.t > 0);
 
@@ -295,15 +300,15 @@ const Game = {
     e.dead = true;
     Sfx.play('kill');
     this.burst(e.x + e.w / 2, e.y + e.h / 2, 18, '#a99cc8', 260);
-    this.earnSouls(e.souls || 5, e.x + e.w / 2, e.y);
+    for (let i = 0; i < (e.shards || 3); i++) this.pickups.push(new Shard(e.x + e.w / 2, e.y, { drop: true }));
   },
 
-  // Souls are earned (never picked up): defeating monsters and finishing levels.
-  earnSouls(n, x, y) {
-    Save.data.souls += n;
-    this.stats.souls += n;
-    Sfx.play('soul');
-    if (x !== undefined) this.popups.push({ x, y: y - 6, t: 1, text: `+${n} souls` });
+  // Shards are collected in levels (and dropped by monsters). They buy heads in the shop.
+  collectShard(s) {
+    Save.data.shards += s.value;
+    this.stats.shards += s.value;
+    if (s.big) { Sfx.play('bigshard'); this.popups.push({ x: s.x + s.w / 2, y: s.y - 6, t: 1, text: '+5 shards' }); this.burst(s.x + s.w / 2, s.y + s.h / 2, 14, '#c070ff', 200); }
+    else if (this.time - this.lastShardSfx > 0.05) { Sfx.play('shard'); this.lastShardSfx = this.time; }
     Save.write();
   },
 
@@ -336,7 +341,6 @@ const Game = {
     this.burst(this.finish.x, this.finish.y - 60, 60, '#c070ff', 420);
     this.burst(this.finish.x, this.finish.y - 60, 30, '#ffd84d', 320);
     this.toast('LEVEL COMPLETE!', 3);
-    const firstClear = !Save.data.levels[this.key];
     // new attacks unlock every 20 levels (Level 20, 40, ...)
     const atk = ATTACKS.find((a) => a.level === this.def.number && !Save.data.unlocks[a.id]);
     this.newUnlock = atk || null;
@@ -344,12 +348,10 @@ const Game = {
     Save.data.levels[this.key] = true;
     const best = Save.data.best[this.key];
     this.newRecord = !best || this.stats.time < best;
-    let reward = firstClear ? 100 : 40;
-    if (this.newRecord) reward += 25;
-    if (this.stats.deaths === 0) reward += 25;
-    this.earnSouls(reward);
     this.prevBest = best;
     if (this.newRecord) Save.data.best[this.key] = this.stats.time;
+    Save.data.shardBest = Save.data.shardBest || {};
+    Save.data.shardBest[this.key] = Math.max(Save.data.shardBest[this.key] || 0, this.stats.shards);
     Save.write();
     this.finishT = 1.8;
   },
@@ -383,7 +385,7 @@ const Game = {
   onBossDefeated(b) {
     this.bossLock = false; this.world.gateClosed = false; this.projectiles = [];
     Sfx.stopMusic(); Sfx.play('victory');
-    this.earnSouls(150, b.x + b.w / 2, b.y);
+    for (let i = 0; i < 12; i++) this.pickups.push(new Shard(b.x + b.w / 2, b.y + 30, { drop: true, big: i < 4 }));
   },
 
   burst(x, y, n, color, speed) {
@@ -425,6 +427,7 @@ const Game = {
     this.world.draw(ctx, cam, t, this.k);
     for (const pl of this.platforms) if (onScreen(pl.x)) pl.draw(ctx, t);
     for (const pad of this.pads) if (onScreen(pad.x)) pad.draw(ctx, t);
+    for (const c of this.pickups) if (onScreen(c.x, 40)) c.draw(ctx, t);
     for (const e of this.enemies) if (onScreen(e.x)) e.draw(ctx, t);
     if (this.boss) this.boss.draw(ctx, t);
     for (const a of this.afterimages) {
@@ -486,6 +489,7 @@ const Game = {
       const x = lt.tx * TILE + 16, y = lt.ty * TILE;
       if (inView(x, y, 160)) L.push({ x, y, r: 150, i: 0.8, c: 'rgba(255,90,10,0.18)' });
     }
+    for (const c of this.pickups) if (inView(c.x, c.y, 60)) L.push({ x: c.x + c.w / 2, y: c.y + c.h / 2, r: c.big ? 90 : 46, i: 0.6, c: c.big ? 'rgba(190,100,255,0.25)' : null });
     for (const pr of this.projectiles) if (pr.type === 'wisp' || pr.type === 'wave') L.push({ x: pr.x + pr.w / 2, y: pr.y + pr.h / 2, r: 130, i: 0.9, c: pr.type === 'wisp' ? 'rgba(80,230,255,0.3)' : 'rgba(255,110,20,0.3)' });
     if (this.boss) L.push({ x: this.boss.x + this.boss.w / 2, y: this.boss.y + 40, r: 260, i: 0.8, c: 'rgba(255,120,20,0.2)' });
     return L;
@@ -493,11 +497,11 @@ const Game = {
 
   drawHUD(ctx) {
     const p = this.player;
-    // souls (top-left)
+    // shards (top-left): total you own, and how many you've grabbed in this level
     ctx.fillStyle = 'rgba(8,5,16,0.55)'; Draw.rr(ctx, 14, 14, 110, 34, 10); ctx.fill();
-    drawSoulIcon(ctx, 31, 31, this.t);
+    drawShardIcon(ctx, 31, 31, this.t);
     ctx.font = '900 18px Nunito, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#bff6ff'; ctx.fillText(Save.data.souls, 46, 32);
+    ctx.fillStyle = '#bff6ff'; ctx.fillText(Save.data.shards, 46, 32);
     if (Save.data.unlocks.wisp) {
       const ready = p.boltCd <= 0;
       ctx.font = '700 12px Nunito, sans-serif'; ctx.fillStyle = ready ? '#9ff4ff' : '#5a7a80';
@@ -507,7 +511,7 @@ const Game = {
     // level + checkpoint label (top-center)
     const lit = this.checkpoints.filter((c) => c.lit).length;
     ctx.font = '700 12px Nunito, sans-serif'; ctx.textAlign = 'center';
-    const label = `Level ${this.def.number}   ·   Checkpoint ${lit} / ${this.checkpoints.length}`;
+    const label = `Level ${this.def.number}   ·   Checkpoint ${lit} / ${this.checkpoints.length}   ·   Shards ${this.stats.shards} / ${this.shardTotal}`;
     const lw = ctx.measureText(label).width + 24;
     ctx.fillStyle = 'rgba(8,5,16,0.55)'; Draw.rr(ctx, VIEW_W / 2 - lw / 2, 14, lw, 26, 9); ctx.fill();
     ctx.fillStyle = '#d8ccf0'; ctx.fillText(label, VIEW_W / 2, 28);

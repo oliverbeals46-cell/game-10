@@ -54,7 +54,8 @@ const UI = {
       b.className = 'lvl' + (unlocked ? '' : ' locked') + (cleared ? ' cleared' : '') + (isBossLevel(n) ? ' boss' : '');
       b.innerHTML = `<span class="num">${n}</span>` +
         (isBossLevel(n) ? '<span class="tag">BOSS</span>' : '') +
-        `<span class="info">${!built ? 'Coming soon' : !unlocked ? 'Locked' : best ? 'Best ' + fmtTime(best, true) : 'Not cleared'}</span>`;
+        `<span class="info">${!built ? 'Coming soon' : !unlocked ? 'Locked' : best ? 'Best ' + fmtTime(best, true) : 'Not cleared'}</span>` +
+        (built && unlocked && d.shardBest && d.shardBest['l' + n] !== undefined ? `<span class="info shards">Shards ${d.shardBest['l' + n]}</span>` : '');
       if (unlocked) b.addEventListener('click', () => { Sfx.play('click'); this.show(null); Game.startLevel(n); this.show(null); });
       grid.appendChild(b);
     }
@@ -62,7 +63,7 @@ const UI = {
 
   refreshMenu() {
     const d = Save.data;
-    document.getElementById('menu-candy').innerHTML = `Souls: <b>${d.souls}</b>`;
+    document.getElementById('menu-candy').innerHTML = `Shards: <b>${d.shards}</b>`;
     document.getElementById('menu-equipped').innerHTML = `Head: <b>${headById(d.equipped).name}</b>`;
     const cleared = Object.keys(d.levels).filter((k) => d.levels[k]).length;
     document.getElementById('menu-progress').innerHTML = `Levels cleared: <b>${cleared}</b>`;
@@ -111,7 +112,7 @@ const UI = {
 
   updateShop() {
     const d = Save.data;
-    document.getElementById('shop-candy').textContent = `Souls: ${d.souls}`;
+    document.getElementById('shop-candy').textContent = `Shards: ${d.shards}`;
     for (const c of this.shopCards) {
       const owned = d.owned.includes(c.h.id), eq = d.equipped === c.h.id;
       c.card.classList.toggle('equipped', eq);
@@ -119,8 +120,8 @@ const UI = {
       if (eq) { c.btn.textContent = 'Equipped'; c.btn.classList.add('on'); }
       else if (owned) c.btn.textContent = 'Equip';
       else {
-        c.btn.textContent = `Buy - ${c.h.price} souls`;
-        c.btn.classList.add(d.souls >= c.h.price ? 'buy' : 'locked');
+        c.btn.textContent = `Buy - ${c.h.price} shards`;
+        c.btn.classList.add(d.shards >= c.h.price ? 'buy' : 'locked');
       }
     }
   },
@@ -129,7 +130,7 @@ const UI = {
     const d = Save.data;
     if (d.equipped === h.id) return;
     if (d.owned.includes(h.id)) { d.equipped = h.id; Sfx.play('click'); }
-    else if (d.souls >= h.price) { d.souls -= h.price; d.owned.push(h.id); d.equipped = h.id; Sfx.play('buy'); }
+    else if (d.shards >= h.price) { d.shards -= h.price; d.owned.push(h.id); d.equipped = h.id; Sfx.play('buy'); }
     else { Sfx.play('deny'); return; }
     Save.write();
     this.updateShop();
@@ -139,7 +140,7 @@ const UI = {
     document.getElementById('victory-stats').innerHTML =
       `<div><b>${fmtTime(stats.time, true)}</b>Your time</div>` +
       `<div><b>${fmtTime(best, true)}</b>${record ? '<span class="rec">NEW BEST!</span>' : 'Best time'}</div>` +
-      `<div><b>${stats.deaths}</b>Deaths</div><div><b>${stats.souls}</b>Souls earned</div>`;
+      `<div><b>${stats.deaths}</b>Deaths</div><div><b>${stats.shards} / ${Game.shardTotal}</b>Shards</div>`;
     const na = nextAttack();
     if (newUnlock) {
       document.querySelector('#screen-victory .unlock-title').textContent = 'New Attack Unlocked';

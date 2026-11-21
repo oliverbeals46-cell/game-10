@@ -394,14 +394,13 @@ function drawVignette(ctx) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
 }
 
-// A small ghostly soul flame, used for the soul counter.
-function drawSoulIcon(ctx, x, y, t) {
-  ctx.save(); ctx.translate(x, y);
+// Shard icon for the HUD.
+function drawShardIcon(ctx, x, y, t) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(1.2, 1.2);
   setGlow(ctx, '#5ae0ff', 10);
-  const fl = Math.sin(t * 6) * 1.2;
-  ctx.fillStyle = shade(ctx, 0, 2, 8, '#ffffff', '#8aeaff', '#1a6a8a');
-  ctx.beginPath(); ctx.moveTo(0, -10 + fl); ctx.quadraticCurveTo(7, -2, 5, 4); ctx.arc(0, 4, 5, 0, Math.PI); ctx.quadraticCurveTo(-7, -2, 0, -10 + fl); ctx.fill();
+  ctx.fillStyle = lin(ctx, -5, -8, 5, 8, ['#effdff', '#5ad8f0', '#0e4a6a']);
+  Draw.poly(ctx, [0, -8, 5, -2, 3, 7, -3, 7, -5, -2]);
   clearGlow(ctx);
-  ctx.fillStyle = '#0a2a3a'; Draw.circ(ctx, -1.8, 3, 1); Draw.circ(ctx, 1.8, 3, 1);
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; Draw.poly(ctx, [0, -8, 1.5, -2, -2, 5, -3.5, -2]);
   ctx.restore();
 }

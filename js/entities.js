@@ -102,13 +102,8 @@ class Player {
       // Down arrow in the air = fall faster
       const maxFall = !this.onGround && downHeld ? PHYS.FASTFALL : PHYS.MAXFALL;
       this.vy = Math.min(this.vy + PHYS.GRAV * (downHeld && this.vy > 0 ? 1.6 : 1) * dt, maxFall);
-      if (!this.onGround && this.vy > 0 && ix !== 0 && this.ctrlLock <= 0 && this.touchingWall(w, ix)) {
-        this.wallSlide = ix;
-        this.vy = Math.min(this.vy, PHYS.WALL_SLIDE * this.st.grip);
-        this.canDash = true; this.airJumps = 1;
-        this.facing = -ix;
-        if (Math.random() < 0.3) g.particles.push(makeParticle(ix > 0 ? this.x + this.w : this.x, this.y + rand(0, 10), -ix * 30, -20, 0.35, '#6b5a8f', 2, 0));
-      }
+      // No wall sliding or wall jumping: if you miss a jump, only your double jump can save you.
+      if (this.st.floaty < 1 && !this.onGround && this.vy > 0 && I.down('jump')) this.vy = Math.min(this.vy, PHYS.MAXFALL * this.st.floaty);
       if (this.jumping && !I.down('jump') && this.vy < 0) { this.vy *= 0.45; this.jumping = false; }
       if (this.vy >= 0) this.jumping = false;
     }
@@ -118,7 +113,7 @@ class Player {
       this.dropT = 0.25; this.y += 2; this.onGround = false; this.coyote = 0; this.platform = null;
     }
 
-    // Jumping (ground / coyote / wall)
+    // Jumping (ground / coyote / double jump)
     if (this.jumpBuf > 0 && this.dashT <= 0) {
       if (this.coyote > 0) {
         this.vy = -PHYS.JUMP * this.st.jump;
@@ -126,18 +121,7 @@ class Player {
         Sfx.play('jump');
         g.dust(this.x + this.w / 2, this.y + this.h, 6);
       } else if (!this.onGround) {
-        const wr = this.touchingWall(w, 1), wl = this.touchingWall(w, -1);
-        if (wr || wl) {
-          const d = this.wallSlide || (wr ? 1 : -1);
-          this.vx = -d * PHYS.WJ_X;
-          this.vy = -PHYS.WJ_Y * this.st.jump;
-          this.ctrlLock = 0.1;
-          this.facing = -d;
-          this.jumping = true;
-          this.jumpBuf = 0;
-          Sfx.play('walljump');
-          g.dust(d > 0 ? this.x + this.w : this.x, this.y + this.h / 2, 5);
-        } else if (this.airJumps > 0) {
+        if (this.airJumps > 0) {
           // DOUBLE JUMP
           this.airJumps--;
           this.vy = -PHYS.JUMP * 0.9 * this.st.jump;
@@ -153,7 +137,7 @@ class Player {
 
     // Dash
     if (I.pressed('dash') && this.canDash && this.dashCd <= 0 && this.dashT <= 0) {
-      this.dashDir = this.wallSlide ? -this.wallSlide : (ix || this.facing);
+      this.dashDir = ix || this.facing;
       this.facing = this.dashDir;
       this.dashT = PHYS.DASH_T * this.st.dash;
       this.dashCd = 0.45 * this.st.dashCd;
@@ -336,7 +320,7 @@ class Crawler {
     this.x = x; this.y = y - this.h;
     this.vx = 0; this.vy = 0; this.dir = -1;
     this.hp = 4; this.flash = 0; this.kb = 0; this.dead = false;
-    this.anim = Math.random() * 10; this.souls = 5; this.contact = 1;
+    this.anim = Math.random() * 10; this.shards = 3; this.contact = 1;
   }
   update(dt, g) {
     this.anim += dt; this.flash -= dt;
@@ -393,7 +377,7 @@ class Bat {
     this.w = 26; this.h = 18;
     this.x = x; this.y = y; this.home = { x, y };
     this.vx = 0; this.vy = 0; this.hp = 2; this.flash = 0; this.kb = 0; this.dead = false;
-    this.state = 'idle'; this.anim = Math.random() * 10; this.souls = 5; this.contact = 1; this.facing = 1;
+    this.state = 'idle'; this.anim = Math.random() * 10; this.shards = 3; this.contact = 1; this.facing = 1;
   }
   update(dt, g) {
     this.anim += dt; this.flash -= dt;
@@ -458,7 +442,7 @@ class Skitter {
     this.w = 22; this.h = 20;
     this.x = x; this.y = y - this.h;
     this.vx = 0; this.vy = 0; this.hp = 2; this.flash = 0; this.dead = false;
-    this.hopT = 1 + Math.random(); this.anim = Math.random() * 10; this.souls = 5; this.contact = 1;
+    this.hopT = 1 + Math.random(); this.anim = Math.random() * 10; this.shards = 3; this.contact = 1;
     this.facing = -1; this.squash = 0; this.home = x;
   }
   update(dt, g) {
@@ -711,6 +695,51 @@ class Projectile {
       ctx.fillStyle = '#ecfeff'; Draw.circ(ctx, 6, 0, 7);
       ctx.fillStyle = '#1a3a40'; Draw.circ(ctx, 8, -2, 1.3); Draw.circ(ctx, 8, 2.5, 1.3);
     }
+    ctx.restore();
+  }
+}
+
+/* =========================== SHARDS =========================== */
+// Glowing crystal shards to collect. Small = 1, big = 5. Spend them on heads in the shop.
+class Shard {
+  constructor(x, y, opts = {}) {
+    this.big = !!opts.big; this.value = this.big ? 5 : 1;
+    this.w = this.big ? 18 : 12; this.h = this.w;
+    this.x = x - this.w / 2; this.y = y - this.h / 2;
+    this.physics = !!opts.drop; this.vx = this.physics ? rand(-160, 160) : 0; this.vy = this.physics ? rand(-520, -260) : 0;
+    this.delay = this.physics ? 0.35 : 0; this.t = Math.random() * 6; this.dead = false;
+  }
+  update(dt, g) {
+    this.t += dt; this.delay -= dt;
+    const p = g.player;
+    const cx = this.x + this.w / 2, cy = this.y + this.h / 2;
+    const dx = (p.x + p.w / 2) - cx, dy = (p.y + p.h / 2) - cy, d = Math.hypot(dx, dy);
+    if (this.delay <= 0 && d < 64 && !p.dead) {
+      this.physics = false;
+      this.x += (dx / d) * 440 * dt; this.y += (dy / d) * 440 * dt;
+    } else if (this.physics) {
+      this.vy = Math.min(this.vy + PHYS.GRAV * dt, 700); this.vx *= 0.99;
+      moveEntity(g.world, this, dt);
+      if (this.onGround) this.vx *= 0.8;
+    }
+    if (d < 20 && this.delay <= 0 && !p.dead) { this.dead = true; g.collectShard(this); }
+  }
+  draw(ctx, t) {
+    const bob = this.physics ? 0 : Math.sin(this.t * 3) * 3;
+    const s = this.big ? 1.6 : 1;
+    ctx.save();
+    ctx.translate(this.x + this.w / 2, this.y + this.h / 2 + bob);
+    ctx.rotate(Math.sin(this.t * 1.5) * 0.15);
+    ctx.scale(s, s);
+    setGlow(ctx, this.big ? '#c070ff' : '#5ae0ff', 12);
+    ctx.fillStyle = this.big ? lin(ctx, -5, -8, 5, 8, ['#f8e8ff', '#c070ff', '#4a1a8a']) : lin(ctx, -5, -8, 5, 8, ['#effdff', '#5ad8f0', '#0e4a6a']);
+    Draw.poly(ctx, [0, -8, 5, -2, 3, 7, -3, 7, -5, -2]);
+    clearGlow(ctx);
+    ctx.fillStyle = 'rgba(255,255,255,0.75)'; Draw.poly(ctx, [0, -8, 1.5, -2, -2, 5, -3.5, -2]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 0.6; Draw.line(ctx, 0, -8, 0.5, 7);
+    // sparkle
+    const sp = (Math.sin(this.t * 4) + 1) / 2;
+    ctx.fillStyle = `rgba(255,255,255,${sp})`; Draw.poly(ctx, [4, -6, 4.6, -4.6, 6, -4, 4.6, -3.4, 4, -2, 3.4, -3.4, 2, -4, 3.4, -4.6]);
     ctx.restore();
   }
 }
