@@ -3,7 +3,7 @@
 // All art is drawn with canvas paths and gradients, so there are no image files.
 const HEADS = [
   { id: 'mask',     name: 'Hollow Mask',   price: 0,   accent: '#d8d0c8', perk: 'Balanced. Always watching.', stats: {} },
-  { id: 'bonesy',   name: 'Bonesy',        price: 40, accent: '#e8e2d0', perk: 'Heavy bones: monsters barely knock you back', stats: { knock: 0.35 } },
+  { id: 'bonesy',   name: 'Bonesy',        price: 40, accent: '#e8e2d0', perk: 'Springy bones: bounces higher off down-slashes', stats: { pogo: 1.25 } },
   { id: 'shade',    name: 'The Shade',     price: 60, accent: '#7aa0c0', perk: 'Longer dash that recharges faster', stats: { dash: 1.35, dashCd: 0.6 } },
   { id: 'stitches', name: 'Stitches',      price: 80, accent: '#b08a50', perk: 'Jumps higher and runs faster', stats: { jump: 1.08, speed: 1.1 } },
   { id: 'fang',     name: 'Count Fang',    price: 100, accent: '#d0213b', perk: 'Wisp Bolt recharges twice as fast', stats: { boltCd: 0.5 } },
@@ -14,7 +14,7 @@ const HEADS = [
 
 function headById(id) { return HEADS.find((h) => h.id === id) || HEADS[0]; }
 function headStats(id) {
-  return Object.assign({ dmg: 1, speed: 1, jump: 1, dash: 1, dashCd: 1, reach: 1, knock: 1, boltCd: 1, floaty: 1 }, headById(id).stats);
+  return Object.assign({ dmg: 1, speed: 1, jump: 1, dash: 1, dashCd: 1, reach: 1, pogo: 1, boltCd: 1, floaty: 1 }, headById(id).stats);
 }
 
 const Draw = {

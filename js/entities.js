@@ -54,21 +54,10 @@ class Player {
     return { x: this.facing > 0 ? this.x + this.w - 6 : this.x - w + 6, y: this.y - 6, w, h: this.h + 12 };
   }
 
-  // Infinite health: monsters only knock you back.
-  hurt(g, dmg, srcX) {
-    if (this.invuln > 0 || this.dead) return false;
-    this.invuln = 0.8;
-    this.dashT = 0;
-    const k = this.st.knock;
-    this.vx = (this.x + this.w / 2 < srcX ? -1 : 1) * 340 * k;
-    this.vy = -360 * Math.max(0.5, k);
-    this.ctrlLock = 0.22 * k;
-    this.jumping = false;
-    this.platform = null;
-    g.shake = Math.max(g.shake, 6);
-    g.freeze = 0.06;
-    Sfx.play('bump');
-    g.burst(this.x + this.w / 2, this.y + this.h / 2, 10, '#c9b8f0', 220);
+  // Every level, every creature: touching a monster (or anything a boss throws) = you die and go back to your checkpoint.
+  hurt(g) {
+    if (this.dead || this.invuln > 0) return false; // brief protection right after respawning
+    g.playerDied();
     return true;
   }
 

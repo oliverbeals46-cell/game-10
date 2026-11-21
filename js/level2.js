@@ -98,7 +98,7 @@ function buildLevel2() {
   ];
 
   const signs = [
-    { x: 3, y: 29, text: 'Level 2! Everything moves a little faster now.' },
+    { x: 3, y: 29, text: 'Level 2! Everything moves a little faster now. Remember: touching a monster kills you.' },
     { x: 11, y: 29, text: 'Small stones, and spinning fire above them. Time your jumps!' },
     { x: 46, y: 29, text: 'This raft goes UP and DOWN. Ride it to the top, then jump to the ledge.' },
     { x: 94, y: 29, text: 'Tiny crumbling stones! Then bounce off the mushroom on the pillar.' },

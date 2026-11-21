@@ -317,7 +317,7 @@ const Game = {
   pogo(p) {
     if (p.pogoDone) return;
     p.pogoDone = true;
-    p.vy = -PHYS.POGO; p.canDash = true; p.jumping = false; p.airJumps = 1;
+    p.vy = -PHYS.POGO * p.st.pogo; p.canDash = true; p.jumping = false; p.airJumps = 1;
     Sfx.play('pogo');
   },
 
@@ -354,6 +354,7 @@ const Game = {
 
   respawn() {
     this.player = new Player(this.checkpoint.x, this.checkpoint.y, Save.data.equipped);
+    this.player.invuln = 1;
     this.projectiles = [];
     for (const pl of this.platforms) if (pl.kind === 'crumble') { pl.state = 'solid'; pl.y = pl.y0; pl.shakeX = 0; }
     if (this.boss && !this.boss.dead) { this.boss = null; this.bossLock = false; this.world.gateClosed = false; Sfx.stopMusic(); }

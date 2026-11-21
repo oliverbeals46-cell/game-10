@@ -25,7 +25,7 @@ No build step is needed. It's plain HTML, CSS and JavaScript.
 
 ## Rules
 
-- **Infinite health.** Spikes, lava and fire kill you instantly, and you respawn at your last **checkpoint** (numbered flags that turn green). Monsters only knock you back.
+- **Infinite health.** Spikes, lava, fire **and touching any monster** kill you instantly (every level), and you respawn at your last **checkpoint** (numbered flags that turn green).
 - The **top-right** shows your death count, your time for the level, and your **best time** for that level.
 - **Signs** (the `?` posts) explain every obstacle and attack. Every level must have them.
 - **Shards** are glowing crystals to collect in every level (small = 1, big purple = 5, monsters drop 3). Spend them on heads in the Heads Shop.
@@ -71,7 +71,7 @@ Floating stones over spikes → moving rafts → crumbling stones over lava → 
 | Head | Price (shards) | Perk |
 | --- | --- | --- |
 | Hollow Mask | free | Balanced |
-| Bonesy | 40 | Monsters barely knock you back |
+| Bonesy | 40 | Bounces higher off down-slashes |
 | The Shade | 60 | Longer dash that recharges faster |
 | Stitches | 80 | Jumps higher and runs faster |
 | Count Fang | 100 | Wisp Bolt recharges twice as fast |

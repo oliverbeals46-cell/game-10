@@ -106,7 +106,7 @@ function buildLevel1() {
     { x: 4, y: 29, text: '← → to move. ↑ to jump (hold it to jump higher).' },
     { x: 9, y: 29, text: 'Reach the glowing portal at the end! Collect shards to buy new heads. Big purple shards are worth 5!' },
     { x: 13, y: 29, text: 'Hop across the floating stones! Press ↑ again in the air to DOUBLE JUMP.' },
-    { x: 41, y: 29, text: 'Mini monsters! Jump over them, or press X to fight them: they drop shards. They only knock you back.' },
+    { x: 41, y: 29, text: 'Mini monsters! Touching one KILLS you. Jump over them, or press X to slash them (they drop shards).' },
     { x: 51, y: 29, text: 'Ride the moving rafts. Press ↓ on a raft to drop through it.' },
     { x: 96, y: 29, text: 'Cracked stones crumble soon after you step on them. Keep moving!' },
     { x: 130, y: 29, text: 'Bounce on the glowing mushrooms to reach the cliff!' },
