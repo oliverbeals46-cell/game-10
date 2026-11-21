@@ -37,7 +37,7 @@ const UI = {
 
   refreshMenu() {
     const d = Save.data;
-    document.getElementById('menu-candy').innerHTML = `Candy: <b>${d.candy}</b>`;
+    document.getElementById('menu-candy').innerHTML = `Souls: <b>${d.souls}</b>`;
     document.getElementById('menu-equipped').innerHTML = `Head: <b>${headById(d.equipped).name}</b>`;
     document.getElementById('menu-progress').innerHTML = d.levels.l1
       ? `Level 1: <b>Cleared</b>${d.best.l1 ? ` (best ${fmtTime(d.best.l1, true)})` : ''}`
@@ -87,7 +87,7 @@ const UI = {
 
   updateShop() {
     const d = Save.data;
-    document.getElementById('shop-candy').textContent = `Candy: ${d.candy}`;
+    document.getElementById('shop-candy').textContent = `Souls: ${d.souls}`;
     for (const c of this.shopCards) {
       const owned = d.owned.includes(c.h.id), eq = d.equipped === c.h.id;
       c.card.classList.toggle('equipped', eq);
@@ -95,8 +95,8 @@ const UI = {
       if (eq) { c.btn.textContent = 'Equipped'; c.btn.classList.add('on'); }
       else if (owned) c.btn.textContent = 'Equip';
       else {
-        c.btn.textContent = `Buy - ${c.h.price} candy`;
-        c.btn.classList.add(d.candy >= c.h.price ? 'buy' : 'locked');
+        c.btn.textContent = `Buy - ${c.h.price} souls`;
+        c.btn.classList.add(d.souls >= c.h.price ? 'buy' : 'locked');
       }
     }
   },
@@ -105,7 +105,7 @@ const UI = {
     const d = Save.data;
     if (d.equipped === h.id) return;
     if (d.owned.includes(h.id)) { d.equipped = h.id; Sfx.play('click'); }
-    else if (d.candy >= h.price) { d.candy -= h.price; d.owned.push(h.id); d.equipped = h.id; Sfx.play('buy'); }
+    else if (d.souls >= h.price) { d.souls -= h.price; d.owned.push(h.id); d.equipped = h.id; Sfx.play('buy'); }
     else { Sfx.play('deny'); return; }
     Save.write();
     this.updateShop();
@@ -115,7 +115,7 @@ const UI = {
     document.getElementById('victory-stats').innerHTML =
       `<div><b>${fmtTime(stats.time, true)}</b>Your time</div>` +
       `<div><b>${fmtTime(best, true)}</b>${record ? '<span class="rec">NEW BEST!</span>' : 'Best time'}</div>` +
-      `<div><b>${stats.deaths}</b>Deaths</div><div><b>${stats.candy}</b>Candy found</div>`;
+      `<div><b>${stats.deaths}</b>Deaths</div><div><b>${stats.souls}</b>Souls earned</div>`;
     const na = nextAttack();
     if (newUnlock) {
       document.querySelector('#screen-victory .unlock-title').textContent = 'New Attack Unlocked';

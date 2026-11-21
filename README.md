@@ -1,6 +1,6 @@
 # Hallow Heads
 
-A spooky 2D **obby** (obstacle-course platformer). You play a little hooded wanderer whose **head** can be swapped. Buy Halloween heads with the candy you collect. Run, jump, double jump, wall-jump and dash through each level to reach the glowing finish portal.
+A creepy 2D **obby** (obstacle-course platformer). No Halloween, just dark and scary. You play a little hooded wanderer whose **head** can be swapped. Buy creepy heads with the souls you earn. Run, jump, double jump, wall-jump and dash through each level to reach the glowing finish portal.
 
 ## Play
 
@@ -29,7 +29,8 @@ No build step is needed. It's plain HTML, CSS and JavaScript.
 - **Infinite health.** Spikes, lava and fire kill you instantly, and you respawn at your last **checkpoint** (numbered flags that turn green). Monsters only knock you back.
 - The **top-right** shows your death count, your time for the level, and your **best time** for that level.
 - **Signs** (the `?` posts) explain every obstacle and attack. Every level must have them.
-- **Candy** buys heads in the Heads Shop. Every head has its own perk.
+- **Souls** are earned, never picked up: 5 per monster, 100 for a first clear (40 for replays), +25 for a new best time, +25 for no deaths. Spend them on heads in the Heads Shop.
+- **No Halloween anywhere.** Everything is creepy and scary instead.
 
 ## Level plan
 
@@ -42,26 +43,26 @@ No build step is needed. It's plain HTML, CSS and JavaScript.
 
 | Levels | Look | Mini enemies | Boss |
 | --- | --- | --- | --- |
-| 1–10 | Haunted pumpkin patch & graveyard, purple moon | Grave Mite, Vesper Bat, Pumpling | The Gourd King (L10) |
+| 1–10 | Haunted graveyard & dead forest, pale moon | Grave Mite, Vesper Bat, Skitter Skull | The Grave Warden (L10) |
 | 11–20 | Frozen bone forest, blue ghost-fire | Ice Wisp, Frost Mite, Snow Skull | The Frozen Widow (L20) |
 | 21–30 | Swamp under a red moon | Bog Leech, Swamp Lantern, Croaking Skull | The Mire Hag (L30) |
 | 31–40 | Underground clockwork tombs | Gear Spider, Chain Ghoul, Tick-Tock Skull | The Grandfather Clock (L40) |
 | 41–50 | Burning cathedral, orange embers | Ember Imp, Candle Wraith, Ash Bat | The Hollow Saint (L50) |
 
 ### Level 1 obstacles
-Floating stones over spikes → moving rafts → crumbling stones over lava → bounce pumpkins up a cliff → spinning fire bars → dash pillars → wall-jump shaft → spike strips → a raft over lava → **finish portal**. There are 6 checkpoints along the way.
+Floating stones over spikes → moving rafts → crumbling stones over lava → bounce mushrooms up a cliff → spinning fire bars → dash pillars → wall-jump shaft → spike strips → a raft over lava → **finish portal**. There are 6 checkpoints along the way.
 
-## Heads (Halloween season)
+## Heads (Creepy Collection)
 
-| Head | Price | Perk |
+| Head | Price (souls) | Perk |
 | --- | --- | --- |
-| Pip the Pumpkin | free | Balanced |
+| Hollow Mask | free | Balanced |
 | Bonesy | 150 | Monsters barely knock you back |
-| Boo | 200 | Longer dash that recharges faster |
-| Mittens the Hex | 250 | Jumps higher and runs faster |
+| The Shade | 200 | Longer dash that recharges faster |
+| Stitches | 250 | Jumps higher and runs faster |
 | Count Fang | 300 | Wisp Bolt recharges twice as fast |
 | Wrapz | 350 | Slides down walls slowly |
-| Franky Bolt | 450 | +50% damage |
+| The Rotter | 450 | +50% damage |
 | Wick | 500 | Longer slash reach |
 
 ## Code layout
@@ -73,7 +74,7 @@ js/art.js         sky, moon, clouds, castle, forest, fog, lighting, checkpoints,
 js/world.js       tile map, collision and textured tile art (cached in chunks)
 js/level1.js      Level 1 layout
 js/entities.js    player, mini enemies, obby obstacles (rafts, crumbling stones, bounce pads, fire bars)
-js/boss.js        The Gourd King (Level 10 boss, ready for when Level 10 is built)
+js/boss.js        The Grave Warden (Level 10 boss, ready for when Level 10 is built)
 js/game.js        game loop, camera, checkpoints, deaths/timer, HUD
 js/heads.js       head art and perks
 js/audio.js       synthesized sound effects + boss-only music

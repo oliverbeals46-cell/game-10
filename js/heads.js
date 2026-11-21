@@ -1,15 +1,15 @@
-// The playable "heads". Every head sits on the same hooded body.
+// The playable "heads" — all creepy, no Halloween. Every head sits on the same hooded body.
 // Health is infinite — heads only change how you move or fight.
 // All art is drawn with canvas paths and gradients, so there are no image files.
 const HEADS = [
-  { id: 'pip',     name: 'Pip the Pumpkin', price: 0,   accent: '#ff8c26', perk: 'Balanced. A true classic.', stats: {} },
-  { id: 'bonesy',  name: 'Bonesy',          price: 150, accent: '#e8e2d0', perk: 'Heavy bones: monsters barely knock you back', stats: { knock: 0.35 } },
-  { id: 'boo',     name: 'Boo',             price: 200, accent: '#cfc6ff', perk: 'Longer dash that recharges faster', stats: { dash: 1.35, dashCd: 0.6 } },
-  { id: 'mittens', name: 'Mittens the Hex', price: 250, accent: '#9b5cd6', perk: 'Jumps higher and runs faster', stats: { jump: 1.08, speed: 1.1 } },
-  { id: 'fang',    name: 'Count Fang',      price: 300, accent: '#d0213b', perk: 'Wisp Bolt recharges twice as fast', stats: { boltCd: 0.5 } },
-  { id: 'wrapz',   name: 'Wrapz',           price: 350, accent: '#7cf4ff', perk: 'Sticky bandages: slides down walls slowly', stats: { grip: 0.45 } },
-  { id: 'franky',  name: 'Franky Bolt',     price: 450, accent: '#8bd16a', perk: '+50% attack damage', stats: { dmg: 1.5 } },
-  { id: 'wick',    name: 'Wick',            price: 500, accent: '#ffb347', perk: 'Much longer slash reach', stats: { reach: 1.35 } },
+  { id: 'mask',     name: 'Hollow Mask',   price: 0,   accent: '#d8d0c8', perk: 'Balanced. Always watching.', stats: {} },
+  { id: 'bonesy',   name: 'Bonesy',        price: 150, accent: '#e8e2d0', perk: 'Heavy bones: monsters barely knock you back', stats: { knock: 0.35 } },
+  { id: 'shade',    name: 'The Shade',     price: 200, accent: '#7aa0c0', perk: 'Longer dash that recharges faster', stats: { dash: 1.35, dashCd: 0.6 } },
+  { id: 'stitches', name: 'Stitches',      price: 250, accent: '#b08a50', perk: 'Jumps higher and runs faster', stats: { jump: 1.08, speed: 1.1 } },
+  { id: 'fang',     name: 'Count Fang',    price: 300, accent: '#d0213b', perk: 'Wisp Bolt recharges twice as fast', stats: { boltCd: 0.5 } },
+  { id: 'wrapz',    name: 'Wrapz',         price: 350, accent: '#7cf4ff', perk: 'Sticky bandages: slides down walls slowly', stats: { grip: 0.45 } },
+  { id: 'rotter',   name: 'The Rotter',    price: 450, accent: '#8aa070', perk: '+50% attack damage', stats: { dmg: 1.5 } },
+  { id: 'wick',     name: 'Wick',          price: 500, accent: '#ffb347', perk: 'Much longer slash reach', stats: { reach: 1.35 } },
 ];
 
 function headById(id) { return HEADS.find((h) => h.id === id) || HEADS[0]; }
@@ -71,31 +71,26 @@ function drawHead(ctx, id, t, opts = {}) {
   if (!flash) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; Draw.ell(ctx, 1, 11, 10, 3); }
 
   switch (id) {
-    case 'pip': {
-      // stem
-      ctx.fillStyle = flash ? W : lin(ctx, -2, -10, 6, -18, ['#2f4218', '#5d7a32', '#3a5020']);
-      ctx.beginPath();
-      ctx.moveTo(-2.5, -9.5); ctx.quadraticCurveTo(-1.5, -17, 5, -18.5);
-      ctx.lineTo(6, -15.5); ctx.quadraticCurveTo(2, -14.5, 2.2, -9.5); ctx.closePath(); ctx.fill();
-      // lobes (back to front)
-      ctx.fillStyle = S('#e0661a', '#a8420a', '#4a1602', -6.5, 1, 9); Draw.ell(ctx, -6.5, 1, 7.6, 11);
-      ctx.fillStyle = S('#e86f1f', '#b04a0c', '#4a1602', 6.5, 1, 9); Draw.ell(ctx, 6.5, 1, 7.6, 11);
-      ctx.fillStyle = S('#ffb060', '#e8701c', '#7a2a05', 0, 0, 12); Draw.ell(ctx, 0, 0, 9.2, 12.2);
-      // grooves
-      ctx.strokeStyle = c('rgba(70,20,0,0.55)'); ctx.lineWidth = 0.9;
-      ctx.beginPath(); ctx.ellipse(0, 0.5, 4.2, 11.6, 0, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(0, 0.5, 9, 11.8, 0, -1.2, 1.2); ctx.stroke();
-      // specular highlight
-      if (!flash) { ctx.fillStyle = 'rgba(255,235,200,0.45)'; Draw.ell(ctx, -4.5, -7, 2.6, 1.4, -0.5); }
-      // carved face: dark inner wall first (gives depth), then candle glow
-      const face = (ox, oy) => {
-        Draw.poly(ctx, [-8 + ox, -1 + oy, -2.5 + ox, -1 + oy, -5 + ox, -6.5 + oy]);
-        Draw.poly(ctx, [3 + ox, -1 + oy, 8.5 + ox, -1 + oy, 6 + ox, -6.5 + oy]);
-        Draw.poly(ctx, [-8 + ox, 3 + oy, -5.5 + ox, 5 + oy, -3 + ox, 3 + oy, -0.5 + ox, 5.5 + oy, 2 + ox, 3 + oy, 4.5 + ox, 5.5 + oy, 8.5 + ox, 3 + oy, 6.5 + ox, 8.5 + oy, 0 + ox, 9.5 + oy, -6 + ox, 8.5 + oy]);
-      };
-      ctx.fillStyle = c('#5a1c02'); face(0, 0);
-      ctx.fillStyle = flash ? W : shade(ctx, 0, 2, 10, '#fff6b0', '#ffc43a', '#ff7a10'); G('#ff9b1a', 12);
-      ctx.save(); ctx.translate(0.6, 0.7); ctx.scale(0.92, 0.92); face(0, 0); ctx.restore();
+    case 'mask': {
+      // hood/hair behind the mask
+      ctx.fillStyle = S('#3a3448', '#1a1624', '#050408', 0, -2, 14); Draw.ell(ctx, 0, -1, 12.5, 13.5);
+      // cracked porcelain face
+      ctx.fillStyle = S('#ffffff', '#e6e0d8', '#7e786c', 0, 0, 11); Draw.ell(ctx, 1.2, 1, 9.4, 11.4);
+      ctx.strokeStyle = c('#5e584c'); ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(6, -10); ctx.lineTo(3.5, -5.5); ctx.lineTo(6.5, -2.5); ctx.lineTo(5, 1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-6, 6); ctx.lineTo(-3.5, 8); ctx.stroke();
+      // empty black eyes with dripping black tears
+      ctx.fillStyle = c('#040205');
+      Draw.ell(ctx, -2.4, -1, 2.6, 3.5); Draw.ell(ctx, 5.2, -1, 2.6, 3.5);
+      const drip = 1.5 + Math.sin(t * 1.5) * 1;
+      ctx.fillRect(-3, 1.5, 1.2, 4 + drip); ctx.fillRect(4.8, 1.5, 1, 2.5 + drip * 0.6);
+      Draw.circ(ctx, -2.4, 5.5 + drip, 0.9);
+      ctx.fillStyle = c('#ffffff'); G('#ffffff', 6);
+      Draw.circ(ctx, -2.2, -1.2, 0.55); Draw.circ(ctx, 5.4, -1.2, 0.55);
+      clearGlow(ctx);
+      // thin stitched smile
+      ctx.strokeStyle = c('#3a2a2a'); ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.arc(1.5, 3.5, 4.5, 0.35, Math.PI - 0.35); ctx.stroke();
       break;
     }
     case 'bonesy': {
@@ -123,65 +118,45 @@ function drawHead(ctx, id, t, opts = {}) {
       }
       break;
     }
-    case 'boo': {
-      const wob = Math.sin(t * 5);
-      G('#b9a7ff', 14);
-      ctx.fillStyle = flash ? W : lin(ctx, -8, -12, 8, 12, ['rgba(255,255,255,0.97)', 'rgba(230,224,255,0.92)', 'rgba(170,155,230,0.75)']);
+    case 'shade': {
+      const wob = Math.sin(t * 4);
+      G('#5a7a96', 14);
+      ctx.fillStyle = flash ? W : lin(ctx, 0, -13, 0, 12, ['rgba(70,78,100,0.97)', 'rgba(36,38,54,0.95)', 'rgba(14,14,22,0.75)']);
       ctx.beginPath();
-      ctx.moveTo(-12, 9);
-      ctx.lineTo(-12, -1);
-      ctx.arc(0, -1, 12, Math.PI, 0);
-      ctx.lineTo(12, 9);
-      for (let i = 0; i < 4; i++) {
-        const x0 = 12 - i * 6;
-        ctx.quadraticCurveTo(x0 - 3, 13 + (i % 2 ? wob : -wob) * 2, x0 - 6, 9);
-      }
+      ctx.moveTo(-12, 10); ctx.lineTo(-12, -1); ctx.arc(0, -2, 12, Math.PI, 0); ctx.lineTo(12, 10);
+      const rag = [9, 13, 7, 12, 8, 14, 9];
+      for (let i = 0; i < rag.length; i++) ctx.lineTo(12 - (i + 1) * (24 / (rag.length + 1)), rag[i] + (i % 2 ? wob : -wob) * 1.5);
       ctx.closePath(); ctx.fill();
       clearGlow(ctx);
-      if (!flash) { ctx.fillStyle = 'rgba(255,255,255,0.8)'; Draw.ell(ctx, -5, -8, 3, 1.6, -0.6); }
-      ctx.fillStyle = c('#120c1e'); Draw.ell(ctx, -2.5, -2, 2.5, 3.8); Draw.ell(ctx, 6, -2, 2.5, 3.8);
-      ctx.fillStyle = c('#ffffff'); Draw.circ(ctx, -1.7, -3.5, 1); Draw.circ(ctx, 6.8, -3.5, 1);
-      ctx.fillStyle = c('#120c1e'); Draw.ell(ctx, 2, 4, 1.8, 2.4 + wob * 0.3);
-      ctx.fillStyle = flash ? W : 'rgba(255,130,180,0.45)'; Draw.ell(ctx, -6.5, 2, 2.4, 1.3); Draw.ell(ctx, 10, 2, 2, 1.3);
+      // empty void where a face should be
+      ctx.fillStyle = flash ? W : shade(ctx, 1.5, 0, 9, '#0c0a12', '#050408', '#000000'); Draw.ell(ctx, 1.5, 0.5, 7.5, 9);
+      ctx.strokeStyle = c('rgba(120,130,160,0.35)'); ctx.lineWidth = 0.7;
+      Draw.line(ctx, -7, -8, -4, 6); Draw.line(ctx, 9, -8, 7, 7);
+      ctx.fillStyle = c('#cfe8ff'); G('#8ac8ff', 12);
+      Draw.ell(ctx, -1.2, -1, 1.5, 0.8, 0.25); Draw.ell(ctx, 4.6, -1, 1.5, 0.8, -0.25);
       break;
     }
-    case 'mittens': {
-      const fur = (cx, cy, r) => S('#4a4260', '#1c1828', '#050408', cx, cy, r);
-      // ears
-      ctx.fillStyle = fur(-9, -7, 6);
-      Draw.poly(ctx, [-11, -1, -5, -8, -13, -12]);
-      ctx.fillStyle = fur(9, -7, 6);
-      Draw.poly(ctx, [11, -1, 5, -8, 13, -12]);
-      ctx.fillStyle = c('#c46a96');
-      Draw.poly(ctx, [-10, -3, -7, -7, -11.5, -9.5]);
-      Draw.poly(ctx, [10, -3, 7, -7, 11.5, -9.5]);
-      // head
-      ctx.fillStyle = fur(0, 1, 11); Draw.circ(ctx, 0, 1, 11);
-      // rim light (moonlight)
-      ctx.strokeStyle = c('rgba(170,140,230,0.8)'); ctx.lineWidth = 1.1;
-      ctx.beginPath(); ctx.arc(0, 1, 10.6, -2.6, -0.6); ctx.stroke();
-      // fur tufts on cheeks
-      ctx.fillStyle = c('#1c1828');
-      Draw.poly(ctx, [-10, 4, -13, 6, -10, 7]); Draw.poly(ctx, [10, 4, 13, 6, 10, 7]);
-      // hat
-      ctx.fillStyle = flash ? W : lin(ctx, -6, -20, 6, -10, ['#7a45ad', '#5a2d82', '#2e1248']);
-      ctx.beginPath(); ctx.moveTo(-7, -8); ctx.quadraticCurveTo(-1, -20, 7, -27 + Math.sin(t * 3) * 0.8);
-      ctx.quadraticCurveTo(3, -17, 7, -8); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = flash ? W : lin(ctx, 0, -11.5, 0, -8.5, ['#ffc060', '#e07a10']); ctx.fillRect(-6.5, -11.5, 13, 3);
-      ctx.fillStyle = c('#c8b040'); ctx.fillRect(-1.5, -11.8, 3, 3.6);
-      ctx.fillStyle = flash ? W : lin(ctx, 0, -10, 0, -6, ['#5a2d82', '#2a0f40']); Draw.ell(ctx, 0, -8, 13, 2.6);
-      // eyes
-      ctx.fillStyle = flash ? W : shade(ctx, -3.5, 1, 3.4, '#e0ffb0', '#7dff5a', '#2a9a10'); G('#5cff3a', 10);
-      Draw.ell(ctx, -3.5, 1, 3, 3.4);
-      ctx.fillStyle = flash ? W : shade(ctx, 5.5, 1, 3.4, '#e0ffb0', '#7dff5a', '#2a9a10');
-      Draw.ell(ctx, 5.5, 1, 3, 3.4);
-      clearGlow(ctx);
-      ctx.fillStyle = c('#050408'); Draw.ell(ctx, -3, 1, 0.9, 2.8); Draw.ell(ctx, 6, 1, 0.9, 2.8);
-      ctx.fillStyle = c('#ffffff'); Draw.circ(ctx, -4.4, -0.4, 0.7); Draw.circ(ctx, 4.6, -0.4, 0.7);
-      ctx.fillStyle = c('#e58ab5'); Draw.poly(ctx, [0.5, 5, 2.5, 5, 1.5, 6.5]);
-      ctx.strokeStyle = c('rgba(200,190,230,0.7)'); ctx.lineWidth = 0.5;
-      Draw.line(ctx, -4, 7, -13, 6); Draw.line(ctx, -4, 8, -13, 9.5);
-      Draw.line(ctx, 7, 7, 15, 6); Draw.line(ctx, 7, 8, 15, 9.5);
+    case 'stitches': {
+      // burlap sack head with a twisted top
+      ctx.fillStyle = S('#d2b282', '#9a7c4e', '#3a2a14', 0, 0, 13);
+      ctx.beginPath();
+      ctx.moveTo(-11, 10); ctx.quadraticCurveTo(-13, -6, -5, -11); ctx.quadraticCurveTo(-1, -16, 2, -17);
+      ctx.quadraticCurveTo(3, -13, 6, -11); ctx.quadraticCurveTo(13, -6, 11, 10); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = c('rgba(60,40,20,0.28)'); ctx.lineWidth = 0.6;
+      for (let i = -10; i <= 10; i += 2.5) { Draw.line(ctx, i, -10, i + 1, 10); Draw.line(ctx, -11, i, 11, i + 0.5); }
+      // rope around the neck
+      ctx.fillStyle = flash ? W : lin(ctx, 0, 8, 0, 12, ['#8a6a3a', '#4a3418']); ctx.fillRect(-11, 8, 22, 3.5);
+      ctx.strokeStyle = c('#3a2810'); ctx.lineWidth = 0.6;
+      for (let x = -10; x < 11; x += 2) Draw.line(ctx, x, 8, x + 1.5, 11.5);
+      // one button eye, one X-stitched eye
+      ctx.fillStyle = flash ? W : shade(ctx, -3, -1, 3, '#4a4450', '#18161c', '#000'); Draw.circ(ctx, -3, -1, 2.8);
+      ctx.fillStyle = c('#6a6470'); for (const [dx, dy] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) Draw.circ(ctx, -3 + dx, -1 + dy, 0.4);
+      ctx.strokeStyle = c('#120c08'); ctx.lineWidth = 1.2;
+      Draw.line(ctx, 3.5, -3.5, 7.5, 0.5); Draw.line(ctx, 7.5, -3.5, 3.5, 0.5);
+      // long stitched mouth
+      ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.moveTo(-7, 5); ctx.quadraticCurveTo(1, 7.5, 8, 4.5); ctx.stroke();
+      for (let x = -6; x <= 7; x += 2.2) Draw.line(ctx, x, 4.2 + Math.abs(x) * 0.05, x + 0.4, 7.4);
       break;
     }
     case 'fang': {
@@ -241,24 +216,26 @@ function drawHead(ctx, id, t, opts = {}) {
       ctx.globalAlpha = 0.45; Draw.circ(ctx, -3, -0.3, 1.4); ctx.globalAlpha = 1;
       break;
     }
-    case 'franky': {
-      ctx.fillStyle = flash ? W : lin(ctx, 0, 2, 0, 7, ['#d8dde4', '#80868e', '#4a4f56']);
-      ctx.fillRect(-15, 2, 4, 5); ctx.fillRect(11, 2, 4, 5);
-      ctx.fillStyle = c('#5a6068'); ctx.fillRect(-16.5, 3, 1.8, 3); ctx.fillRect(14.7, 3, 1.8, 3);
-      ctx.fillStyle = S('#b4e08e', '#74ac54', '#2c4a1e', 0, 0, 14); Draw.rr(ctx, -11, -11, 22, 23, 4); ctx.fill();
-      ctx.fillStyle = c('rgba(30,50,20,0.35)'); ctx.fillRect(-11, 8, 22, 4);
-      ctx.fillStyle = flash ? W : lin(ctx, 0, -14, 0, -5, ['#3a3a3a', '#111', '#000']);
-      Draw.poly(ctx, [-12, -14, 12, -14, 12, -7, 9, -5, 6, -7, 3, -5, 0, -7, -3, -5, -6, -7, -9, -5, -12, -7]);
-      ctx.strokeStyle = c('#1e2a16'); ctx.lineWidth = 1;
-      Draw.line(ctx, -9, -2.5, 9, -1.5);
-      for (let x = -7; x <= 7; x += 3.5) Draw.line(ctx, x, -4, x + 0.3, -0.2);
-      ctx.fillStyle = c('#fff6a8'); G('#e8ff5a', 8);
-      Draw.ell(ctx, -3.5, 2.5, 2.6, 2); Draw.ell(ctx, 5.5, 2.5, 2.6, 2);
-      clearGlow(ctx);
-      ctx.fillStyle = c('#4f8436'); ctx.fillRect(-6.5, 0, 6, 2); ctx.fillRect(2.5, 0, 6, 2);
-      ctx.fillStyle = c('#111'); Draw.circ(ctx, -3, 3, 0.9); Draw.circ(ctx, 6, 3, 0.9);
-      ctx.strokeStyle = c('#1e2a16'); ctx.lineWidth = 1.1;
-      Draw.line(ctx, -4, 7.5, 7, 7.5); Draw.line(ctx, 1.5, 6.5, 1.5, 8.5);
+    case 'rotter': {
+      // thin hair strands
+      ctx.strokeStyle = c('#1a1a16'); ctx.lineWidth = 0.8;
+      for (let i = -6; i <= 6; i += 3) Draw.line(ctx, i, -11, i - 2 + Math.sin(t * 2 + i) * 0.6, -15);
+      // decayed skin
+      ctx.fillStyle = S('#b4c4a4', '#6e7e62', '#222a1c', 0, -1, 13); Draw.ell(ctx, 0, -1, 11, 12);
+      ctx.fillStyle = c('rgba(60,30,40,0.4)'); Draw.ell(ctx, -6, -6, 2.5, 1.6); Draw.ell(ctx, 7, 6, 2, 1.4); Draw.ell(ctx, -7, 4, 1.6, 2.2);
+      // sunken eye with a tiny glow
+      ctx.fillStyle = flash ? W : shade(ctx, -3, -1, 4, '#2a1a1a', '#0a0606', '#000'); Draw.ell(ctx, -3, -1, 3, 3.6);
+      ctx.fillStyle = c('#e8ff6a'); G('#c8ff3a', 8); Draw.circ(ctx, -2.6, -0.6, 0.7); clearGlow(ctx);
+      // bulging eye with red veins
+      ctx.fillStyle = flash ? W : shade(ctx, 5.5, -1.5, 4, '#ffffff', '#e8e0d0', '#9a8a7a'); Draw.circ(ctx, 5.5, -1.5, 3.4);
+      ctx.strokeStyle = c('rgba(180,20,30,0.7)'); ctx.lineWidth = 0.5;
+      Draw.line(ctx, 2.4, -1, 4.5, -1.2); Draw.line(ctx, 8.6, -2.5, 6.6, -1.8); Draw.line(ctx, 5, 1.6, 5.3, 0);
+      ctx.fillStyle = c('#0a0606'); Draw.circ(ctx, 6.4, -1.2, 1);
+      // torn mouth showing teeth
+      ctx.fillStyle = c('#2a0a0e'); Draw.rr(ctx, -5, 4.5, 12, 4.5, 1.5); ctx.fill();
+      ctx.fillStyle = c('#5a1a1e'); Draw.ell(ctx, 7, 6.5, 2.5, 2.4);
+      ctx.fillStyle = c('#e8dcc0');
+      for (const [x, h] of [[-4, 2], [-2, 1.6], [0, 2.2], [2, 1.4], [4, 2]]) ctx.fillRect(x, 4.5, 1.4, h);
       break;
     }
     case 'wick': {

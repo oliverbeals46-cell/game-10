@@ -60,11 +60,10 @@ const Game = {
     this.difficulty = D;
     this.enemies = def.enemies.map((e) => {
       if (e.type === 'bat') return new Bat(e.x * TILE, e.y * TILE);
-      if (e.type === 'pumpling') return new Pumpling(e.x * TILE + 4, (e.y + 1) * TILE);
+      if (e.type === 'skitter') return new Skitter(e.x * TILE + 4, (e.y + 1) * TILE);
       return new Crawler(e.x * TILE + 1, (e.y + 1) * TILE);
     });
     this.enemies.forEach((e) => (e.speedMul = D.enemy));
-    this.pickups = def.candy.map(([x, y]) => new Candy(x * TILE + 10, y * TILE + 10));
     this.platforms = def.platforms.map((p) => new Platform(Object.assign({}, p, { period: (p.period || 4) / D.speed, crumble: 0.5 / D.speed })));
     this.pads = def.pads.map((p) => new JumpPad(p));
     this.firebars = def.firebars.map((f) => new FireBar(Object.assign({}, f, { speed: (f.speed || 1.6) * D.speed })));
@@ -73,8 +72,8 @@ const Game = {
     this.projectiles = []; this.particles = []; this.afterimages = []; this.toasts = [];
     this.boss = null;
     this.finishT = 0; this.deathT = 0; this.titleT = 3.2; this.completed = false;
-    this.stats = { candy: 0, deaths: 0, time: 0 };
-    this.shake = 0; this.freeze = 0; this.flashRed = 0; this.time = 0; this.lastCandySfx = 0;
+    this.stats = { souls: 0, deaths: 0, time: 0 };
+    this.shake = 0; this.freeze = 0; this.flashRed = 0; this.time = 0; this.popups = [];
     this.newUnlock = false;
     this.cam = { x: 0, y: 0 };
     this.updateCamera(1, true);
@@ -177,8 +176,8 @@ const Game = {
     }
     this.projectiles = this.projectiles.filter((pr) => !pr.dead);
 
-    for (const c of this.pickups) c.update(dt, this);
-    this.pickups = this.pickups.filter((c) => !c.dead);
+    for (const q of this.popups) { q.t -= dt; q.y -= 30 * dt; }
+    this.popups = this.popups.filter((q) => q.t > 0);
 
     // checkpoints: touch the pad to save your spot (health does NOT refill)
     for (const c of this.checkpoints) {
@@ -292,13 +291,15 @@ const Game = {
     e.dead = true;
     Sfx.play('kill');
     this.burst(e.x + e.w / 2, e.y + e.h / 2, 18, '#a99cc8', 260);
-    for (let i = 0; i < e.candy; i++) this.pickups.push(new Candy(e.x + e.w / 2 - 6, e.y, true));
+    this.earnSouls(e.souls || 5, e.x + e.w / 2, e.y);
   },
 
-  collectCandy() {
-    Save.data.candy++;
-    this.stats.candy++;
-    if (this.time - this.lastCandySfx > 0.05) { Sfx.play('candy'); this.lastCandySfx = this.time; }
+  // Souls are earned (never picked up): defeating monsters and finishing levels.
+  earnSouls(n, x, y) {
+    Save.data.souls += n;
+    this.stats.souls += n;
+    Sfx.play('soul');
+    if (x !== undefined) this.popups.push({ x, y: y - 6, t: 1, text: `+${n} souls` });
     Save.write();
   },
 
@@ -331,6 +332,7 @@ const Game = {
     this.burst(this.finish.x, this.finish.y - 60, 60, '#c070ff', 420);
     this.burst(this.finish.x, this.finish.y - 60, 30, '#ffd84d', 320);
     this.toast('LEVEL COMPLETE!', 3);
+    const firstClear = !Save.data.levels.l1;
     // new attacks unlock every 20 levels (Level 20, 40, ...)
     const atk = ATTACKS.find((a) => a.level === this.def.number && !Save.data.unlocks[a.id]);
     this.newUnlock = atk || null;
@@ -338,6 +340,10 @@ const Game = {
     Save.data.levels.l1 = true;
     const best = Save.data.best.l1;
     this.newRecord = !best || this.stats.time < best;
+    let reward = firstClear ? 100 : 40;
+    if (this.newRecord) reward += 25;
+    if (this.stats.deaths === 0) reward += 25;
+    this.earnSouls(reward);
     this.prevBest = best;
     if (this.newRecord) Save.data.best.l1 = this.stats.time;
     Save.write();
@@ -373,7 +379,7 @@ const Game = {
   onBossDefeated(b) {
     this.bossLock = false; this.world.gateClosed = false; this.projectiles = [];
     Sfx.stopMusic(); Sfx.play('victory');
-    for (let i = 0; i < 60; i++) this.pickups.push(new Candy(b.x + b.w / 2 - 6, b.y + 30, true));
+    this.earnSouls(150, b.x + b.w / 2, b.y);
   },
 
   burst(x, y, n, color, speed) {
@@ -415,7 +421,6 @@ const Game = {
     this.world.draw(ctx, cam, t, this.k);
     for (const pl of this.platforms) if (onScreen(pl.x)) pl.draw(ctx, t);
     for (const pad of this.pads) if (onScreen(pad.x)) pad.draw(ctx, t);
-    for (const c of this.pickups) if (onScreen(c.x, 40)) c.draw(ctx, t);
     for (const e of this.enemies) if (onScreen(e.x)) e.draw(ctx, t);
     if (this.boss) this.boss.draw(ctx, t);
     for (const a of this.afterimages) {
@@ -445,6 +450,12 @@ const Game = {
       const sx2 = s.x * TILE + 16, sy2 = (s.y + 1) * TILE;
       if (Math.abs(p.x + p.w / 2 - sx2) < 70 && Math.abs(p.y + p.h - sy2) < 90) drawBubble(ctx, sx2, sy2 - 56, s.text);
     }
+    ctx.font = '900 13px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const q of this.popups) {
+      ctx.globalAlpha = Math.min(1, q.t * 2);
+      setGlow(ctx, '#5ae0ff', 8); ctx.fillStyle = '#d8fbff'; ctx.fillText(q.text, q.x, q.y); clearGlow(ctx);
+    }
+    ctx.globalAlpha = 1;
     ctx.restore();
 
     drawLeaves(ctx, dt, t);
@@ -478,15 +489,11 @@ const Game = {
 
   drawHUD(ctx) {
     const p = this.player;
-    // candy (top-left)
-    ctx.fillStyle = 'rgba(8,5,16,0.55)'; Draw.rr(ctx, 14, 14, 96, 34, 10); ctx.fill();
-    ctx.save(); ctx.translate(32, 31);
-    ctx.fillStyle = '#ffffff'; Draw.poly(ctx, [-6, 6, 6, 6, 0, -8]);
-    ctx.fillStyle = '#ff9f1a'; Draw.poly(ctx, [-4.6, 2, 4.6, 2, 3, -2, -3, -2]);
-    ctx.fillStyle = '#ffe14d'; Draw.poly(ctx, [-6, 6, 6, 6, 4.6, 2, -4.6, 2]);
-    ctx.restore();
+    // souls (top-left)
+    ctx.fillStyle = 'rgba(8,5,16,0.55)'; Draw.rr(ctx, 14, 14, 110, 34, 10); ctx.fill();
+    drawSoulIcon(ctx, 31, 31, this.t);
     ctx.font = '900 18px Nunito, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#ffd08a'; ctx.fillText(Save.data.candy, 46, 32);
+    ctx.fillStyle = '#bff6ff'; ctx.fillText(Save.data.souls, 46, 32);
     if (Save.data.unlocks.wisp) {
       const ready = p.boltCd <= 0;
       ctx.font = '700 12px Nunito, sans-serif'; ctx.fillStyle = ready ? '#9ff4ff' : '#5a7a80';
@@ -512,9 +519,9 @@ const Game = {
     ctx.fillText(this.stats.deaths === 1 ? 'death' : 'deaths', rx + 32 + ctx.measureText(String(this.stats.deaths)).width * 1.4, 32);
     ctx.textAlign = 'right'; ctx.font = '900 14px Nunito, sans-serif'; ctx.fillStyle = '#fff2dc';
     ctx.fillText(fmtTime(this.stats.time, true), rx + rw - 10, 31);
-    ctx.font = '700 11px Nunito, sans-serif'; ctx.fillStyle = '#ffc27a'; ctx.textAlign = 'left';
+    ctx.font = '700 11px Nunito, sans-serif'; ctx.fillStyle = '#e8a0a0'; ctx.textAlign = 'left';
     ctx.fillText('Best', rx + 10, 58);
-    ctx.textAlign = 'right'; ctx.fillStyle = best ? '#ffd08a' : '#6a6080';
+    ctx.textAlign = 'right'; ctx.fillStyle = best ? '#e8e0cc' : '#6a6080';
     ctx.fillText(best ? fmtTime(best, true) : '--:--.-', rx + rw - 10, 58);
   },
 
@@ -523,8 +530,8 @@ const Game = {
     if (this.titleT > 0) {
       const a = Math.min(1, this.titleT, (3.2 - this.titleT) * 2);
       ctx.globalAlpha = Math.max(0, a);
-      ctx.fillStyle = '#ff9f40'; ctx.font = '64px Creepster, Nunito, cursive';
-      setGlow(ctx, '#ff7a1a', 16);
+      ctx.fillStyle = '#e8e0cc'; ctx.font = '64px Creepster, Nunito, cursive';
+      setGlow(ctx, '#c8102e', 18);
       ctx.fillText(`LEVEL ${this.def.number}`, VIEW_W / 2, 170);
       clearGlow(ctx);
       ctx.fillStyle = '#c9b8f0'; ctx.font = '700 15px Nunito, sans-serif';

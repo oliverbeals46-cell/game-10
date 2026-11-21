@@ -1,4 +1,4 @@
-// Player, mini enemies, obby obstacles, projectiles and pickups.
+// Player, mini enemies, obby obstacles and projectiles.
 const PHYS = {
   GRAV: 2000, MAXFALL: 900, FASTFALL: 1250, RUN: 250, JUMP: 700,
   WJ_X: 260, WJ_Y: 680, WALL_SLIDE: 110,
@@ -336,7 +336,7 @@ class Crawler {
     this.x = x; this.y = y - this.h;
     this.vx = 0; this.vy = 0; this.dir = -1;
     this.hp = 4; this.flash = 0; this.kb = 0; this.dead = false;
-    this.anim = Math.random() * 10; this.candy = 3; this.contact = 1;
+    this.anim = Math.random() * 10; this.souls = 5; this.contact = 1;
   }
   update(dt, g) {
     this.anim += dt; this.flash -= dt;
@@ -393,7 +393,7 @@ class Bat {
     this.w = 26; this.h = 18;
     this.x = x; this.y = y; this.home = { x, y };
     this.vx = 0; this.vy = 0; this.hp = 2; this.flash = 0; this.kb = 0; this.dead = false;
-    this.state = 'idle'; this.anim = Math.random() * 10; this.candy = 3; this.contact = 1; this.facing = 1;
+    this.state = 'idle'; this.anim = Math.random() * 10; this.souls = 5; this.contact = 1; this.facing = 1;
   }
   update(dt, g) {
     this.anim += dt; this.flash -= dt;
@@ -451,14 +451,14 @@ class Bat {
   }
 }
 
-// Pumpling: a little hopping pumpkin that serves the Gourd King (the boss of Level 10).
-// It hops toward you when you get close. Jump over it or slash it.
-class Pumpling {
+// Skitter Skull: a skull on spider legs that hops toward you. It serves the Grave Warden (the boss of Level 10).
+// Jump over it or slash it.
+class Skitter {
   constructor(x, y) {
     this.w = 22; this.h = 20;
     this.x = x; this.y = y - this.h;
     this.vx = 0; this.vy = 0; this.hp = 2; this.flash = 0; this.dead = false;
-    this.hopT = 1 + Math.random(); this.anim = Math.random() * 10; this.candy = 3; this.contact = 1;
+    this.hopT = 1 + Math.random(); this.anim = Math.random() * 10; this.souls = 5; this.contact = 1;
     this.facing = -1; this.squash = 0; this.home = x;
   }
   update(dt, g) {
@@ -472,9 +472,8 @@ class Pumpling {
       if (this.hopT <= 0) {
         const near = Math.abs(dx) < 260 && Math.abs(p.y - this.y) < 120 && !p.dead;
         this.facing = near ? Math.sign(dx) || 1 : (this.x > this.home ? -1 : 1);
-        // don't hop off ledges into hazards
         const tx = Math.floor((this.x + this.w / 2 + this.facing * 70) / TILE), ty = Math.floor((this.y + this.h + 4) / TILE);
-        if (g.world.standable(tx, ty) && !g.world.isHazard(tx, ty - 1)) { this.vy = -520; this.vx = this.facing * 140; }
+        if (g.world.standable(tx, ty) && !g.world.isHazard(tx, ty - 1)) { this.vy = -520; this.vx = this.facing * 140 * (this.speedMul || 1); Sfx.play('skitter'); }
         this.hopT = near ? 0.9 : 1.6;
       }
     }
@@ -485,7 +484,7 @@ class Pumpling {
   hurt(dmg, dir, g) {
     this.hp -= dmg; this.flash = 0.12;
     if (dir) { this.vx = dir * 240; this.vy = -200; }
-    g.burst(this.x + this.w / 2, this.y + this.h / 2, 6, '#ff9f40', 160);
+    g.burst(this.x + this.w / 2, this.y + this.h / 2, 6, '#e8e0cc', 160);
     if (this.hp <= 0) g.killEnemy(this);
   }
   draw(ctx, t) {
@@ -496,16 +495,25 @@ class Pumpling {
     ctx.save();
     ctx.translate(cx, by);
     const sq = this.squash, air = !this.onGround;
-    ctx.scale(this.facing * (1 + sq * 0.25 - (air ? 0.08 : 0)), 1 - sq * 0.25 + (air ? 0.1 : 0));
-    ctx.fillStyle = f ? '#fff' : shade(ctx, -4, -14, 10, '#d0601a', '#a0400a', '#401200'); Draw.ell(ctx, -5, -9, 7, 9);
-    ctx.fillStyle = f ? '#fff' : shade(ctx, 4, -14, 10, '#d0601a', '#a0400a', '#401200'); Draw.ell(ctx, 5, -9, 7, 9);
-    ctx.fillStyle = f ? '#fff' : shade(ctx, 0, -10, 11, '#ffb060', '#e8701c', '#6a2004'); Draw.ell(ctx, 0, -10, 8, 10);
-    ctx.fillStyle = c('#3a5020'); ctx.fillRect(-1.5, -22, 3, 4);
-    ctx.fillStyle = c('#4f7a2a'); Draw.ell(ctx, 4, -21, 4, 1.8, -0.4);
-    ctx.fillStyle = c('#ffd84d'); if (!f) setGlow(ctx, '#ff8a1a', 8);
-    Draw.poly(ctx, [-5, -11, -1, -11, -3, -15]); Draw.poly(ctx, [2, -11, 6, -11, 4, -15]);
-    Draw.poly(ctx, [-5, -7, -2, -5, 0, -7, 2, -5, 5, -7, 3, -3, -3, -3]);
+    ctx.scale(this.facing, 1);
+    // spider legs
+    ctx.strokeStyle = c('#1a1418'); ctx.lineWidth = 1.4;
+    for (let i = 0; i < 4; i++) {
+      const s = i < 2 ? -1 : 1, k = i % 2;
+      const wig = Math.sin(this.anim * 16 + i) * (air ? 0 : 1.5);
+      const kx = s * (8 + k * 3), ky = air ? -14 : -13 + wig;
+      const fx = s * (12 + k * 4), fy = air ? -4 : 0;
+      ctx.beginPath(); ctx.moveTo(s * 3, -9); ctx.lineTo(kx, ky - 4); ctx.lineTo(fx, fy); ctx.stroke();
+    }
+    ctx.scale(1 + sq * 0.2, 1 - sq * 0.2);
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 0, -11, 9, '#fffaf0', '#cfc6ae', '#4a4232'); Draw.circ(ctx, 0, -11, 8);
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 1, -5, 5, '#f4efe2', '#bdb49c', '#4a4232'); Draw.rr(ctx, -4, -7, 9, 5, 2); ctx.fill();
+    ctx.fillStyle = c('#0a0608'); Draw.ell(ctx, -1.5, -11.5, 2.2, 2.6); Draw.ell(ctx, 4, -11.5, 2.2, 2.6);
+    ctx.fillStyle = c('#ff3a3a'); if (!f) setGlow(ctx, '#ff0000', 8);
+    Draw.circ(ctx, -1.2, -11.2, 0.8); Draw.circ(ctx, 4.3, -11.2, 0.8);
     clearGlow(ctx);
+    ctx.strokeStyle = c('#4a4232'); ctx.lineWidth = 0.6;
+    for (let x = -3; x <= 4; x += 1.8) Draw.line(ctx, x, -6.5, x, -3);
     ctx.restore();
   }
 }
@@ -575,7 +583,7 @@ class Platform {
   }
 }
 
-// Bouncy pumpkin mushroom: launches you high into the air.
+// Bounce fungus: a pale glowing mushroom that launches you high into the air.
 class JumpPad {
   constructor(o) { this.x = o.x * TILE + 2; this.y = (o.y + 1) * TILE - 14; this.w = TILE - 4; this.h = 14; this.squish = 0; }
   update(dt, g) {
@@ -587,24 +595,28 @@ class JumpPad {
       p.y = Math.min(p.y, this.y - p.h);
       this.squish = 1;
       Sfx.play('pad');
-      g.burst(this.x + this.w / 2, this.y, 10, '#ff9f40', 200);
+      g.burst(this.x + this.w / 2, this.y, 10, '#9ff0ff', 200);
     }
   }
   draw(ctx, t) {
     const x = this.x + this.w / 2, y = this.y + this.h;
     const sq = this.squish;
     ctx.fillStyle = 'rgba(0,0,0,0.35)'; Draw.ell(ctx, x, y, 15, 3);
-    ctx.fillStyle = lin(ctx, x - 4, 0, x + 4, 0, ['#e8dcc0', '#b8a888']);
-    ctx.fillRect(x - 4, y - 8, 8, 8);
-    ctx.save(); ctx.translate(x, y - 7); ctx.scale(1 + sq * 0.35, 1 - sq * 0.45);
-    ctx.fillStyle = shade(ctx, 0, -5, 15, '#ffc070', '#f07a1e', '#6e2604');
+    ctx.fillStyle = lin(ctx, x - 4, 0, x + 4, 0, ['#d8e4e8', '#8a9aa0']);
+    ctx.fillRect(x - 4, y - 9, 8, 9);
+    ctx.save(); ctx.translate(x, y - 8); ctx.scale(1 + sq * 0.35, 1 - sq * 0.45);
+    setGlow(ctx, '#5ae0ff', 14);
+    ctx.fillStyle = shade(ctx, 0, -6, 15, '#e8ffff', '#6ad8f0', '#123a4a');
     ctx.beginPath(); ctx.ellipse(0, 0, 15, 11, 0, Math.PI, 0); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#fff3c8';
-    for (const [dx, dy, r] of [[-7, -5, 2.2], [3, -8, 2], [8, -3, 1.6], [-1, -3, 1.4]]) Draw.circ(ctx, dx, dy, r);
-    ctx.restore();
-    setGlow(ctx, '#ffae3a', 14); ctx.fillStyle = 'rgba(255,190,90,0.9)';
-    Draw.poly(ctx, [x - 4, y - 26 - Math.sin(t * 5) * 3, x + 4, y - 26 - Math.sin(t * 5) * 3, x, y - 32 - Math.sin(t * 5) * 3]);
     clearGlow(ctx);
+    ctx.strokeStyle = 'rgba(10,40,50,0.5)'; ctx.lineWidth = 0.7;
+    for (let i = -12; i <= 12; i += 4) Draw.line(ctx, i * 0.3, -1, i, 0);
+    ctx.fillStyle = 'rgba(230,255,255,0.8)';
+    for (const [dx, dy, r] of [[-7, -5, 1.6], [3, -8, 1.3], [8, -3, 1.1], [-1, -4, 1]]) Draw.circ(ctx, dx, dy, r);
+    ctx.restore();
+    // drifting spores
+    ctx.fillStyle = 'rgba(160,240,255,0.7)';
+    for (let i = 0; i < 3; i++) { const k = (t * 0.6 + i / 3) % 1; Draw.circ(ctx, x - 6 + i * 6 + Math.sin(t * 2 + i) * 3, y - 20 - k * 22, 1.2 * (1 - k)); }
   }
 }
 
@@ -672,9 +684,9 @@ class Projectile {
   draw(ctx, t) {
     const cx = this.x + this.w / 2, cy = this.y + this.h / 2;
     ctx.save();
-    if (this.type === 'seed') {
+    if (this.type === 'seed') { // bone shard
       ctx.translate(cx, cy); ctx.rotate(this.t * 10);
-      ctx.fillStyle = shade(ctx, 0, 0, 7, '#fff8e0', '#e8d6a0', '#8a7040'); Draw.ell(ctx, 0, 0, 7, 5);
+      ctx.fillStyle = shade(ctx, 0, 0, 7, '#ffffff', '#d8d0b8', '#5a5240'); Draw.rr(ctx, -7, -2, 14, 4, 2); ctx.fill(); Draw.circ(ctx, -7, -2, 2.4); Draw.circ(ctx, -7, 2, 2.4); Draw.circ(ctx, 7, -2, 2.4); Draw.circ(ctx, 7, 2, 2.4);
     } else if (this.type === 'wave') {
       setGlow(ctx, '#ff7a1a', 16);
       const fl = Math.sin(this.t * 30) * 3;
@@ -703,49 +715,7 @@ class Projectile {
   }
 }
 
-/* =========================== PICKUPS & FX =========================== */
-class Candy {
-  constructor(x, y, physics = false) {
-    this.x = x; this.y = y; this.vx = physics ? rand(-160, 160) : 0; this.vy = physics ? rand(-520, -260) : 0;
-    this.w = 12; this.h = 12; this.physics = physics; this.t = Math.random() * 6; this.dead = false;
-    this.kind = Math.random() < 0.5 ? 0 : 1; this.delay = physics ? 0.35 : 0;
-  }
-  update(dt, g) {
-    this.t += dt; this.delay -= dt;
-    const p = g.player;
-    const dx = (p.x + p.w / 2) - (this.x + 6), dy = (p.y + p.h / 2) - (this.y + 6);
-    const d = Math.hypot(dx, dy);
-    if (this.delay <= 0 && d < 70 && !p.dead) {
-      this.physics = false;
-      this.x += (dx / d) * 420 * dt; this.y += (dy / d) * 420 * dt;
-    } else if (this.physics) {
-      this.vy = Math.min(this.vy + PHYS.GRAV * dt, 700);
-      this.vx *= 0.99;
-      moveEntity(g.world, this, dt);
-      if (this.onGround) this.vx *= 0.8;
-    }
-    if (d < 20 && this.delay <= 0 && !p.dead) { this.dead = true; g.collectCandy(this); }
-  }
-  draw(ctx, t) {
-    const bob = this.physics ? 0 : Math.sin(this.t * 3) * 3;
-    ctx.save();
-    ctx.translate(this.x + 6, this.y + 6 + bob);
-    if (this.kind === 0) {
-      ctx.rotate(Math.sin(this.t * 2) * 0.2);
-      ctx.fillStyle = '#fffaf0'; Draw.poly(ctx, [-6, 5, 6, 5, 0, -8]);
-      ctx.fillStyle = '#ff9f1a'; Draw.poly(ctx, [-4.6, 2, 4.6, 2, 3, -2, -3, -2]);
-      ctx.fillStyle = '#ffd84d'; Draw.poly(ctx, [-6, 5, 6, 5, 4.6, 2, -4.6, 2]);
-      ctx.fillStyle = 'rgba(255,255,255,0.6)'; Draw.poly(ctx, [-1.5, -4, 0, -7, 0.5, -3]);
-    } else {
-      ctx.rotate(this.t * 0.8);
-      ctx.fillStyle = '#9a50f0';
-      Draw.poly(ctx, [-5, 0, -10, -4, -10, 4]); Draw.poly(ctx, [5, 0, 10, -4, 10, 4]);
-      ctx.fillStyle = shade(ctx, 0, 0, 5.5, '#f4e0ff', '#c58cff', '#6a20c0'); Draw.circ(ctx, 0, 0, 5);
-    }
-    ctx.restore();
-  }
-}
-
+/* =========================== FX =========================== */
 function makeParticle(x, y, vx, vy, life, color, size, grav = 600) {
   return { x, y, vx, vy, life, max: life, color, size, grav };
 }

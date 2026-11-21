@@ -1,4 +1,4 @@
-// LEVEL 1 (an obby: obstacle course from start to finish). Levels 1–10 share the haunted pumpkin-patch look.
+// LEVEL 1 (an obby: obstacle course from start to finish). Levels 1–10 share the haunted graveyard look.
 // Coordinates are in tiles (32px). Rows grow downward; the main ground is row 30.
 // Bosses only show up every 10–20 levels, so Level 1 has mini enemies only.
 function buildLevel1() {
@@ -50,27 +50,13 @@ function buildLevel1() {
   fill(230, 14, 236, 32, T.EMPTY); fill(230, 30, 236, 32, T.LAVA);
   fill(W - 1, 0, W - 1, H - 1);   // right world edge
 
-  const candy = [
-    [8, 28], [9, 28], [10, 28],
-    [17, 26], [18, 26], [19, 26], [23, 24], [24, 24], [25, 24], [29, 25], [30, 25], [31, 25], [33, 27],
-    [42, 28], [46, 27], [47, 27],
-    [57, 25], [61, 25], [68, 24], [72, 24], [79, 26], [80, 26],
-    [86, 28], [87, 28], [88, 28],
-    [101, 26], [107, 26], [113, 26], [119, 26], [122, 24],
-    [135, 20], [136, 20], [139, 14], [140, 13], [141, 14],
-    [147, 16], [152, 16], [156, 16], [161, 16],
-    [169, 15], [170, 15], [176, 14], [177, 14], [178, 14], [184, 15],
-    [195, 28], [196, 28], [202, 24], [203, 19], [202, 15],
-    [211, 11], [212, 11], [221, 11], [226, 12], [232, 10], [234, 10], [240, 12], [241, 12],
-  ];
-
-  // Mini enemies — jump over them or fight them for candy.
+  // Mini enemies — jump over them or fight them for souls.
   const enemies = [
     { type: 'crawler', x: 44, y: 29 },
     { type: 'bat', x: 87, y: 24 },
-    { type: 'pumpling', x: 90, y: 29 },
-    { type: 'pumpling', x: 139, y: 29 },
-    { type: 'pumpling', x: 215, y: 13 },
+    { type: 'skitter', x: 90, y: 29 },
+    { type: 'skitter', x: 139, y: 29 },
+    { type: 'skitter', x: 215, y: 13 },
     { type: 'bat', x: 184, y: 12 },
     { type: 'crawler', x: 197, y: 29 },
     { type: 'crawler', x: 225, y: 13 },
@@ -95,10 +81,10 @@ function buildLevel1() {
     { x: 4, y: 29, text: '← → to move. ↑ to jump (hold it to jump higher).' },
     { x: 9, y: 29, text: 'Reach the glowing portal at the end! Spikes, lava and fire cost 1 health.' },
     { x: 13, y: 29, text: 'Hop across the floating stones! Press ↑ again in the air to DOUBLE JUMP.' },
-    { x: 41, y: 29, text: 'Mini monsters! Jump over them, or press X to fight them for candy. They only bump you back.' },
+    { x: 41, y: 29, text: 'Mini monsters! Jump over them, or press X to fight them for souls. They only knock you back.' },
     { x: 51, y: 29, text: 'Ride the moving rafts. Press ↓ on a raft to drop through it.' },
     { x: 96, y: 29, text: 'Cracked stones crumble soon after you step on them. Keep moving!' },
-    { x: 130, y: 29, text: 'Bounce on the glowing pumpkins to reach the cliff!' },
+    { x: 130, y: 29, text: 'Bounce on the glowing mushrooms to reach the cliff!' },
     { x: 145, y: 17, text: 'Time your run past the spinning fire.' },
     { x: 165, y: 17, text: 'Press C or Shift to DASH across the big gaps. Dash in mid-air!' },
     { x: 195, y: 29, text: 'Slide down a wall and press ↑ to WALL-JUMP up the shaft.' },
@@ -119,7 +105,7 @@ function buildLevel1() {
     number: 1,
     w: W, h: H, tiles,
     spawn: { x: 3, y: 29 },
-    candy, enemies, platforms, pads, firebars, signs, decor,
+    enemies, platforms, pads, firebars, signs, decor,
     checkpoints: [{ x: 48, y: 29 }, { x: 94, y: 29 }, { x: 128, y: 29 }, { x: 163, y: 17 }, { x: 190, y: 17 }, { x: 207, y: 13 }],
     finish: { x: 244, y: 13 },
   };

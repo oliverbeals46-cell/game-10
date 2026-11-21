@@ -5,16 +5,16 @@
 const WORLDS = [
   {
     id: 1, levels: [1, 10],
-    look: 'A haunted pumpkin patch and graveyard under a purple moon.',
-    enemies: ['Grave Mite (crawler)', 'Vesper Bat (flyer)', 'Pumpling (hopping pumpkin minion)'],
-    boss: 'The Gourd King (Level 10)',
+    look: 'A haunted graveyard and dead forest under a pale moon.',
+    enemies: ['Grave Mite (crawler)', 'Vesper Bat (flyer)', 'Skitter Skull (hopping skull on spider legs)'],
+    boss: 'The Grave Warden (Level 10)',
     pal: {
       sky: ['#05030c', '#160d2c', '#2c1638', '#3d1f34'], star: '#efe8ff', moon: [255, 230, 190],
       far: ['#2a1a42', '#1c1230'], mid: ['#1a1030', '#120a22'], near: ['#0f0819', '#0a0612'],
-      castle: '#1b1230', windows: '#ffb04a', tree: '#0d0a17', bgTree: '#130c22',
+      castle: '#1b1230', windows: '#c8e0a0', tree: '#0d0a17', bgTree: '#130c22',
       fog: [150, 120, 190], haze: [120, 90, 150],
       stone: [44, 38, 64], grass: ['#5e8a62', '#3e6448', '#7aa070', '#2f4c38', '#6b7f5a'], grassTop: ['#4f7656', '#2c4634'], moss: [70, 110, 80],
-      leaves: ['#a0521a', '#7a3a12', '#c0742a', '#5a2a10'], dark: [6, 3, 16], ambient: 0.55,
+      leaves: ['#4a3a30', '#2e2620', '#5a4a44', '#3a3038'], dark: [6, 3, 16], ambient: 0.55,
     },
   },
   {
@@ -70,7 +70,7 @@ const WORLDS = [
       castle: '#24100a', windows: '#ffd06a', tree: '#0e0602', bgTree: '#1e0e06',
       fog: [220, 120, 60], haze: [180, 100, 60],
       stone: [56, 44, 40], grass: ['#7a5a3a', '#5a3a22', '#9a7a4a', '#3a2614', '#6a4a2a'], grassTop: ['#6a4a2a', '#3a2614'], moss: [140, 90, 50],
-      leaves: ['#ff8a2a', '#ffb04a', '#ff5a1a', '#c04010'], dark: [10, 4, 2], ambient: 0.55,
+      leaves: ['#ff6a2a', '#c8401a', '#ff8a3a', '#6a2a14'], dark: [10, 4, 2], ambient: 0.55,
     },
   },
 ];
