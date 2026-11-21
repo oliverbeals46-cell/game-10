@@ -1,6 +1,6 @@
 // Menus, shop and overlays (HTML on top of the canvas).
 const UI = {
-  screens: ['menu', 'howto', 'controls', 'credits', 'shop', 'pause', 'victory'],
+  screens: ['menu', 'levels', 'howto', 'controls', 'credits', 'shop', 'pause', 'victory'],
   shopAnim: null,
 
   init() {
@@ -15,13 +15,17 @@ const UI = {
     for (const s of this.screens) document.getElementById('screen-' + s).classList.add('hidden');
     if (id) document.getElementById('screen-' + id).classList.remove('hidden');
     if (id !== 'shop' && this.shopAnim) { cancelAnimationFrame(this.shopAnim); this.shopAnim = null; }
+    document.getElementById('hud-buttons').classList.toggle('hidden', id !== null || Game.state !== 'playing');
   },
 
   action(a) {
     Sfx.init();
     Sfx.play('click');
     switch (a) {
-      case 'play': this.show(null); Game.startLevel(); break;
+      case 'play': this.openLevels(); break;
+      case 'levels': Game.exitToLevels(); break;
+      case 'next': this.show(null); Game.startLevel(Game.levelNum + 1); this.show(null); break;
+      case 'pausebtn': Game.pause(); break;
       case 'shop':
         if (Game.state !== 'menu') { Game.state = 'menu'; Game.world = null; }
         this.openShop(); break;
@@ -30,8 +34,29 @@ const UI = {
       case 'credits': this.show('credits'); break;
       case 'menu': Game.menuDummy = Game.makeDummy(Save.data.equipped); this.refreshMenu(); this.show('menu'); break;
       case 'resume': Game.resume(); break;
-      case 'restart': this.show(null); Game.startLevel(); break;
+      case 'restart': this.show(null); Game.startLevel(Game.levelNum); this.show(null); break;
       case 'quit': Game.quitToMenu(); break;
+    }
+  },
+
+  // Level select: replay any level you've reached. Levels unlock in order.
+  openLevels() {
+    this.show('levels');
+    const grid = document.getElementById('level-grid');
+    grid.innerHTML = '';
+    const d = Save.data;
+    for (let n = 1; n <= 20; n++) {
+      const built = !!LEVELS[n];
+      const unlocked = built && (n === 1 || d.levels['l' + (n - 1)]);
+      const cleared = !!d.levels['l' + n];
+      const best = d.best['l' + n];
+      const b = document.createElement('button');
+      b.className = 'lvl' + (unlocked ? '' : ' locked') + (cleared ? ' cleared' : '') + (isBossLevel(n) ? ' boss' : '');
+      b.innerHTML = `<span class="num">${n}</span>` +
+        (isBossLevel(n) ? '<span class="tag">BOSS</span>' : '') +
+        `<span class="info">${!built ? 'Coming soon' : !unlocked ? 'Locked' : best ? 'Best ' + fmtTime(best, true) : 'Not cleared'}</span>`;
+      if (unlocked) b.addEventListener('click', () => { Sfx.play('click'); this.show(null); Game.startLevel(n); this.show(null); });
+      grid.appendChild(b);
     }
   },
 
@@ -39,9 +64,8 @@ const UI = {
     const d = Save.data;
     document.getElementById('menu-candy').innerHTML = `Souls: <b>${d.souls}</b>`;
     document.getElementById('menu-equipped').innerHTML = `Head: <b>${headById(d.equipped).name}</b>`;
-    document.getElementById('menu-progress').innerHTML = d.levels.l1
-      ? `Level 1: <b>Cleared</b>${d.best.l1 ? ` (best ${fmtTime(d.best.l1, true)})` : ''}`
-      : 'Level 1: <b>Not cleared</b>';
+    const cleared = Object.keys(d.levels).filter((k) => d.levels[k]).length;
+    document.getElementById('menu-progress').innerHTML = `Levels cleared: <b>${cleared}</b>`;
   },
 
   openShop() {
@@ -126,6 +150,11 @@ const UI = {
       document.querySelector('#screen-victory .unlock-name').textContent = na ? na.name : '';
       document.querySelector('#screen-victory .unlock-desc').textContent = na ? `Unlocks after you beat Level ${na.level}. A new attack every 20 levels!` : '';
     }
+    const nb = document.getElementById('btn-next');
+    const hasNext = !!LEVELS[Game.levelNum + 1];
+    nb.disabled = !hasNext;
+    nb.textContent = hasNext ? `Level ${Game.levelNum + 1}` : `Level ${Game.levelNum + 1} coming soon`;
+    document.querySelector('#screen-victory h2').textContent = `Level ${Game.levelNum} Complete!`;
     this.show('victory');
   },
 };
@@ -138,3 +167,4 @@ function fmtTime(s, tenths) {
 
 Game.init();
 UI.init();
+document.querySelectorAll('#hud-buttons button').forEach((b) => b.addEventListener('mousedown', (e) => e.preventDefault()));

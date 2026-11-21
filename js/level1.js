@@ -110,3 +110,7 @@ function buildLevel1() {
     finish: { x: 244, y: 13 },
   };
 }
+
+// Registry of built levels. Add LEVELS[2] = buildLevel2, etc. as new levels are made.
+const LEVELS = { 1: buildLevel1 };
+const PLANNED_LEVELS = 50;

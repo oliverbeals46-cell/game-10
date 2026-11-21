@@ -47,8 +47,11 @@ const Game = {
   },
 
   /* ---------------- level lifecycle ---------------- */
-  startLevel() {
-    const def = buildLevel1();
+  startLevel(n = this.levelNum || 1) {
+    if (!LEVELS[n]) n = 1;
+    this.levelNum = n;
+    this.key = 'l' + n;
+    const def = LEVELS[n]();
     this.def = def;
     Art.applyTheme(themeForLevel(def.number));
     this.world = new World(def);
@@ -85,6 +88,7 @@ const Game = {
 
   pause() { if (this.state !== 'playing') return; this.state = 'paused'; UI.show('pause'); },
   resume() { this.state = 'playing'; UI.show(null); this.last = performance.now(); if (document.activeElement) document.activeElement.blur(); },
+  exitToLevels() { this.state = 'menu'; this.world = null; Sfx.stopMusic(); Save.write(); Art.applyTheme(themeForLevel(1)); this.menuDummy = this.makeDummy(Save.data.equipped); UI.openLevels(); },
   quitToMenu() { this.state = 'menu'; this.world = null; Art.applyTheme(themeForLevel(1)); Sfx.stopMusic(); Save.write(); this.menuDummy = this.makeDummy(Save.data.equipped); UI.refreshMenu(); UI.show('menu'); },
 
   /* ---------------- main loop ---------------- */
@@ -332,27 +336,27 @@ const Game = {
     this.burst(this.finish.x, this.finish.y - 60, 60, '#c070ff', 420);
     this.burst(this.finish.x, this.finish.y - 60, 30, '#ffd84d', 320);
     this.toast('LEVEL COMPLETE!', 3);
-    const firstClear = !Save.data.levels.l1;
+    const firstClear = !Save.data.levels[this.key];
     // new attacks unlock every 20 levels (Level 20, 40, ...)
     const atk = ATTACKS.find((a) => a.level === this.def.number && !Save.data.unlocks[a.id]);
     this.newUnlock = atk || null;
     if (atk) Save.data.unlocks[atk.id] = true;
-    Save.data.levels.l1 = true;
-    const best = Save.data.best.l1;
+    Save.data.levels[this.key] = true;
+    const best = Save.data.best[this.key];
     this.newRecord = !best || this.stats.time < best;
     let reward = firstClear ? 100 : 40;
     if (this.newRecord) reward += 25;
     if (this.stats.deaths === 0) reward += 25;
     this.earnSouls(reward);
     this.prevBest = best;
-    if (this.newRecord) Save.data.best.l1 = this.stats.time;
+    if (this.newRecord) Save.data.best[this.key] = this.stats.time;
     Save.write();
     this.finishT = 1.8;
   },
 
   showVictory() {
     this.state = 'victory';
-    UI.showVictory(this.stats, this.newUnlock, Save.data.best.l1, this.newRecord);
+    UI.showVictory(this.stats, this.newUnlock, Save.data.best[this.key], this.newRecord);
   },
 
   // ---- boss support (bosses appear every 10–20 levels; Level 1 has none) ----
@@ -448,7 +452,7 @@ const Game = {
     ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
     for (const s of this.def.signs) {
       const sx2 = s.x * TILE + 16, sy2 = (s.y + 1) * TILE;
-      if (Math.abs(p.x + p.w / 2 - sx2) < 70 && Math.abs(p.y + p.h - sy2) < 90) drawBubble(ctx, sx2, sy2 - 56, s.text);
+      if (Math.abs(p.x + p.w / 2 - sx2) < 70 && Math.abs(p.y + p.h - sy2) < 90) drawBubble(ctx, sx2, sy2 - 56, s.text, cam.x, cam.x + VIEW_W);
     }
     ctx.font = '900 13px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const q of this.popups) {
@@ -509,7 +513,7 @@ const Game = {
     ctx.fillStyle = '#d8ccf0'; ctx.fillText(label, VIEW_W / 2, 28);
 
     // deaths, time and best time (top-right)
-    const best = Save.data.best.l1;
+    const best = Save.data.best[this.key];
     const rw = 132, rx = VIEW_W - rw - 14;
     ctx.fillStyle = 'rgba(8,5,16,0.55)'; Draw.rr(ctx, rx, 14, rw, 62, 10); ctx.fill();
     ctx.save(); ctx.translate(rx + 16, 30); ctx.scale(0.55, 0.55); drawHead(ctx, 'bonesy', this.t, { glow: false }); ctx.restore();

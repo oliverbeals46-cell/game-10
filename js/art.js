@@ -93,24 +93,40 @@ const Art = {
     });
   },
 
+  // Dead trees: smooth tapered branches (no seams), drawn in a big enough box that nothing gets cut off.
   makeTree(seed, color, scale) {
-    const w = 200, h = 230;
+    const w = 380, h = 320;
     return this.sprite(w, h, (ctx) => {
       const r = mulberry32(seed * 31 + 5);
-      ctx.strokeStyle = color; ctx.lineCap = 'round';
-      const branch = (x, y, len, ang, wid, depth) => {
-        const x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
-        ctx.lineWidth = wid;
-        ctx.beginPath(); ctx.moveTo(x, y);
-        ctx.quadraticCurveTo((x + x2) / 2 + (r() - 0.5) * len * 0.3, (y + y2) / 2, x2, y2); ctx.stroke();
-        if (depth <= 0 || wid < 0.8) return;
-        const n = 2 + (r() < 0.35 ? 1 : 0);
-        for (let i = 0; i < n; i++) branch(x2, y2, len * (0.62 + r() * 0.18), ang + (r() - 0.5) * 1.3, wid * 0.62, depth - 1);
-      };
-      // roots + trunk
       ctx.fillStyle = color;
-      Draw.poly(ctx, [w / 2 - 14 * scale, h, w / 2 - 5, h - 30, w / 2 + 5, h - 30, w / 2 + 16 * scale, h]);
-      branch(w / 2, h - 2, 60 * scale + r() * 20, -Math.PI / 2 + (r() - 0.5) * 0.3, 11 * scale, 6);
+      const seg = (x, y, len, ang, wid, depth) => {
+        const x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len, w2 = wid * 0.66;
+        const nx = -Math.sin(ang), ny = Math.cos(ang);
+        ctx.beginPath();
+        ctx.moveTo(x + nx * wid / 2, y + ny * wid / 2);
+        ctx.lineTo(x2 + nx * w2 / 2, y2 + ny * w2 / 2);
+        ctx.lineTo(x2 - nx * w2 / 2, y2 - ny * w2 / 2);
+        ctx.lineTo(x - nx * wid / 2, y - ny * wid / 2);
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(x2, y2, w2 / 2, 0, Math.PI * 2); ctx.fill();
+        if (depth <= 0 || w2 < 0.6) return;
+        const n = 2 + (r() < 0.3 ? 1 : 0);
+        for (let i = 0; i < n; i++) {
+          const spread = 0.3 + r() * 0.55;
+          let a = ang + (n === 2 ? (i ? spread : -spread) : (i - 1) * spread) + (r() - 0.5) * 0.2;
+          a = a * 0.88 + (-Math.PI / 2) * 0.12 + (r() < 0.2 ? (r() - 0.5) * 0.8 : 0); // upward-ish, with crooked twists // branches reach upward, not sideways forever
+          seg(x2, y2, len * (0.7 + r() * 0.1), a, w2, depth - 1);
+        }
+      };
+      const bx = w / 2, by = h, tw = 12 * scale;
+      // flared roots that blend into the trunk
+      ctx.beginPath();
+      ctx.moveTo(bx - tw * 1.8, by);
+      ctx.quadraticCurveTo(bx - tw * 0.6, by - 4, bx - tw / 2, by - 22);
+      ctx.lineTo(bx + tw / 2, by - 22);
+      ctx.quadraticCurveTo(bx + tw * 0.6, by - 4, bx + tw * 1.9, by);
+      ctx.closePath(); ctx.fill();
+      seg(bx, by - 20, (50 + r() * 14) * scale, -Math.PI / 2 + (r() - 0.5) * 0.15, tw, 6);
     });
   },
 
@@ -166,15 +182,15 @@ function drawBackground(ctx, camX, camY, t) {
 
   // mid ridge with a dead forest
   const midY = ridge(ctx, camX * 0.22, camY * 0.12, 395, 30, 0.006, TH.mid, 1);
-  const spacing = 170, ox = camX * 0.22;
+  const spacing = 200, ox = camX * 0.22;
   const start = Math.floor(ox / spacing) - 1;
   for (let i = start; i < start + VIEW_W / spacing + 3; i++) {
     const r = hash2(i, 77);
     if (r < 0.3) continue;
     const sp = Art.bgTrees[((i % 3) + 3) % 3];
     const wx = i * spacing + r * 80, sx = wx - ox;
-    const s = 0.6 + r * 0.5;
-    ctx.drawImage(sp.cv, sx - sp.w * s / 2, midY(wx) - sp.h * s + 8, sp.w * s, sp.h * s);
+    const s = 0.5 + r * 0.4;
+    ctx.drawImage(sp.cv, sx - sp.w * s / 2, midY(wx) - sp.h * s + 6, sp.w * s, sp.h * s);
   }
   fogBand(ctx, 400 - camY * 0.12, 100, hexA(TH.haze, 0.16 * TH.fogMul));
 
@@ -236,7 +252,8 @@ function drawDecor(ctx, d, t) {
     ctx.restore();
   } else if (d.type === 'tree') {
     const sp = Art.trees[Math.min(3, Math.floor(hash2(d.x || x, 5) * 4))];
-    ctx.drawImage(sp.cv, x - sp.w / 2, y - sp.h + 4, sp.w, sp.h);
+    const k = 0.8;
+    ctx.drawImage(sp.cv, x - sp.w * k / 2, y - sp.h * k + 2, sp.w * k, sp.h * k);
   } else if (d.type === 'shroom') {
     const gl = 0.65 + Math.sin(t * 2 + x) * 0.2;
     ctx.fillStyle = lin(ctx, x - 2, 0, x + 2, 0, ['#e8f4f0', '#9ab8b0']); ctx.fillRect(x - 2, y - 10, 4, 10); ctx.fillRect(x + 8, y - 6, 3, 6); ctx.fillRect(x - 9, y - 5, 2.5, 5);
@@ -321,7 +338,7 @@ function drawSignPost(ctx, s) {
   ctx.fillText('?', x, y - 27);
 }
 
-function drawBubble(ctx, x, y, text) {
+function drawBubble(ctx, x, y, text, minX = -1e9, maxX = 1e9) {
   ctx.font = '700 13px Nunito, sans-serif';
   const words = text.split(' '), lines = [];
   let line = '';
@@ -332,12 +349,12 @@ function drawBubble(ctx, x, y, text) {
   lines.push(line);
   const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 24;
   const h = lines.length * 17 + 14;
-  const bx = x - w / 2, by = y - h;
+  const bx = clamp(x - w / 2, minX + 8, maxX - w - 8), by = y - h;
   ctx.fillStyle = 'rgba(12,8,24,0.92)'; Draw.rr(ctx, bx, by, w, h, 8); ctx.fill();
   ctx.strokeStyle = '#7a52b8'; ctx.lineWidth = 1.5; Draw.rr(ctx, bx, by, w, h, 8); ctx.stroke();
   ctx.fillStyle = 'rgba(12,8,24,0.92)'; Draw.poly(ctx, [x - 7, by + h, x + 7, by + h, x, by + h + 8]);
   ctx.fillStyle = '#f3ecff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  lines.forEach((l, i) => ctx.fillText(l, x, by + 8 + i * 17));
+  lines.forEach((l, i) => ctx.fillText(l, bx + w / 2, by + 8 + i * 17));
 }
 
 /* ---------------- lighting ---------------- */
