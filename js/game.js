@@ -47,8 +47,9 @@ const Game = {
   },
 
   /* ---------------- level lifecycle ---------------- */
-  startLevel(n = this.levelNum || 1) {
+  startLevel(n = this.levelNum || 1, fresh = false) {
     if (!LEVELS[n]) n = 1;
+    if (fresh) Save.clearResume();
     this.levelNum = n;
     this.key = 'l' + n;
     const def = LEVELS[n]();
@@ -61,7 +62,9 @@ const Game = {
     this.player = new Player(this.checkpoint.x, this.checkpoint.y, Save.data.equipped);
     this.pickups = def.shards.map(([x, y]) => new Shard(x * TILE + 16, y * TILE + 16));
     this.pickups.push(...(def.bigShards || []).map(([x, y]) => new Shard(x * TILE + 16, y * TILE + 16, { big: true })));
+    this.pickups.forEach((s, i) => (s.id = i));
     this.shardTotal = this.pickups.reduce((n, s) => n + s.value, 0);
+    this.taken = [];
     const D = difficultyForLevel(def.number);
     this.difficulty = D;
     this.enemies = def.enemies.map((e) => {
@@ -82,6 +85,22 @@ const Game = {
     this.shake = 0; this.freeze = 0; this.flashRed = 0; this.time = 0; this.popups = []; this.lastShardSfx = 0;
     this.newUnlock = false;
     this.cam = { x: 0, y: 0 };
+    // Continue where the player left off (they closed the tab mid-level)
+    const r = Save.data.resume;
+    if (r && r.level === n) {
+      const cp = this.checkpoints[r.checkpoint - 1];
+      if (cp) {
+        for (const c of this.checkpoints) if (c.n <= r.checkpoint) c.lit = true;
+        this.checkpoint = { x: cp.x - 10, y: cp.y - 30 };
+        this.player.x = this.checkpoint.x; this.player.y = this.checkpoint.y;
+      }
+      this.stats.time = r.time || 0; this.stats.deaths = r.deaths || 0; this.stats.shards = r.shards || 0;
+      this.taken = Array.isArray(r.taken) ? r.taken.slice() : [];
+      const t = new Set(this.taken);
+      this.pickups = this.pickups.filter((s) => !t.has(s.id));
+      this.titleT = 0;
+      this.toast(cp ? `Welcome back! Continuing from checkpoint ${r.checkpoint}` : 'Welcome back!', 2.6);
+    }
     this.updateCamera(1, true);
     this.state = 'playing';
     this.acc = 0;
@@ -91,8 +110,14 @@ const Game = {
 
   pause() { if (this.state !== 'playing') return; this.state = 'paused'; UI.show('pause'); },
   resume() { this.state = 'playing'; UI.show(null); this.last = performance.now(); if (document.activeElement) document.activeElement.blur(); },
-  exitToLevels() { this.state = 'menu'; this.world = null; Sfx.stopMusic(); Save.write(); Art.applyTheme(themeForLevel(1)); this.menuDummy = this.makeDummy(Save.data.equipped); UI.openLevels(); },
-  quitToMenu() { this.state = 'menu'; this.world = null; Art.applyTheme(themeForLevel(1)); Sfx.stopMusic(); Save.write(); this.menuDummy = this.makeDummy(Save.data.equipped); UI.refreshMenu(); UI.show('menu'); },
+  // Save mid-level progress so closing the tab never loses it.
+  saveResume() {
+    if (!this.world || this.completed) return;
+    const lit = this.checkpoints.filter((c) => c.lit).length;
+    Save.setResume({ level: this.levelNum, checkpoint: lit, time: this.stats.time, deaths: this.stats.deaths, shards: this.stats.shards, taken: this.taken });
+  },
+  exitToLevels() { this.saveResume(); this.state = 'menu'; this.world = null; Sfx.stopMusic(); Save.write(); Art.applyTheme(themeForLevel(1)); this.menuDummy = this.makeDummy(Save.data.equipped); UI.openLevels(); },
+  quitToMenu() { this.saveResume(); this.state = 'menu'; this.world = null; Art.applyTheme(themeForLevel(1)); Sfx.stopMusic(); Save.write(); this.menuDummy = this.makeDummy(Save.data.equipped); UI.refreshMenu(); UI.show('menu'); },
 
   /* ---------------- main loop ---------------- */
   loop(now) {
@@ -197,7 +222,7 @@ const Game = {
         Sfx.play('checkpoint');
         this.burst(c.x, c.y - 30, 26, '#7dffb0', 220);
         this.toast(`Checkpoint ${c.n} / ${this.checkpoints.length}!`, 2);
-        Save.write();
+        this.saveResume();
       }
     }
 
@@ -307,9 +332,10 @@ const Game = {
   collectShard(s) {
     Save.data.shards += s.value;
     this.stats.shards += s.value;
+    if (s.id !== undefined) this.taken.push(s.id);
     if (s.big) { Sfx.play('bigshard'); this.popups.push({ x: s.x + s.w / 2, y: s.y - 6, t: 1, text: '+5 shards' }); this.burst(s.x + s.w / 2, s.y + s.h / 2, 14, '#c070ff', 200); }
     else if (this.time - this.lastShardSfx > 0.05) { Sfx.play('shard'); this.lastShardSfx = this.time; }
-    Save.write();
+    this.saveResume();
   },
 
   // Obby death: quick flash, then back to the last checkpoint. Health is infinite; only deaths are counted.
@@ -319,6 +345,7 @@ const Game = {
     p.dead = true;
     this.stats.deaths++;
     this.deathT = 0.75;
+    this.saveResume();
     Sfx.play('die');
     this.shake = 8; this.flashRed = 0.3;
     this.burst(p.x + p.w / 2, p.y + p.h / 2, 30, headById(p.head).accent, 320);
@@ -352,6 +379,7 @@ const Game = {
     if (this.newRecord) Save.data.best[this.key] = this.stats.time;
     Save.data.shardBest = Save.data.shardBest || {};
     Save.data.shardBest[this.key] = Math.max(Save.data.shardBest[this.key] || 0, this.stats.shards);
+    Save.data.resume = null;
     Save.write();
     this.finishT = 1.8;
   },

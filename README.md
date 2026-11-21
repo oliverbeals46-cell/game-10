@@ -32,6 +32,17 @@ No build step is needed. It's plain HTML, CSS and JavaScript.
 - **No wall climbing.** If you miss a jump, only your double jump can save you.
 - **No Halloween anywhere.** Everything is creepy and scary instead.
 
+## Saving (never lose progress)
+
+Progress saves automatically in the player's browser: shards, heads, cleared levels, best times, and **where you are inside a level** (continue from your last checkpoint after closing the tab).
+
+Rules for every future update (see `js/save.js`):
+- The save key never changes, and updates only **add** or **convert** data, never delete it.
+- New levels and new shop heads just add entries, so existing saves keep working.
+- Every save also writes a backup copy. A damaged save falls back to the backup.
+
+Saves live in each browser, so a different computer or a private/incognito window starts fresh.
+
 ## Level plan
 
 - Levels are just numbered (Level 1, 2, 3...). There are no separate named worlds.

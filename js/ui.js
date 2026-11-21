@@ -34,7 +34,7 @@ const UI = {
       case 'credits': this.show('credits'); break;
       case 'menu': Game.menuDummy = Game.makeDummy(Save.data.equipped); this.refreshMenu(); this.show('menu'); break;
       case 'resume': Game.resume(); break;
-      case 'restart': this.show(null); Game.startLevel(Game.levelNum); this.show(null); break;
+      case 'restart': this.show(null); Game.startLevel(Game.levelNum, true); this.show(null); break;
       case 'quit': Game.quitToMenu(); break;
     }
   },
@@ -55,7 +55,8 @@ const UI = {
       b.innerHTML = `<span class="num">${n}</span>` +
         (isBossLevel(n) ? '<span class="tag">BOSS</span>' : '') +
         `<span class="info">${!built ? 'Coming soon' : !unlocked ? 'Locked' : best ? 'Best ' + fmtTime(best, true) : 'Not cleared'}</span>` +
-        (built && unlocked && d.shardBest && d.shardBest['l' + n] !== undefined ? `<span class="info shards">Shards ${d.shardBest['l' + n]}</span>` : '');
+        (built && unlocked && d.shardBest && d.shardBest['l' + n] !== undefined ? `<span class="info shards">Shards ${d.shardBest['l' + n]}</span>` : '') +
+        (d.resume && d.resume.level === n ? `<span class="info cont">&#9654; Continue${d.resume.checkpoint ? ' · CP ' + d.resume.checkpoint : ''}</span>` : '');
       if (unlocked) b.addEventListener('click', () => { Sfx.play('click'); this.show(null); Game.startLevel(n); this.show(null); });
       grid.appendChild(b);
     }
