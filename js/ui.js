@@ -64,7 +64,7 @@ const UI = {
     }
   },
 
-  // Secret code. Only a scrambled fingerprint (hash) of the code is stored here, not the code itself.
+  // Code entry (only a hash is stored).
   CODE_HASH: 'f5340a20d53171f3dc26dab6d42febc25c1b2d27753879ba6e72e73a6b5b5aed',
   openCode() {
     this.show('code');
