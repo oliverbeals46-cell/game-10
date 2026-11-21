@@ -631,17 +631,19 @@ const Game = {
 
   renderMenuScene(ctx, dt) {
     const t = this.t;
-    const camX = t * 10; // slow, calm drift on the menu
+    // The menu scenery stands still (only fog, clouds and leaves drift), so nothing can jitter.
+    const camX = 400;
     drawBackground(ctx, camX, 300, t);
     // ground strip
     const gg = ctx.createLinearGradient(0, 470, 0, 540);
     gg.addColorStop(0, '#2a2240'); gg.addColorStop(0.2, '#141020'); gg.addColorStop(1, '#07050c');
     ctx.fillStyle = gg; ctx.fillRect(0, 470, VIEW_W, 70);
     ctx.fillStyle = '#3e6448'; ctx.fillRect(0, 468, VIEW_W, 4);
-    for (let i = 0; i < 6; i++) {
-      const gx = ((i * 230 - camX) % 1380 + 1380) % 1380 - 200;
-      drawDecor(ctx, { type: i % 3 === 0 ? 'tree' : i % 2 ? 'grave' : 'shroom', px: gx, py: 470, seed: i + 1 }, t);
-    }
+    const MENU_DECOR = [
+      { type: 'grave', px: 24, seed: 3 }, { type: 'tree', px: 455, seed: 1 }, { type: 'shroom', px: 330, seed: 5 },
+      { type: 'grave', px: 560, seed: 2 }, { type: 'shroom', px: 830, seed: 7 }, { type: 'grave', px: 925, seed: 4 },
+    ];
+    for (const m of MENU_DECOR) drawDecor(ctx, Object.assign({ py: 470 }, m), t);
     const d = this.menuDummy;
     d.anim = t;
     ctx.save();
@@ -653,7 +655,7 @@ const Game = {
     ctx.restore();
     drawLighting(ctx, [
       { x: 700, y: 360, r: 340, i: 0.95, c: 'rgba(255,200,140,0.10)' },
-      { x: 740, y: 120, r: 380, i: 0.5 },
+      { x: THEME.moonX - (400 * 0.02) % 300, y: THEME.moonY - 6, r: 380, i: 0.5 },
     ], { x: 0, y: 0 }, 0.45);
     drawLeaves(ctx, dt, t);
     const sh = ctx.createLinearGradient(0, 0, 560, 0);
