@@ -121,3 +121,5 @@ kbd {
 .unlock-title { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #7cf4ff; }
 .unlock-name { font-family: 'Creepster', cursive; font-size: 32px; color: #c9fbff; text-shadow: 0 0 12px #7cf4ff; }
 .unlock-desc { font-size: 14px; color: #d9d0f0; }
+
+.stats .rec { color: #5cff9a; font-weight: 900; }

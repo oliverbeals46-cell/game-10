@@ -1,0 +1,378 @@
+// Scenery art: sky, moon, clouds, castle, forest, fog, decorations, checkpoints, portal and lighting.
+// Expensive pieces are painted once into off-screen "sprites" and reused every frame.
+const Art = {
+  ready: false,
+
+  init() {
+    this.rng = mulberry32(1337);
+    this.clouds = [0, 1, 2].map((i) => this.makeCloud(i));
+    this.applyTheme(themeForLevel(1));
+    this.stars = Array.from({ length: 170 }, () => ({ x: Math.random() * 2400, y: Math.random() * 360, r: Math.random() * 1.3 + 0.3, p: Math.random() * 6 }));
+    this.leaves = Array.from({ length: 22 }, () => this.newLeaf(true));
+    this.light = document.createElement('canvas');
+    this.light.width = VIEW_W / 2; this.light.height = VIEW_H / 2;
+    this.lctx = this.light.getContext('2d');
+    this.ready = true;
+  },
+
+  // Rebuild the scenery sprites in the colours of the current level's theme.
+  applyTheme(theme) {
+    if (THEME && THEME.level === theme.level) return;
+    THEME = theme;
+    this.moon = this.makeMoon(theme.moon);
+    this.castle = this.makeCastle(theme.castle, theme.windows);
+    this.trees = [0, 1, 2, 3].map((i) => this.makeTree(i, theme.tree, 1));
+    this.bgTrees = [0, 1, 2].map((i) => this.makeTree(i + 10, theme.bgTree, 0.7));
+    if (this.leaves) this.leaves.forEach((l) => (l.col = theme.leaves[Math.floor(Math.random() * theme.leaves.length)]));
+  },
+
+  sprite(w, h, fn) {
+    const cv = document.createElement('canvas');
+    cv.width = w * 2; cv.height = h * 2;
+    const ctx = cv.getContext('2d'); ctx.scale(2, 2);
+    fn(ctx);
+    return { cv, w, h };
+  },
+
+  makeMoon(m) {
+    const mix = (k) => `rgb(${Math.round(m[0] * k)},${Math.round(m[1] * k)},${Math.round(m[2] * k)})`;
+    return this.sprite(360, 360, (ctx) => {
+      const c = 180;
+      const halo = ctx.createRadialGradient(c, c, 40, c, c, 180);
+      halo.addColorStop(0, hexA(m, 0.45)); halo.addColorStop(0.35, hexA(m, 0.12)); halo.addColorStop(1, hexA(m, 0));
+      ctx.fillStyle = halo; ctx.fillRect(0, 0, 360, 360);
+      const g = ctx.createRadialGradient(c - 16, c - 18, 6, c, c, 52);
+      g.addColorStop(0, '#fffaf0'); g.addColorStop(0.6, mix(0.95)); g.addColorStop(1, mix(0.72));
+      ctx.fillStyle = g; Draw.circ(ctx, c, c, 50);
+      const r = mulberry32(7);
+      for (let i = 0; i < 26; i++) {
+        const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 42, x = c + Math.cos(a) * d, y = c + Math.sin(a) * d, s = 2 + r() * 8;
+        const cg = ctx.createRadialGradient(x - s * 0.3, y - s * 0.3, 0, x, y, s);
+        cg.addColorStop(0, 'rgba(150,120,90,0.35)'); cg.addColorStop(1, 'rgba(150,120,90,0)');
+        ctx.fillStyle = cg; Draw.circ(ctx, x, y, s);
+      }
+      // terminator shadow for a round, 3D moon
+      const sh = ctx.createRadialGradient(c + 30, c + 24, 20, c, c, 60);
+      sh.addColorStop(0, 'rgba(40,20,40,0.35)'); sh.addColorStop(1, 'rgba(40,20,40,0)');
+      ctx.fillStyle = sh; Draw.circ(ctx, c, c, 50);
+    });
+  },
+
+  makeCloud(seed) {
+    return this.sprite(460, 140, (ctx) => {
+      const r = mulberry32(100 + seed);
+      for (let i = 0; i < 46; i++) {
+        const x = 40 + r() * 380, y = 50 + r() * 50 - Math.abs(x - 230) * 0.08, s = 20 + r() * 40;
+        const g = ctx.createRadialGradient(x, y - s * 0.3, 0, x, y, s);
+        g.addColorStop(0, 'rgba(190,170,230,0.10)'); g.addColorStop(1, 'rgba(120,100,170,0)');
+        ctx.fillStyle = g; Draw.circ(ctx, x, y, s);
+      }
+    });
+  },
+
+  makeCastle(col, windows) {
+    return this.sprite(420, 260, (ctx) => {
+      ctx.fillStyle = col;
+      const tower = (x, w, h, roof) => {
+        ctx.fillRect(x, 260 - h, w, h);
+        if (roof) { Draw.poly(ctx, [x - 4, 260 - h, x + w / 2, 260 - h - roof, x + w + 4, 260 - h]); }
+        else for (let i = 0; i < w; i += 8) ctx.fillRect(x + i, 260 - h - 6, 5, 6);
+      };
+      ctx.fillRect(60, 150, 300, 110);
+      for (let i = 60; i < 360; i += 12) ctx.fillRect(i, 142, 7, 8);
+      tower(40, 34, 170, 50); tower(130, 26, 200, 60); tower(190, 46, 230, 80); tower(260, 28, 180, 0); tower(340, 36, 150, 46);
+      // broken section
+      ctx.clearRect(300, 120, 30, 40);
+      // warm windows
+      ctx.fillStyle = windows;
+      ctx.shadowColor = windows; ctx.shadowBlur = 8;
+      for (const [x, y] of [[50, 120], [140, 100], [140, 140], [205, 70], [222, 110], [205, 150], [350, 150], [90, 190], [250, 200], [300, 190]]) {
+        ctx.beginPath(); ctx.moveTo(x, y + 10); ctx.lineTo(x, y + 3); ctx.arc(x + 3, y + 3, 3, Math.PI, 0); ctx.lineTo(x + 6, y + 10); ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    });
+  },
+
+  makeTree(seed, color, scale) {
+    const w = 200, h = 230;
+    return this.sprite(w, h, (ctx) => {
+      const r = mulberry32(seed * 31 + 5);
+      ctx.strokeStyle = color; ctx.lineCap = 'round';
+      const branch = (x, y, len, ang, wid, depth) => {
+        const x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
+        ctx.lineWidth = wid;
+        ctx.beginPath(); ctx.moveTo(x, y);
+        ctx.quadraticCurveTo((x + x2) / 2 + (r() - 0.5) * len * 0.3, (y + y2) / 2, x2, y2); ctx.stroke();
+        if (depth <= 0 || wid < 0.8) return;
+        const n = 2 + (r() < 0.35 ? 1 : 0);
+        for (let i = 0; i < n; i++) branch(x2, y2, len * (0.62 + r() * 0.18), ang + (r() - 0.5) * 1.3, wid * 0.62, depth - 1);
+      };
+      // roots + trunk
+      ctx.fillStyle = color;
+      Draw.poly(ctx, [w / 2 - 14 * scale, h, w / 2 - 5, h - 30, w / 2 + 5, h - 30, w / 2 + 16 * scale, h]);
+      branch(w / 2, h - 2, 60 * scale + r() * 20, -Math.PI / 2 + (r() - 0.5) * 0.3, 11 * scale, 6);
+    });
+  },
+
+  newLeaf(anywhere) {
+    const cols = THEME ? THEME.leaves : ['#a0521a'];
+    return { x: Math.random() * VIEW_W, y: anywhere ? Math.random() * VIEW_H : -10, vx: rand(-30, -10), vy: rand(20, 45), r: Math.random() * 6, spin: rand(-3, 3), col: cols[Math.floor(Math.random() * cols.length)] };
+  },
+};
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------------- background ---------------- */
+function drawBackground(ctx, camX, camY, t) {
+  const TH = THEME;
+  const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
+  g.addColorStop(0, TH.sky[0]); g.addColorStop(0.45, TH.sky[1]); g.addColorStop(0.8, TH.sky[2]); g.addColorStop(1, TH.sky[3]);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+
+  for (const s of Art.stars) {
+    const x = ((s.x - camX * 0.02) % 2400 + 2400) % 2400;
+    if (x > VIEW_W) continue;
+    ctx.globalAlpha = 0.35 + Math.sin(t * 2 + s.p) * 0.3;
+    ctx.fillStyle = TH.star;
+    ctx.fillRect(x, s.y - camY * 0.01, s.r, s.r);
+  }
+  ctx.globalAlpha = 1;
+
+  const mx = TH.moonX - (camX * 0.02) % 300, my = TH.moonY - camY * 0.02;
+  ctx.drawImage(Art.moon.cv, mx - 180, my - 180, 360, 360);
+
+  // clouds drifting across the moon
+  for (let i = 0; i < 4; i++) {
+    const c = Art.clouds[i % 3];
+    const x = ((i * 520 - camX * 0.05 + t * (8 + i * 3)) % 1900 + 1900) % 1900 - 460;
+    ctx.drawImage(c.cv, x, 40 + i * 45 - camY * 0.03, c.w, c.h);
+  }
+
+  // far ridge with a ruined castle
+  ridge(ctx, camX * 0.08, camY * 0.05, 330, 38, 0.003, TH.far, 0.9);
+  const cx = ((TH.castleX - camX * 0.08) % 2600 + 2600) % 2600 - 500;
+  ctx.globalAlpha = 0.9;
+  ctx.drawImage(Art.castle.cv, cx, 320 - camY * 0.05 - 260 + 20, 420, 260);
+  ctx.globalAlpha = 1;
+  // haze
+  fogBand(ctx, 300 - camY * 0.05, 120, hexA(TH.haze, 0.18 * TH.fogMul));
+
+  // mid ridge with a dead forest
+  const midY = ridge(ctx, camX * 0.22, camY * 0.12, 395, 30, 0.006, TH.mid, 1);
+  const spacing = 170, ox = camX * 0.22;
+  const start = Math.floor(ox / spacing) - 1;
+  for (let i = start; i < start + VIEW_W / spacing + 3; i++) {
+    const r = hash2(i, 77);
+    if (r < 0.3) continue;
+    const sp = Art.bgTrees[((i % 3) + 3) % 3];
+    const wx = i * spacing + r * 80, sx = wx - ox;
+    const s = 0.6 + r * 0.5;
+    ctx.drawImage(sp.cv, sx - sp.w * s / 2, midY(wx) - sp.h * s + 8, sp.w * s, sp.h * s);
+  }
+  fogBand(ctx, 400 - camY * 0.12, 100, hexA(TH.haze, 0.16 * TH.fogMul));
+
+  // near ridge
+  ridge(ctx, camX * 0.4, camY * 0.2, 450, 22, 0.009, TH.near, 1);
+  for (let i = 0; i < 3; i++) {
+    const fx = ((i * 520 - camX * 0.45 + t * 10 * (i % 2 ? 1 : -1)) % 1700 + 1700) % 1700 - 400;
+    const fg = ctx.createRadialGradient(fx, 470 - camY * 0.2, 10, fx, 470 - camY * 0.2, 300);
+    fg.addColorStop(0, hexA(TH.fog, 0.10 * TH.fogMul)); fg.addColorStop(1, hexA(TH.fog, 0));
+    ctx.fillStyle = fg; ctx.fillRect(fx - 300, 170 - camY * 0.2, 600, 600);
+  }
+  ctx.fillStyle = TH.tint; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+}
+
+function ridge(ctx, ox, oy, base, amp, freq, cols, alpha) {
+  const yAt = (wx) => base - oy * 0.5 + Math.sin(wx * freq) * amp + Math.sin(wx * freq * 2.3 + 1) * amp * 0.5 + Math.sin(wx * freq * 7.1) * amp * 0.12;
+  const g = ctx.createLinearGradient(0, base - amp - oy * 0.5, 0, VIEW_H);
+  g.addColorStop(0, cols[0]); g.addColorStop(1, cols[1]);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(0, VIEW_H);
+  for (let x = 0; x <= VIEW_W + 12; x += 12) ctx.lineTo(x, yAt(x + ox));
+  ctx.lineTo(VIEW_W, VIEW_H); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+  return (wx) => yAt(wx);
+}
+
+function fogBand(ctx, y, h, col) {
+  const g = ctx.createLinearGradient(0, y - h / 2, 0, y + h / 2);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.5, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, y - h / 2, VIEW_W, h);
+}
+
+/* ---------------- foreground FX ---------------- */
+function drawLeaves(ctx, dt, t) {
+  for (const l of Art.leaves) {
+    l.x += (l.vx + Math.sin(t * 1.3 + l.r) * 20) * dt; l.y += l.vy * dt; l.r += l.spin * dt;
+    if (l.y > VIEW_H + 10 || l.x < -20) Object.assign(l, Art.newLeaf(false), { x: Math.random() * (VIEW_W + 200) });
+    ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.r); ctx.scale(1, Math.sin(t * 3 + l.r));
+    ctx.fillStyle = l.col; Draw.ell(ctx, 0, 0, 4, 2);
+    ctx.restore();
+  }
+}
+
+/* ---------------- decorations ---------------- */
+function drawDecor(ctx, d, t) {
+  const x = d.px !== undefined ? d.px : d.x * TILE + 16;
+  const y = d.py !== undefined ? d.py : (d.y + 1) * TILE;
+  if (d.type === 'grave') {
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; Draw.ell(ctx, x + 2, y, 16, 3);
+    ctx.save(); ctx.translate(x, y); ctx.rotate((hash2(x, 1) - 0.5) * 0.12);
+    ctx.fillStyle = lin(ctx, -12, 0, 12, 0, ['#6a6478', '#45405a', '#24202f']);
+    ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-12, -24); ctx.arc(0, -24, 12, Math.PI, 0); ctx.lineTo(12, 0); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(-11, -24, 2, 24);
+    ctx.fillStyle = 'rgba(70,110,80,0.6)'; Draw.ell(ctx, -6, -2, 6, 2.5); Draw.ell(ctx, 8, -30, 3, 1.5);
+    ctx.fillStyle = '#1e1a28'; ctx.fillRect(-1.5, -30, 3, 15); ctx.fillRect(-6, -26, 12, 3);
+    ctx.strokeStyle = 'rgba(10,6,16,0.7)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(6, -34); ctx.lineTo(4, -26); ctx.lineTo(7, -20); ctx.stroke();
+    ctx.restore();
+  } else if (d.type === 'tree') {
+    const sp = Art.trees[Math.min(3, Math.floor(hash2(d.x || x, 5) * 4))];
+    ctx.drawImage(sp.cv, x - sp.w / 2, y - sp.h + 4, sp.w, sp.h);
+  } else if (d.type === 'shroom') {
+    const gl = 0.65 + Math.sin(t * 2 + x) * 0.2;
+    ctx.fillStyle = lin(ctx, x - 2, 0, x + 2, 0, ['#e8f4f0', '#9ab8b0']); ctx.fillRect(x - 2, y - 10, 4, 10); ctx.fillRect(x + 8, y - 6, 3, 6); ctx.fillRect(x - 9, y - 5, 2.5, 5);
+    setGlow(ctx, '#5cffd0', 14);
+    ctx.fillStyle = `rgba(92,255,208,${gl})`;
+    ctx.beginPath(); ctx.arc(x, y - 10, 7, Math.PI, 0); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 9.5, y - 6, 4.5, Math.PI, 0); ctx.fill();
+    ctx.beginPath(); ctx.arc(x - 7.8, y - 5, 3.5, Math.PI, 0); ctx.fill();
+    clearGlow(ctx);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; Draw.circ(ctx, x - 2, y - 13, 1.2); Draw.circ(ctx, x + 9, y - 8, 0.8);
+  } else if (d.type === 'skulls') {
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; Draw.ell(ctx, x - 3, y, 18, 3);
+    for (const [ox, oy, r] of [[-10, -6, 6], [3, -6, 6.5], [-4, -15, 6]]) {
+      ctx.fillStyle = shade(ctx, x + ox, y + oy, r, '#fffaf0', '#cfc6ae', '#5a5240'); Draw.circ(ctx, x + ox, y + oy, r);
+      ctx.fillStyle = '#120a14'; Draw.circ(ctx, x + ox - 2, y + oy - 1, 1.6); Draw.circ(ctx, x + ox + 2, y + oy - 1, 1.6);
+    }
+  }
+}
+
+/* ---------------- checkpoints (obby style) ---------------- */
+// A numbered stone pad with a tattered flag. Grey when untouched, glowing green once reached.
+function drawCheckpoint(ctx, c, t) {
+  const x = c.x, y = c.y;
+  const on = c.lit;
+  // pad
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; Draw.ell(ctx, x, y, 26, 4);
+  ctx.fillStyle = lin(ctx, 0, y - 8, 0, y, on ? ['#6a8f72', '#2c4434'] : ['#6a6478', '#2a2636']);
+  Draw.rr(ctx, x - 24, y - 7, 48, 7, 2); ctx.fill();
+  ctx.fillStyle = on ? 'rgba(120,255,170,0.9)' : 'rgba(160,150,190,0.5)';
+  if (on) setGlow(ctx, '#3dff7a', 12);
+  ctx.fillRect(x - 20, y - 8, 40, 2);
+  clearGlow(ctx);
+  // pole
+  ctx.fillStyle = lin(ctx, x - 2, 0, x + 2, 0, ['#9a96a8', '#3a3644']); ctx.fillRect(x - 15, y - 62, 3, 55);
+  ctx.fillStyle = on ? '#9dffc0' : '#8a8498'; Draw.circ(ctx, x - 13.5, y - 63, 3);
+  // flag
+  const wave = (i) => Math.sin(t * 6 - i * 0.6) * (on ? 2.5 : 1);
+  ctx.fillStyle = on ? lin(ctx, x - 12, 0, x + 20, 0, ['#2fd06a', '#1a8a46']) : lin(ctx, x - 12, 0, x + 20, 0, ['#5a5468', '#3a3646']);
+  ctx.beginPath(); ctx.moveTo(x - 12, y - 60);
+  for (let i = 0; i <= 5; i++) ctx.lineTo(x - 12 + i * 6, y - 60 + wave(i));
+  ctx.lineTo(x + 20, y - 52 + wave(5)); ctx.lineTo(x + 16, y - 44 + wave(5));
+  for (let i = 5; i >= 0; i--) ctx.lineTo(x - 12 + i * 6, y - 40 + wave(i));
+  ctx.closePath(); ctx.fill();
+  // number on the flag
+  ctx.fillStyle = on ? '#eafff0' : '#c8c0d8';
+  ctx.font = '900 13px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(c.n), x + 3, y - 50 + wave(3));
+}
+
+/* ---------------- finish portal ---------------- */
+function drawPortal(ctx, f, t) {
+  const x = f.x, y = f.y;
+  // stone arch
+  ctx.fillStyle = lin(ctx, x - 40, 0, x + 40, 0, ['#5a5468', '#2a2636', '#141019']);
+  ctx.beginPath(); ctx.moveTo(x - 40, y); ctx.lineTo(x - 40, y - 70); ctx.arc(x, y - 70, 40, Math.PI, 0); ctx.lineTo(x + 40, y); ctx.lineTo(x + 28, y); ctx.lineTo(x + 28, y - 70); ctx.arc(x, y - 70, 28, 0, Math.PI, true); ctx.lineTo(x - 28, y); ctx.closePath(); ctx.fill();
+  // swirling vortex
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(x - 28, y); ctx.lineTo(x - 28, y - 70); ctx.arc(x, y - 70, 28, Math.PI, 0); ctx.lineTo(x + 28, y); ctx.closePath(); ctx.clip();
+  const g = ctx.createRadialGradient(x, y - 55, 2, x, y - 55, 70);
+  g.addColorStop(0, '#fff0ff'); g.addColorStop(0.25, '#c070ff'); g.addColorStop(0.6, '#5a1aa0'); g.addColorStop(1, '#1a0630');
+  ctx.fillStyle = g; ctx.fillRect(x - 30, y - 110, 60, 110);
+  ctx.strokeStyle = 'rgba(255,190,255,0.5)'; ctx.lineWidth = 2;
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    ctx.arc(x, y - 55, 8 + i * 9, t * (2 + i * 0.4) + i, t * (2 + i * 0.4) + i + 2.4);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // pumpkin keystone
+  ctx.save(); ctx.translate(x, y - 112); ctx.scale(0.8, 0.8); drawHead(ctx, 'pip', t); ctx.restore();
+  ctx.fillStyle = '#fff2dc'; ctx.font = '900 12px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('FINISH', x, y - 132);
+}
+
+/* ---------------- signs ---------------- */
+function drawSignPost(ctx, s) {
+  const x = s.x * TILE + 16, y = (s.y + 1) * TILE;
+  ctx.fillStyle = lin(ctx, x - 2, 0, x + 2, 0, ['#5a3c26', '#2a1a10']); ctx.fillRect(x - 2, y - 26, 4, 26);
+  ctx.fillStyle = lin(ctx, 0, y - 36, 0, y - 18, ['#8a6244', '#4a3020']); Draw.rr(ctx, x - 14, y - 36, 28, 17, 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(20,10,4,0.5)'; ctx.lineWidth = 0.6; Draw.line(ctx, x - 13, y - 28, x + 13, y - 28);
+  ctx.fillStyle = '#ffd08a'; ctx.font = '900 12px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('?', x, y - 27);
+}
+
+function drawBubble(ctx, x, y, text) {
+  ctx.font = '700 13px Nunito, sans-serif';
+  const words = text.split(' '), lines = [];
+  let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > 250 && line) { lines.push(line); line = w; } else line = test;
+  }
+  lines.push(line);
+  const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 24;
+  const h = lines.length * 17 + 14;
+  const bx = x - w / 2, by = y - h;
+  ctx.fillStyle = 'rgba(12,8,24,0.92)'; Draw.rr(ctx, bx, by, w, h, 8); ctx.fill();
+  ctx.strokeStyle = '#7a52b8'; ctx.lineWidth = 1.5; Draw.rr(ctx, bx, by, w, h, 8); ctx.stroke();
+  ctx.fillStyle = 'rgba(12,8,24,0.92)'; Draw.poly(ctx, [x - 7, by + h, x + 7, by + h, x, by + h + 8]);
+  ctx.fillStyle = '#f3ecff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  lines.forEach((l, i) => ctx.fillText(l, x, by + 8 + i * 17));
+}
+
+/* ---------------- lighting ---------------- */
+// Darkens the scene, then cuts soft holes where lights are, then adds coloured glow.
+function drawLighting(ctx, lights, cam, ambient) {
+  const L = Art.lctx, W = Art.light.width, H = Art.light.height, s = W / VIEW_W;
+  L.globalCompositeOperation = 'source-over';
+  L.clearRect(0, 0, W, H);
+  L.fillStyle = hexA(THEME.dark, ambient);
+  L.fillRect(0, 0, W, H);
+  L.globalCompositeOperation = 'destination-out';
+  for (const l of lights) {
+    const x = (l.x - cam.x) * s, y = (l.y - cam.y) * s, r = l.r * s;
+    if (x < -r || y < -r || x > W + r || y > H + r) continue;
+    const g = L.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(0,0,0,${l.i})`); g.addColorStop(0.5, `rgba(0,0,0,${l.i * 0.6})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    L.fillStyle = g; L.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  ctx.drawImage(Art.light, 0, 0, VIEW_W, VIEW_H);
+  // coloured bloom
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const l of lights) {
+    if (!l.c) continue;
+    const x = l.x - cam.x, y = l.y - cam.y, r = l.r * 0.7;
+    if (x < -r || y < -r || x > VIEW_W + r || y > VIEW_H + r) continue;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, l.c); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  ctx.restore();
+}
+
+function drawVignette(ctx) {
+  const g = ctx.createRadialGradient(VIEW_W / 2, VIEW_H / 2, 220, VIEW_W / 2, VIEW_H / 2, 640);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(2,1,6,0.6)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+}

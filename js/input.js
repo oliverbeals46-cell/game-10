@@ -5,10 +5,9 @@ const Input = (() => {
     right: ['ArrowRight', 'KeyD'],
     up: ['ArrowUp', 'KeyW'],
     down: ['ArrowDown', 'KeyS'],
-    jump: ['Space', 'KeyZ'],
+    jump: ['ArrowUp', 'Space', 'KeyZ'],
     attack: ['KeyJ', 'KeyX'],
     dash: ['ShiftLeft', 'ShiftRight', 'KeyK', 'KeyC'],
-    heal: ['KeyF'],
     spell: ['KeyL', 'KeyV'],
   };
   const held = new Set();

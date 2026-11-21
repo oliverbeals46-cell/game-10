@@ -35,12 +35,14 @@
       <div class="card">
         <h2>How to Play</h2>
         <ul class="bullets">
-          <li><b>Explore</b> the Rotten Patch. Run, jump, wall-jump and dash your way through spooky ruins.</li>
-          <li><b>Fight</b> grave mites and vesper bats with your slash. Hit them from above with a <b>down-slash</b> to bounce (it works on spikes too!).</li>
-          <li><b>Soul</b> fills the orb in the corner every time you hit a foe. Spend it to <b>heal</b> one mask.</li>
-          <li><b>Candy</b> is the currency. Collect it and spend it in the <b>Heads Shop</b> on new Halloween heads &mdash; each one has its own perk.</li>
-          <li><b>Lanterns</b> are checkpoints. Light one to save your spot and refill your health.</li>
-          <li><b>Beat the boss</b> at the end of each level to unlock a new attack. Level 1's boss, the Gourd King, guards the <b>Wisp Bolt</b>.</li>
+          <li><b>It's an obby!</b> Run, jump, double jump, wall-jump and dash through an obstacle course all the way to the glowing <b>finish portal</b>.</li>
+          <li><b>No health bar.</b> Touch spikes, lava or fire and you die, then pop right back at your last checkpoint. Your deaths are counted in the top-right.</li>
+          <li><b>Checkpoints</b> are numbered flags. Touch one and it turns green. That's where you come back after you die.</li>
+          <li><b>Beat your time.</b> Your time for the level and your best time are shown in the top-right corner.</li>
+          <li><b>Mini monsters</b> roam the course. They only knock you back. Jump over them, or fight them for extra candy. Down-slash them (or spikes) to bounce!</li>
+          <li><b>Signs</b> (the <b>?</b> posts) explain each obstacle and attack. Walk up to one to read it.</li>
+          <li><b>Candy</b> buys new Halloween heads in the <b>Heads Shop</b>. Each head has its own perk.</li>
+          <li><b>Every 10 levels</b> the look changes, new monsters show up, and there's a <b>boss</b> on Level 10, 20, 30... You unlock a <b>new attack every 20 levels</b> to help with the next boss. The first is the <b>Wisp Bolt</b> after Level 20.</li>
         </ul>
         <button class="back" data-action="menu">Back</button>
       </div>
@@ -51,15 +53,15 @@
       <div class="card">
         <h2>Controls</h2>
         <table class="keys">
-          <tr><td>Move</td><td><kbd>A</kbd><kbd>D</kbd> or <kbd>&larr;</kbd><kbd>&rarr;</kbd></td></tr>
-          <tr><td>Jump (hold = higher)</td><td><kbd>Space</kbd> or <kbd>Z</kbd></td></tr>
-          <tr><td>Wall-jump</td><td>Jump while sliding on a wall</td></tr>
-          <tr><td>Attack</td><td><kbd>J</kbd> or <kbd>X</kbd></td></tr>
-          <tr><td>Aim attack up / down</td><td>Hold <kbd>W</kbd>/<kbd>&uarr;</kbd> or <kbd>S</kbd>/<kbd>&darr;</kbd> + Attack</td></tr>
-          <tr><td>Dash</td><td><kbd>Shift</kbd>, <kbd>K</kbd> or <kbd>C</kbd></td></tr>
-          <tr><td>Heal (costs Soul)</td><td><kbd>F</kbd></td></tr>
-          <tr><td>Wisp Bolt (unlockable)</td><td><kbd>L</kbd> or <kbd>V</kbd></td></tr>
-          <tr><td>Drop through platform</td><td><kbd>S</kbd>/<kbd>&darr;</kbd> + Jump</td></tr>
+          <tr><td>Move</td><td><kbd>&larr;</kbd><kbd>&rarr;</kbd> or <kbd>A</kbd><kbd>D</kbd></td></tr>
+          <tr><td>Jump (hold = higher)</td><td><kbd>&uarr;</kbd>, <kbd>Space</kbd> or <kbd>Z</kbd></td></tr>
+          <tr><td>Double jump</td><td>Press <kbd>&uarr;</kbd> again in the air</td></tr>
+          <tr><td>Wall-jump</td><td>Slide on a wall, then press <kbd>&uarr;</kbd></td></tr>
+          <tr><td>Fall faster / drop through rafts</td><td><kbd>&darr;</kbd> or <kbd>S</kbd></td></tr>
+          <tr><td>Attack</td><td><kbd>X</kbd> or <kbd>J</kbd></td></tr>
+          <tr><td>Attack up / down (bounce)</td><td>Hold <kbd>&uarr;</kbd> or <kbd>&darr;</kbd> + Attack</td></tr>
+          <tr><td>Dash</td><td><kbd>C</kbd>, <kbd>Shift</kbd> or <kbd>K</kbd></td></tr>
+          <tr><td>Wisp Bolt (unlocks after Level 20)</td><td><kbd>V</kbd> or <kbd>L</kbd></td></tr>
           <tr><td>Pause</td><td><kbd>Esc</kbd> or <kbd>P</kbd></td></tr>
           <tr><td>Mute sound</td><td><kbd>M</kbd></td></tr>
         </table>
@@ -112,12 +114,12 @@
     <div id="screen-victory" class="screen panel hidden">
       <div class="card center">
         <h2>Level 1 Complete!</h2>
-        <p class="sub">The Gourd King has been carved.</p>
+        <p class="sub">You made it to the portal!</p>
         <div class="stats" id="victory-stats"></div>
         <div class="unlock">
           <div class="unlock-title">New Attack Unlocked</div>
           <div class="unlock-name">Wisp Bolt</div>
-          <div class="unlock-desc">Press <kbd>L</kbd> or <kbd>V</kbd> to fire a ghostly bolt (costs Soul). Ready for Level 2.</div>
+          <div class="unlock-desc">Press <kbd>V</kbd> to fire a ghostly bolt that zips through monsters. It recharges by itself.</div>
         </div>
         <p class="sub dim">Level 2 is coming soon&hellip;</p>
         <nav class="menu row">
@@ -133,6 +135,8 @@
   <script src="js/input.js"></script>
   <script src="js/save.js"></script>
   <script src="js/heads.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/themes.js"></script>
   <script src="js/world.js"></script>
   <script src="js/level1.js"></script>
   <script src="js/entities.js"></script>

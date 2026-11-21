@@ -1,4 +1,4 @@
-// LEVEL 1 BOSS — The Gourd King, Lord of the Rotten Patch.
+// BOSS OF LEVEL 10 — The Gourd King (boss for the haunted pumpkin-patch levels 1–10). Not used until Level 10 exists.
 // Attacks: Charge (rams the wall), Leap Slam (fire shockwaves), Seed Spit (arcing seeds).
 // Phase 2 (below half health): faster, double leaps, more seeds, and charges shake debris from the ceiling.
 class GourdKing {

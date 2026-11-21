@@ -10,6 +10,8 @@ const Save = {
     try { d = JSON.parse(localStorage.getItem(this.key)); } catch (e) { d = null; }
     this.data = Object.assign(this.defaults(), d || {});
     if (!this.data.owned.includes('pip')) this.data.owned.push('pip');
+    // v2: attacks now unlock every 20 levels, so clear the old Level-1 unlock
+    if (!this.data.v2) { this.data.unlocks = {}; this.data.v2 = true; }
     return this.data;
   },
   write() {

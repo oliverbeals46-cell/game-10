@@ -40,7 +40,7 @@ const UI = {
     document.getElementById('menu-candy').innerHTML = `Candy: <b>${d.candy}</b>`;
     document.getElementById('menu-equipped').innerHTML = `Head: <b>${headById(d.equipped).name}</b>`;
     document.getElementById('menu-progress').innerHTML = d.levels.l1
-      ? `Level 1: <b>Cleared</b>${d.best.l1 ? ` (best ${fmtTime(d.best.l1)})` : ''}`
+      ? `Level 1: <b>Cleared</b>${d.best.l1 ? ` (best ${fmtTime(d.best.l1, true)})` : ''}`
       : 'Level 1: <b>Not cleared</b>';
   },
 
@@ -111,17 +111,29 @@ const UI = {
     this.updateShop();
   },
 
-  showVictory(stats, newUnlock) {
+  showVictory(stats, newUnlock, best, record) {
     document.getElementById('victory-stats').innerHTML =
-      `<div><b>${fmtTime(stats.time)}</b>Time</div><div><b>${stats.candy}</b>Candy found</div><div><b>${stats.deaths}</b>Deaths</div>`;
-    document.querySelector('#screen-victory .unlock-title').textContent = newUnlock ? 'New Attack Unlocked' : 'Attack Unlocked';
+      `<div><b>${fmtTime(stats.time, true)}</b>Your time</div>` +
+      `<div><b>${fmtTime(best, true)}</b>${record ? '<span class="rec">NEW BEST!</span>' : 'Best time'}</div>` +
+      `<div><b>${stats.deaths}</b>Deaths</div><div><b>${stats.candy}</b>Candy found</div>`;
+    const na = nextAttack();
+    if (newUnlock) {
+      document.querySelector('#screen-victory .unlock-title').textContent = 'New Attack Unlocked';
+      document.querySelector('#screen-victory .unlock-name').textContent = newUnlock.name;
+      document.querySelector('#screen-victory .unlock-desc').innerHTML = `Press <kbd>${newUnlock.key}</kbd>. ${newUnlock.desc}`;
+    } else {
+      document.querySelector('#screen-victory .unlock-title').textContent = na ? 'Next attack' : 'All attacks unlocked';
+      document.querySelector('#screen-victory .unlock-name').textContent = na ? na.name : '';
+      document.querySelector('#screen-victory .unlock-desc').textContent = na ? `Unlocks after you beat Level ${na.level}. A new attack every 20 levels!` : '';
+    }
     this.show('victory');
   },
 };
 
-function fmtTime(s) {
+function fmtTime(s, tenths) {
   const m = Math.floor(s / 60), r = Math.floor(s % 60);
-  return `${m}:${String(r).padStart(2, '0')}`;
+  const base = `${m}:${String(r).padStart(2, '0')}`;
+  return tenths ? `${base}.${Math.floor((s * 10) % 10)}` : base;
 }
 
 Game.init();

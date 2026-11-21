@@ -1,10 +1,10 @@
 # Hallow Heads
 
-A 2D Halloween action-platformer in the spirit of Hollow Knight. You play a tiny cloaked vessel whose **head** can be swapped. Buy spooky heads in the shop with the candy you collect. Each head has its own perk. Platform through the Rotten Patch, fight foes, and defeat the boss to unlock new attacks.
+A spooky 2D **obby** (obstacle-course platformer). You play a little hooded wanderer whose **head** can be swapped. Buy Halloween heads with the candy you collect. Run, jump, double jump, wall-jump and dash through each level to reach the glowing finish portal.
 
 ## Play
 
-No build step is needed. It is plain HTML, CSS and JavaScript.
+No build step is needed. It's plain HTML, CSS and JavaScript.
 
 - Open `index.html` in a browser, **or**
 - serve the folder with `python3 -m http.server` and visit http://localhost:8000
@@ -13,55 +13,68 @@ No build step is needed. It is plain HTML, CSS and JavaScript.
 
 | Action | Keys |
 | --- | --- |
-| Move | A / D or ← / → |
-| Jump (hold for higher) | Space or Z |
-| Wall-jump | Jump while sliding on a wall |
-| Attack | J or X (hold W/↑ or S/↓ to aim up/down) |
-| Pogo bounce | Down-attack a foe or spikes while in the air |
-| Dash | Shift, K or C |
-| Heal (costs 33 Soul) | F |
-| Wisp Bolt (unlocked after Level 1) | L or V |
-| Drop through platform | S/↓ + Jump |
+| Move | ← / → (or A / D) |
+| Jump (hold for higher) | ↑ (or Space / Z) |
+| Double jump | Press ↑ again in the air |
+| Wall-jump | Slide on a wall, then press ↑ |
+| Fall faster / drop through rafts | ↓ (or S) |
+| Attack | X (or J). Hold ↑/↓ while attacking to aim up/down |
+| Pogo bounce | Down-attack a monster or spikes while in the air |
+| Dash | C (or Shift / K) |
+| Wisp Bolt (unlocks after Level 20) | V (or L) |
 | Pause / Mute | Esc or P / M |
 
-## What's in Level 1: *The Rotten Patch*
+## Rules
 
-- A tutorial path with signs: jumping, a spike pit, attacking, pogo-bouncing over a spike field, a wall-jump shaft, and a dash gap.
-- Enemies: **Grave Mites** (crawlers) and **Vesper Bats** (swoop at you).
-- A lantern checkpoint before the boss.
-- **Boss: The Gourd King** has a charge, a leap slam that sends fire shockwaves, and a seed spit. At half health he becomes enraged: he gets faster, does double leaps and spits more seeds, and his charges knock debris from the ceiling.
-- Beating him unlocks the **Wisp Bolt** ranged attack.
+- **Infinite health.** Spikes, lava and fire kill you instantly, and you respawn at your last **checkpoint** (numbered flags that turn green). Monsters only knock you back.
+- The **top-right** shows your death count, your time for the level, and your **best time** for that level.
+- **Signs** (the `?` posts) explain every obstacle and attack. Every level must have them.
+- **Candy** buys heads in the Heads Shop. Every head has its own perk.
+
+## Level plan
+
+- Levels are just numbered (Level 1, 2, 3...). There are no separate named worlds.
+- **Every 10 levels** the game changes: a new colour scheme and setting (same realistic, scary style), new mini enemies that match it, and a **boss on Level 10, 20, 30...** See `js/themes.js`.
+- Inside each group of 10, every level is a little different (moon position, fog, tint) so no two look the same.
+- **One new attack every 20 levels** (Level 20, 40, ...), each one helpful against the next boss. The first is the Wisp Bolt (`ATTACKS` in `js/themes.js`).
+- **Music plays only in boss fights.** There are sound effects for footsteps, jumping, double jump, wall-jump, dash, attacks and every unlockable attack.
+
+| Levels | Look | Mini enemies | Boss |
+| --- | --- | --- | --- |
+| 1–10 | Haunted pumpkin patch & graveyard, purple moon | Grave Mite, Vesper Bat, Pumpling | The Gourd King (L10) |
+| 11–20 | Frozen bone forest, blue ghost-fire | Ice Wisp, Frost Mite, Snow Skull | The Frozen Widow (L20) |
+| 21–30 | Swamp under a red moon | Bog Leech, Swamp Lantern, Croaking Skull | The Mire Hag (L30) |
+| 31–40 | Underground clockwork tombs | Gear Spider, Chain Ghoul, Tick-Tock Skull | The Grandfather Clock (L40) |
+| 41–50 | Burning cathedral, orange embers | Ember Imp, Candle Wraith, Ash Bat | The Hollow Saint (L50) |
+
+### Level 1 obstacles
+Floating stones over spikes → moving rafts → crumbling stones over lava → bounce pumpkins up a cliff → spinning fire bars → dash pillars → wall-jump shaft → spike strips → a raft over lava → **finish portal**. There are 6 checkpoints along the way.
 
 ## Heads (Halloween season)
 
 | Head | Price | Perk |
 | --- | --- | --- |
 | Pip the Pumpkin | free | Balanced |
-| Bonesy | 150 | +1 mask |
+| Bonesy | 150 | Monsters barely knock you back |
 | Boo | 200 | Longer dash that recharges faster |
 | Mittens the Hex | 250 | Jumps higher and runs faster |
-| Count Fang | 300 | +50% Soul from hits |
-| Wrapz | 350 | +2 masks, slightly slower |
+| Count Fang | 300 | Wisp Bolt recharges twice as fast |
+| Wrapz | 350 | Slides down walls slowly |
 | Franky Bolt | 450 | +50% damage |
 | Wick | 500 | Longer slash reach |
-
-Progress (candy, owned heads, unlocks) is saved in the browser's localStorage.
 
 ## Code layout
 
 ```
-index.html        screens: home, shop, how to play, controls, credits, pause, victory
-css/style.css
-js/audio.js       synthesized sound effects (Web Audio)
-js/input.js       keyboard input
-js/save.js        localStorage save data
-js/heads.js       head definitions, perks and the canvas art for every head
-js/world.js       tile map, collision and tile rendering
-js/level1.js      Level 1 layout (built from rectangles; easy to edit)
-js/entities.js    player, enemies, projectiles, candy
-js/boss.js        the Gourd King
-js/game.js        game loop, camera, combat, HUD, backgrounds
+index.html        screens: home, shop, how to play, controls, credits, pause, level complete
+js/themes.js      the look/enemies/boss for each group of 10 levels + the attack unlock schedule
+js/art.js         sky, moon, clouds, castle, forest, fog, lighting, checkpoints, portal, decorations
+js/world.js       tile map, collision and textured tile art (cached in chunks)
+js/level1.js      Level 1 layout
+js/entities.js    player, mini enemies, obby obstacles (rafts, crumbling stones, bounce pads, fire bars)
+js/boss.js        The Gourd King (Level 10 boss, ready for when Level 10 is built)
+js/game.js        game loop, camera, checkpoints, deaths/timer, HUD
+js/heads.js       head art and perks
+js/audio.js       synthesized sound effects + boss-only music
 js/ui.js          menus and shop
 ```
-
-To add a level, copy `js/level1.js`, change the layout, and point `Game.startLevel()` at it.

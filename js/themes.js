@@ -1,0 +1,103 @@
+// Every 10 levels the game changes: new colours/setting, new mini enemies, and a boss on level 10, 20, 30...
+// These are NOT separate named worlds — levels just go in order (Levels 1–10, 11–20, ...).
+// Inside each group of 10, every level is shifted a little (variant) so no two levels look the same,
+// while everything keeps the same realistic, scary style.
+const WORLDS = [
+  {
+    id: 1, levels: [1, 10],
+    look: 'A haunted pumpkin patch and graveyard under a purple moon.',
+    enemies: ['Grave Mite (crawler)', 'Vesper Bat (flyer)', 'Pumpling (hopping pumpkin minion)'],
+    boss: 'The Gourd King (Level 10)',
+    pal: {
+      sky: ['#05030c', '#160d2c', '#2c1638', '#3d1f34'], star: '#efe8ff', moon: [255, 230, 190],
+      far: ['#2a1a42', '#1c1230'], mid: ['#1a1030', '#120a22'], near: ['#0f0819', '#0a0612'],
+      castle: '#1b1230', windows: '#ffb04a', tree: '#0d0a17', bgTree: '#130c22',
+      fog: [150, 120, 190], haze: [120, 90, 150],
+      stone: [44, 38, 64], grass: ['#5e8a62', '#3e6448', '#7aa070', '#2f4c38', '#6b7f5a'], grassTop: ['#4f7656', '#2c4634'], moss: [70, 110, 80],
+      leaves: ['#a0521a', '#7a3a12', '#c0742a', '#5a2a10'], dark: [6, 3, 16], ambient: 0.55,
+    },
+  },
+  {
+    id: 2, levels: [11, 20],
+    look: 'A frozen forest of bone-white trees and blue ghost-fire.',
+    enemies: ['Ice Wisp', 'Frost Mite', 'Snow Skull'],
+    boss: 'The Frozen Widow (Level 20)',
+    pal: {
+      sky: ['#02060e', '#0a1a2c', '#16324a', '#24405a'], star: '#e8f6ff', moon: [210, 235, 255],
+      far: ['#1a3048', '#10203a'], mid: ['#0e1c30', '#081424'], near: ['#060e1a', '#040a12'],
+      castle: '#0e1e34', windows: '#7ae0ff', tree: '#0a1220', bgTree: '#0e1a2c',
+      fog: [170, 210, 240], haze: [120, 170, 210],
+      stone: [40, 52, 70], grass: ['#cfe6f0', '#9fc2d4', '#e8f4fa', '#7aa2b8', '#b8d6e4'], grassTop: ['#dff0f8', '#9cbccc'], moss: [150, 200, 220],
+      leaves: ['#ffffff', '#d8ecf8', '#bcd8ea', '#eaf6ff'], dark: [2, 6, 16], ambient: 0.5,
+    },
+  },
+  {
+    id: 3, levels: [21, 30],
+    look: 'A sinking swamp under a red moon, full of rotten roots and toxic slime.',
+    enemies: ['Bog Leech', 'Swamp Lantern', 'Croaking Skull'],
+    boss: 'The Mire Hag (Level 30)',
+    pal: {
+      sky: ['#0a0204', '#2a0a10', '#4a1416', '#3a1a10'], star: '#ffe0d8', moon: [255, 120, 100],
+      far: ['#3a1418', '#22080c'], mid: ['#1e1410', '#140c08'], near: ['#0c0a06', '#080604'],
+      castle: '#2a0c10', windows: '#ff5a3a', tree: '#0c0806', bgTree: '#1a0e0a',
+      fog: [120, 160, 80], haze: [150, 80, 70],
+      stone: [52, 44, 36], grass: ['#5a6a2a', '#3e4a1c', '#7a8a3a', '#2e3a14', '#6a5a2a'], grassTop: ['#4a5a22', '#2a3412'], moss: [110, 140, 50],
+      leaves: ['#6a7a2a', '#4a3a1a', '#8a6a2a', '#3a2a10'], dark: [10, 4, 4], ambient: 0.58,
+    },
+  },
+  {
+    id: 4, levels: [31, 40],
+    look: 'Underground tombs full of ticking gears, chains and green candlelight.',
+    enemies: ['Gear Spider', 'Chain Ghoul', 'Tick-Tock Skull'],
+    boss: 'The Grandfather Clock (Level 40)',
+    pal: {
+      sky: ['#020604', '#0a1a12', '#12281c', '#1a2a1c'], star: '#e0ffe8', moon: [190, 255, 200],
+      far: ['#12281c', '#0a1a12'], mid: ['#0e1e14', '#08140c'], near: ['#060e08', '#040a06'],
+      castle: '#0c1e14', windows: '#7aff9a', tree: '#06100a', bgTree: '#0c1a10',
+      fog: [120, 200, 150], haze: [90, 150, 110],
+      stone: [46, 50, 44], grass: ['#8a8a6a', '#6a6a4a', '#aaa880', '#4a4a34', '#7a7a5a'], grassTop: ['#7a7a5a', '#4a4a34'], moss: [90, 140, 100],
+      leaves: ['#c8a040', '#8a7030', '#e0c060', '#6a5020'], dark: [2, 8, 4], ambient: 0.6,
+    },
+  },
+  {
+    id: 5, levels: [41, 50],
+    look: 'A burning cathedral at the end of the night, glowing with orange embers.',
+    enemies: ['Ember Imp', 'Candle Wraith', 'Ash Bat'],
+    boss: 'The Hollow Saint (Level 50)',
+    pal: {
+      sky: ['#0a0402', '#2a100a', '#4a1e0c', '#6a2a0e'], star: '#fff0d8', moon: [255, 180, 90],
+      far: ['#3a1a0e', '#24100a'], mid: ['#201008', '#160a04'], near: ['#0e0804', '#0a0602'],
+      castle: '#24100a', windows: '#ffd06a', tree: '#0e0602', bgTree: '#1e0e06',
+      fog: [220, 120, 60], haze: [180, 100, 60],
+      stone: [56, 44, 40], grass: ['#7a5a3a', '#5a3a22', '#9a7a4a', '#3a2614', '#6a4a2a'], grassTop: ['#6a4a2a', '#3a2614'], moss: [140, 90, 50],
+      leaves: ['#ff8a2a', '#ffb04a', '#ff5a1a', '#c04010'], dark: [10, 4, 2], ambient: 0.55,
+    },
+  },
+];
+
+function worldForLevel(n) { return WORLDS.find((w) => n >= w.levels[0] && n <= w.levels[1]) || WORLDS[WORLDS.length - 1]; }
+function isBossLevel(n) { return n % 10 === 0; }
+
+// Small per-level changes inside a world: moon position, fog thickness, a slight colour tint.
+function themeForLevel(n) {
+  const w = worldForLevel(n);
+  const v = (n - 1) % 10;
+  const r = mulberry32(n * 97);
+  return Object.assign({}, w.pal, {
+    world: w, level: n,
+    moonX: 560 + r() * 300, moonY: 90 + r() * 60,
+    fogMul: 0.8 + r() * 0.6,
+    tint: `rgba(${Math.floor(r() * 60)},${Math.floor(r() * 30)},${Math.floor(r() * 60)},${0.04 + v * 0.008})`,
+    castleX: 900 + r() * 1400,
+  });
+}
+
+const hexA = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+let THEME = null;
+
+// One new attack every 20 levels. Each one helps against the boss that comes after it.
+const ATTACKS = [
+  { level: 20, id: 'wisp', name: 'Wisp Bolt', key: 'V', desc: 'Fire a ghostly bolt that zips through monsters. Great for hitting bosses from far away.' },
+  // { level: 40, ... }, { level: 60, ... } — added as those levels are built.
+];
+function nextAttack() { return ATTACKS.find((a) => !Save.data.unlocks[a.id]); }
