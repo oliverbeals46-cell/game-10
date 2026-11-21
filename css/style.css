@@ -152,3 +152,11 @@ kbd {
 
 .lvl .info.shards { color: #7ae8ff; }
 .lvl .info.cont { color: #ffd0d0; font-weight: 900; }
+
+.code-btn { background: none; border: none; color: #4a3e66; font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+.code-btn:hover { color: #8a7aaa; }
+#code-input {
+  width: 200px; margin: 6px 0 4px; padding: 8px 12px; font: 900 22px Nunito, sans-serif; letter-spacing: 4px; text-align: center;
+  color: #fff; background: #120a20; border: 2px solid #5b3f8c; border-radius: 10px; outline: none;
+}
+#code-input:focus { border-color: #c8323c; }

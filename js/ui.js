@@ -1,6 +1,6 @@
 // Menus, shop and overlays (HTML on top of the canvas).
 const UI = {
-  screens: ['menu', 'levels', 'howto', 'controls', 'credits', 'shop', 'pause', 'victory'],
+  screens: ['menu', 'code', 'levels', 'howto', 'controls', 'credits', 'shop', 'pause', 'victory'],
   shopAnim: null,
 
   init() {
@@ -26,6 +26,8 @@ const UI = {
       case 'levels': Game.exitToLevels(); break;
       case 'next': this.show(null); Game.startLevel(Game.levelNum + 1); this.show(null); break;
       case 'pausebtn': Game.pause(); break;
+      case 'code': this.openCode(); break;
+      case 'code-submit': this.submitCode(); break;
       case 'shop':
         if (Game.state !== 'menu') { Game.state = 'menu'; Game.world = null; }
         this.openShop(); break;
@@ -47,7 +49,7 @@ const UI = {
     const d = Save.data;
     for (let n = 1; n <= 20; n++) {
       const built = !!LEVELS[n];
-      const unlocked = built && (n === 1 || d.levels['l' + (n - 1)]);
+      const unlocked = built && (n === 1 || d.levels['l' + (n - 1)] || d.devUnlock);
       const cleared = !!d.levels['l' + n];
       const best = d.best['l' + n];
       const b = document.createElement('button');
@@ -60,6 +62,35 @@ const UI = {
       if (unlocked) b.addEventListener('click', () => { Sfx.play('click'); this.show(null); Game.startLevel(n); this.show(null); });
       grid.appendChild(b);
     }
+  },
+
+  // Secret code. Only a scrambled fingerprint (hash) of the code is stored here, not the code itself.
+  CODE_HASH: 'f5340a20d53171f3dc26dab6d42febc25c1b2d27753879ba6e72e73a6b5b5aed',
+  openCode() {
+    this.show('code');
+    const inp = document.getElementById('code-input');
+    inp.value = ''; document.getElementById('code-msg').innerHTML = '&nbsp;';
+    setTimeout(() => inp.focus(), 50);
+    if (!inp.dataset.bound) { inp.dataset.bound = '1'; inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.submitCode(); e.stopPropagation(); }); }
+  },
+  async submitCode() {
+    const inp = document.getElementById('code-input'), msg = document.getElementById('code-msg');
+    const text = 'hallowheads:' + inp.value.trim();
+    let hash = '';
+    try {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+      hash = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) { msg.textContent = 'Codes need the online version of the game.'; return; }
+    if (hash !== this.CODE_HASH) { Sfx.play('deny'); msg.textContent = 'Wrong code.'; inp.value = ''; return; }
+    const d = Save.data;
+    d.devUnlock = true;                                   // every level can be picked
+    for (const h of HEADS) if (!d.owned.includes(h.id)) d.owned.push(h.id); // every head
+    d.shards += 9999;
+    Save.write();
+    Sfx.play('buy');
+    msg.textContent = 'Code accepted! All levels and heads unlocked, +9,999 shards.';
+    inp.value = '';
+    this.refreshMenu();
   },
 
   refreshMenu() {
