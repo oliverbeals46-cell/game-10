@@ -8,7 +8,8 @@ class GraveWarden {
     this.x = x; this.y = y;
     this.vx = 0; this.vy = 0;
     this.arena = arena;
-    this.maxHp = 64; this.hp = this.maxHp;
+    this.maxHp = 40; this.hp = this.maxHp; // 20 slashes (touching the boss kills you, so it's not too long)
+    this.shotType = 'seed'; this.waveType = 'wave';
     this.phase = 1;
     this.state = 'intro'; this.timer = 2.2;
     this.facing = -1; this.flash = 0; this.anim = 0;
@@ -120,7 +121,7 @@ class GraveWarden {
         if (this.timer <= 0 && this.spitLeft > 0) {
           const dist = Math.abs(pc - bc);
           const vx = this.facing * clamp(dist * rand(0.55, 1.15), 140, 620);
-          g.projectiles.push(new Projectile('seed', bc + this.facing * 30 - 7, this.y + 52, vx, rand(-620, -420)));
+          g.projectiles.push(new Projectile(this.shotType, bc + this.facing * 30 - 7, this.y + 52, vx, rand(-620, -420)));
           Sfx.play('spit');
           this.spitLeft--; this.timer = 0.15;
         }
@@ -217,6 +218,72 @@ class GraveWarden {
     Draw.line(ctx, 30, -92 + breathe, 50, -66 + armUp); Draw.line(ctx, 50, -66 + armUp, 54, -40 + armUp);
     ctx.strokeStyle = c('#5a4a3a'); ctx.lineWidth = 2;
     for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse(54 + Math.sin(t * 3 + i) * 2, -34 + armUp + i * 7, 2.5, 4, 0, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+
+// BOSS OF LEVEL 20 — The Frozen Widow: a giant ice spider. Same attack pattern style as the Warden,
+// but she spits icicles, her slams send frost waves, and her charges shake icicles from the ceiling.
+class FrozenWidow extends GraveWarden {
+  constructor(x, y, arena) {
+    super(x, y, arena);
+    this.name = 'THE FROZEN WIDOW';
+    this.maxHp = 50; this.hp = 50;
+    this.shotType = 'icicle'; this.waveType = 'frostwave';
+    this.w = 110; this.h = 80;
+  }
+  hurt(dmg, g) {
+    const wasP1 = this.phase === 1;
+    const r = super.hurt(dmg, g);
+    if (wasP1 && this.phase === 2) { g.toasts = g.toasts.filter((m) => !m.text.includes('Warden')); g.toast('The Frozen Widow is ENRAGED!', 2.2); }
+    return r;
+  }
+  draw(ctx, t) {
+    const f = this.flash > 0;
+    const c = (col) => (f ? '#ffffff' : col);
+    const p2 = this.phase === 2;
+    const bc = this.x + this.w / 2;
+    let shakeX = 0;
+    if (this.state.startsWith('tele') || this.state === 'roar' || this.dying) shakeX = Math.sin(t * 60) * 2.5;
+    const sq = this.squash, bob = Math.sin(this.anim * 3) * 2;
+    ctx.save();
+    ctx.translate(bc + shakeX, this.y + this.h);
+    ctx.scale(this.facing * (1 + sq * 0.12), 1 - sq * 0.1);
+    if (this.dying) ctx.globalAlpha = Math.max(0.2, this.timer / 2.6);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; Draw.ell(ctx, 0, 0, 60, 8);
+    // eight legs
+    const walk = this.state === 'charge' ? this.anim * 25 : this.anim * 3;
+    ctx.strokeStyle = c('#1a2a40'); ctx.lineWidth = 4; ctx.lineCap = 'round';
+    for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
+      const ph = Math.sin(walk + i * 1.3 + (s > 0 ? 0 : Math.PI)) * 4;
+      const hx = s * (8 + i * 6), hy = -40 + bob;
+      const kx = s * (34 + i * 8), ky = -64 + i * 4 + ph;
+      const fx = s * (42 + i * 9) + ph, fy = 0;
+      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
+      ctx.fillStyle = c('#dff6ff'); Draw.circ(ctx, kx, ky, 2.5);
+    }
+    // abdomen (ice) with cracks
+    ctx.fillStyle = f ? '#fff' : shade(ctx, -22, -52 + bob, 32, '#f0fcff', p2 ? '#5aa0e0' : '#7ac8f0', '#0e2a4a');
+    Draw.ell(ctx, -22, -48 + bob, 30, 24);
+    ctx.strokeStyle = c('rgba(255,255,255,0.7)'); ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-40, -58 + bob); ctx.lineTo(-28, -48 + bob); ctx.lineTo(-34, -36 + bob); ctx.moveTo(-28, -48 + bob); ctx.lineTo(-12, -54 + bob); ctx.stroke();
+    // hourglass mark
+    ctx.fillStyle = c(p2 ? '#ff3a4a' : '#3ad0ff'); if (!f) setGlow(ctx, p2 ? '#ff0020' : '#3ad0ff', 14);
+    Draw.poly(ctx, [-26, -60 + bob, -18, -60 + bob, -22, -50 + bob]); Draw.poly(ctx, [-26, -40 + bob, -18, -40 + bob, -22, -50 + bob]);
+    clearGlow(ctx);
+    // head with many eyes
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 16, -44 + bob, 18, '#e8f6ff', '#6a9ac0', '#0e1e34'); Draw.ell(ctx, 16, -42 + bob, 18, 15);
+    const eyeCol = p2 ? '#ff3a3a' : '#bff4ff';
+    ctx.fillStyle = c(eyeCol); if (!f) setGlow(ctx, p2 ? '#ff0000' : '#3ad0ff', 12);
+    for (const [ex, ey, er] of [[20, -48, 3], [28, -46, 3], [16, -52, 2], [26, -53, 2], [12, -46, 1.8], [32, -50, 1.8]]) Draw.circ(ctx, ex, ey + bob, er);
+    clearGlow(ctx);
+    // fangs, open when spitting
+    const open = (this.state === 'tele_spit' || this.state === 'spit' || this.state === 'roar') ? 5 : 0;
+    ctx.fillStyle = c('#ffffff');
+    Draw.poly(ctx, [24, -34 + bob, 28, -34 + bob, 25 + open, -24 + bob]); Draw.poly(ctx, [30, -34 + bob, 34, -34 + bob, 33 + open, -25 + bob]);
+    // icicle crown
+    ctx.fillStyle = f ? '#fff' : lin(ctx, 0, -70, 0, -55, ['#ffffff', '#9fe8ff']);
+    for (let i = 0; i < 5; i++) Draw.poly(ctx, [4 + i * 6, -55 + bob, 8 + i * 6, -55 + bob, 6 + i * 6, -68 - (i === 2 ? 6 : 0) + bob]);
     ctx.restore();
   }
 }

@@ -229,6 +229,7 @@ function drawLeaves(ctx, dt, t) {
   for (const l of Art.leaves) {
     l.x += (l.vx + Math.sin(t * 1.3 + l.r) * 20) * dt; l.y += l.vy * dt; l.r += l.spin * dt;
     if (l.y > VIEW_H + 10 || l.x < -20) Object.assign(l, Art.newLeaf(false), { x: Math.random() * (VIEW_W + 200) });
+    if (THEME.snow) { ctx.globalAlpha = 0.85; ctx.fillStyle = l.col; Draw.circ(ctx, l.x, l.y, 1.2 + Math.abs(l.r % 1.5)); ctx.globalAlpha = 1; continue; }
     ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.r); ctx.scale(1, Math.sin(t * 3 + l.r));
     ctx.fillStyle = l.col; Draw.ell(ctx, 0, 0, 4, 2);
     ctx.restore();
@@ -403,4 +404,34 @@ function drawShardIcon(ctx, x, y, t) {
   clearGlow(ctx);
   ctx.fillStyle = 'rgba(255,255,255,0.75)'; Draw.poly(ctx, [0, -8, 1.5, -2, -2, 5, -3.5, -2]);
   ctx.restore();
+}
+
+// Boss arena: a dark crypt hall with arches, chains and torches (colours follow the level's theme).
+function drawArenaBackdrop(ctx, A, t) {
+  const x = (A.gateX + 1) * TILE, y = A.ceilY, w = A.x2 - x, h = A.floorY - y;
+  const S = THEME.stone;
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, `rgb(${S[0] - 30},${S[1] - 30},${S[2] - 30})`); g.addColorStop(1, `rgb(${S[0] - 20},${S[1] - 20},${S[2] - 18})`);
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = `rgba(${S[0]},${S[1]},${S[2]},0.35)`;
+  for (let row = 0; row < h / 24; row++) for (let col = 0; col < w / 48 + 1; col++) {
+    const bx = x + col * 48 + (row % 2 ? 24 : 0), by = y + row * 24;
+    if (bx + 44 > x + w) continue;
+    ctx.fillRect(bx + 2, by + 2, 44, 20);
+  }
+  for (let i = 0; i < 4; i++) {
+    const ax = x + 110 + i * 225;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath(); ctx.moveTo(ax - 48, A.floorY); ctx.lineTo(ax - 48, y + 170); ctx.arc(ax, y + 170, 48, Math.PI, 0); ctx.lineTo(ax + 48, A.floorY); ctx.fill();
+    // hanging chains
+    ctx.strokeStyle = 'rgba(120,110,130,0.6)'; ctx.lineWidth = 1.5;
+    for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.ellipse(ax - 70 + Math.sin(t + i) * 1.5, y + 8 + k * 9, 2.2, 4, 0, 0, Math.PI * 2); ctx.stroke(); }
+    // torch
+    const tx = ax + 70, ty = y + 110;
+    ctx.fillStyle = '#2a2230'; ctx.fillRect(tx - 3, ty, 6, 16);
+    setGlow(ctx, THEME.fireGlow, 18);
+    ctx.fillStyle = THEME.fire[1];
+    ctx.beginPath(); ctx.moveTo(tx - 5, ty); ctx.quadraticCurveTo(tx, ty - 18 - Math.sin(t * 12 + i) * 4, tx + 5, ty); ctx.fill();
+    clearGlow(ctx);
+  }
 }

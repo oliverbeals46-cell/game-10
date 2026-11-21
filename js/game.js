@@ -70,16 +70,19 @@ const Game = {
     this.enemies = def.enemies.map((e) => {
       if (e.type === 'bat') return new Bat(e.x * TILE, e.y * TILE);
       if (e.type === 'skitter') return new Skitter(e.x * TILE + 4, (e.y + 1) * TILE);
+      if (e.type === 'snowskull') return new SnowSkull(e.x * TILE + 4, (e.y + 1) * TILE);
+      if (e.type === 'icewisp') return new IceWisp(e.x * TILE, e.y * TILE);
+      if (e.type === 'frostmite') return new FrostMite(e.x * TILE + 1, (e.y + 1) * TILE);
       return new Crawler(e.x * TILE + 1, (e.y + 1) * TILE);
     });
     this.enemies.forEach((e) => (e.speedMul = D.enemy));
-    this.platforms = def.platforms.map((p) => new Platform(Object.assign({}, p, { period: (p.period || 4) / D.speed, crumble: 0.5 / D.speed })));
+    this.platforms = def.platforms.map((p) => new Platform(Object.assign({}, p, { period: (p.period || 4) / D.platform, phase: (p.phase || 0) / D.platform, crumble: 0.5 / D.platform })));
     this.pads = def.pads.map((p) => new JumpPad(p));
     this.firebars = def.firebars.map((f) => new FireBar(Object.assign({}, f, { speed: (f.speed || 1.6) * D.speed })));
     this.checkpoints = def.checkpoints.map((c, i) => ({ x: c.x * TILE + 16, y: (c.y + 1) * TILE, lit: false, n: i + 1 }));
     this.finish = { x: def.finish.x * TILE + 16, y: (def.finish.y + 1) * TILE };
     this.projectiles = []; this.particles = []; this.afterimages = []; this.toasts = [];
-    this.boss = null;
+    this.boss = null; this.bossStarted = false; this.bossDefeated = false; this.bossLock = false; this.bossTitleT = 0;
     this.finishT = 0; this.deathT = 0; this.titleT = 3.2; this.completed = false;
     this.stats = { shards: 0, deaths: 0, time: 0 };
     this.shake = 0; this.freeze = 0; this.flashRed = 0; this.time = 0; this.popups = []; this.lastShardSfx = 0;
@@ -139,7 +142,7 @@ const Game = {
 
   step(dt) {
     this.time += dt;
-    this.titleT -= dt; this.flashRed -= dt;
+    this.titleT -= dt; this.flashRed -= dt; this.bossTitleT -= dt;
     this.shake = Math.max(0, this.shake - dt * 40);
     this.toasts.forEach((m) => (m.t -= dt));
     this.toasts = this.toasts.filter((m) => m.t > 0);
@@ -185,6 +188,13 @@ const Game = {
     for (const pad of this.pads) pad.update(dt, this);
     for (const f of this.firebars) f.update(dt, this);
 
+    const A = this.def.arena;
+    if (A && !this.bossStarted && !this.bossDefeated && p.x > A.triggerX) {
+      this.bossStarted = true;
+      const Cls = A.boss === 'widow' ? FrozenWidow : GraveWarden;
+      this.startBoss(new Cls(A.bossSpawn.x, A.bossSpawn.y, A));
+      this.bossTitleT = 3.4;
+    }
     if (this.boss) {
       this.boss.update(dt, this);
       const b = this.boss;
@@ -357,7 +367,8 @@ const Game = {
     this.player.invuln = 1;
     this.projectiles = [];
     for (const pl of this.platforms) if (pl.kind === 'crumble') { pl.state = 'solid'; pl.y = pl.y0; pl.shakeX = 0; }
-    if (this.boss && !this.boss.dead) { this.boss = null; this.bossLock = false; this.world.gateClosed = false; Sfx.stopMusic(); }
+    if (this.boss && !this.bossDefeated) { this.boss = null; this.bossLock = false; this.world.gateClosed = false; Sfx.stopMusic(); }
+    if (!this.bossDefeated) this.bossStarted = false;
     this.updateCamera(1, true);
   },
 
@@ -399,9 +410,9 @@ const Game = {
     Sfx.startMusic('boss');
   },
   spawnShockwaves(b) {
-    const y = b.y + b.h - 26, cx = b.x + b.w / 2, sp = b.phase === 2 ? 420 : 340;
-    this.projectiles.push(new Projectile('wave', cx - 53, y, -sp, 0));
-    this.projectiles.push(new Projectile('wave', cx + 27, y, sp, 0));
+    const y = b.y + b.h - 26, cx = b.x + b.w / 2, sp = b.phase === 2 ? 420 : 340, ty = b.waveType || 'wave';
+    this.projectiles.push(new Projectile(ty, cx - 53, y, -sp, 0));
+    this.projectiles.push(new Projectile(ty, cx + 27, y, sp, 0));
   },
   spawnDebris(n) {
     const A = this.def.arena;
@@ -412,7 +423,10 @@ const Game = {
     }
   },
   onBossDefeated(b) {
-    this.bossLock = false; this.world.gateClosed = false; this.projectiles = [];
+    this.bossDefeated = true;
+    this.bossLock = false; this.world.gateClosed = false; this.world.exitOpen = true; this.projectiles = [];
+    this.toast(`${b.name} HAS FALLEN!`, 3);
+    this.shake = 12;
     Sfx.stopMusic(); Sfx.play('victory');
     for (let i = 0; i < 12; i++) this.pickups.push(new Shard(b.x + b.w / 2, b.y + 30, { drop: true, big: i < 4 }));
   },
@@ -449,6 +463,7 @@ const Game = {
     ctx.save();
     ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
     const onScreen = (x, pad = 200) => x > cam.x - pad && x < cam.x + VIEW_W + pad;
+    if (this.def.arena) drawArenaBackdrop(ctx, this.def.arena, t);
     for (const d of this.def.decor) if (onScreen(d.x * TILE)) drawDecor(ctx, d, t);
     for (const s of this.def.signs) if (onScreen(s.x * TILE)) drawSignPost(ctx, s);
     for (const c of this.checkpoints) if (onScreen(c.x)) drawCheckpoint(ctx, c, t);
@@ -511,16 +526,17 @@ const Game = {
     for (const c of this.checkpoints) if (inView(c.x, c.y, 200)) L.push({ x: c.x, y: c.y - 40, r: c.lit ? 200 : 90, i: c.lit ? 0.9 : 0.4, c: c.lit ? 'rgba(80,255,150,0.18)' : null });
     if (inView(this.finish.x, this.finish.y, 300)) L.push({ x: this.finish.x, y: this.finish.y - 60, r: 320, i: 1, c: 'rgba(190,90,255,0.35)' });
     for (const d of this.def.decor) if (d.type === 'shroom') { const x = d.x * TILE + 16, y = (d.y + 1) * TILE - 8; if (inView(x, y, 120)) L.push({ x, y, r: 110, i: 0.7, c: 'rgba(80,255,200,0.16)' }); }
-    for (const f of this.firebars) if (inView(f.cx, f.cy, 200)) L.push({ x: f.cx, y: f.cy, r: 190, i: 0.9, c: 'rgba(255,110,20,0.3)' });
+    for (const f of this.firebars) if (inView(f.cx, f.cy, 200)) L.push({ x: f.cx, y: f.cy, r: 190, i: 0.9, c: THEME.snow ? 'rgba(60,170,255,0.3)' : 'rgba(255,110,20,0.3)' });
     for (const pad of this.pads) if (inView(pad.x, pad.y, 120)) L.push({ x: pad.x + 14, y: pad.y - 10, r: 100, i: 0.7, c: 'rgba(255,150,40,0.2)' });
     for (const lt of this.world.lavaTiles) {
       if (lt.tx % 2) continue;
       const x = lt.tx * TILE + 16, y = lt.ty * TILE;
-      if (inView(x, y, 160)) L.push({ x, y, r: 150, i: 0.8, c: 'rgba(255,90,10,0.18)' });
+      if (inView(x, y, 160)) L.push({ x, y, r: 150, i: 0.8, c: THEME.snow ? 'rgba(80,200,255,0.16)' : 'rgba(255,90,10,0.18)' });
     }
     for (const c of this.pickups) if (inView(c.x, c.y, 60)) L.push({ x: c.x + c.w / 2, y: c.y + c.h / 2, r: c.big ? 90 : 46, i: 0.6, c: c.big ? 'rgba(190,100,255,0.25)' : null });
     for (const pr of this.projectiles) if (pr.type === 'wisp' || pr.type === 'wave') L.push({ x: pr.x + pr.w / 2, y: pr.y + pr.h / 2, r: 130, i: 0.9, c: pr.type === 'wisp' ? 'rgba(80,230,255,0.3)' : 'rgba(255,110,20,0.3)' });
-    if (this.boss) L.push({ x: this.boss.x + this.boss.w / 2, y: this.boss.y + 40, r: 260, i: 0.8, c: 'rgba(255,120,20,0.2)' });
+    if (this.boss) L.push({ x: this.boss.x + this.boss.w / 2, y: this.boss.y + 40, r: 280, i: 0.85, c: THEME.snow ? 'rgba(80,200,255,0.2)' : 'rgba(120,220,255,0.15)' });
+    if (this.def.arena && inView(this.def.arena.x1 + 450, this.def.arena.floorY - 200, 600)) L.push({ x: this.def.arena.x1 + 450, y: this.def.arena.floorY - 220, r: 520, i: 0.55 });
     return L;
   },
 
@@ -564,6 +580,28 @@ const Game = {
 
   drawOverlays(ctx) {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const b = this.boss;
+    if (b && (b.state !== 'intro' || b.landedIntro) && !b.dead) {
+      const w = 520, x = (VIEW_W - w) / 2, y = VIEW_H - 40;
+      ctx.fillStyle = 'rgba(8,5,16,0.85)'; Draw.rr(ctx, x - 4, y - 4, w + 8, 18, 6); ctx.fill();
+      ctx.fillStyle = '#2a0810'; ctx.fillRect(x, y, w, 10);
+      ctx.fillStyle = b.phase === 2 ? '#ff2a3a' : '#c8102e';
+      ctx.fillRect(x, y, w * (b.hp / b.maxHp), 10);
+      ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x, y, w * (b.hp / b.maxHp), 3);
+      ctx.fillStyle = '#e8e0cc'; ctx.font = '22px Creepster, Nunito, cursive';
+      ctx.fillText(b.name, VIEW_W / 2, y - 16);
+    }
+    if (this.bossTitleT > 0 && this.bossTitleT < 3) {
+      const a = Math.min(1, this.bossTitleT, (3 - this.bossTitleT) * 2);
+      ctx.globalAlpha = Math.max(0, a);
+      ctx.fillStyle = '#e8e0cc'; ctx.font = '64px Creepster, Nunito, cursive';
+      setGlow(ctx, '#c8102e', 20);
+      ctx.fillText(this.def.arena.name, VIEW_W / 2, 180);
+      clearGlow(ctx);
+      ctx.fillStyle = '#c9b8f0'; ctx.font = '700 15px Nunito, sans-serif';
+      ctx.fillText(`Boss of Level ${this.def.number}`, VIEW_W / 2, 225);
+      ctx.globalAlpha = 1;
+    }
     if (this.titleT > 0) {
       const a = Math.min(1, this.titleT, (3.2 - this.titleT) * 2);
       ctx.globalAlpha = Math.max(0, a);
@@ -572,7 +610,7 @@ const Game = {
       ctx.fillText(`LEVEL ${this.def.number}`, VIEW_W / 2, 170);
       clearGlow(ctx);
       ctx.fillStyle = '#c9b8f0'; ctx.font = '700 15px Nunito, sans-serif';
-      ctx.fillText('Reach the portal!', VIEW_W / 2, 215);
+      ctx.fillText(this.def.arena ? 'A boss waits at the end...' : 'Reach the portal!', VIEW_W / 2, 215);
       clearGlow(ctx);
       ctx.globalAlpha = 1;
     }

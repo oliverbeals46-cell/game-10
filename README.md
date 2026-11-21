@@ -55,10 +55,15 @@ Saves live in each browser, so a different computer or a private/incognito windo
 | Levels | Look | Mini enemies | Boss |
 | --- | --- | --- | --- |
 | 1–10 | Haunted graveyard & dead forest, pale moon | Grave Mite, Vesper Bat, Skitter Skull | The Grave Warden (L10) |
-| 11–20 | Frozen bone forest, blue ghost-fire | Ice Wisp, Frost Mite, Snow Skull | The Frozen Widow (L20) |
+| 11–20 | Frozen forest: snow, ice spikes, freezing water, blue ghost-fire | Frost Mite, Ice Wisp, Snow Skull | The Frozen Widow (L20) |
 | 21–30 | Swamp under a red moon | Bog Leech, Swamp Lantern, Croaking Skull | The Mire Hag (L30) |
 | 31–40 | Underground clockwork tombs | Gear Spider, Chain Ghoul, Tick-Tock Skull | The Grandfather Clock (L40) |
 | 41–50 | Burning cathedral, orange embers | Ember Imp, Candle Wraith, Ash Bat | The Hollow Saint (L50) |
+
+### Levels 3–20
+Built by `js/levelgen.js` from the obstacle pieces that were tested in Levels 1–2 (floating stones, small stones under fire, moving rafts, crumbling stones, elevator rafts, bounce-mushroom cliffs and pillars, fire runs, dash gaps, lava staircases, plank climbs, spike strips, crumbling bridges, dash pillars). Each level number gives its own layout, gets longer and faster as numbers go up, and has signs before every obstacle, checkpoints, shards, and the mini enemies of its group. Levels 10 and 20 end in a boss arena: the gate shuts behind you, boss music plays, and the exit opens when the boss falls.
+
+Every level stores its route so an automated playtest can run it; all 20 levels have been beaten that way.
 
 ### Level 2 obstacles
 Small stepping stones under spinning fire → an up-and-down raft to a high ledge → a sliding raft over lava → tiny crumbling stones → a bounce mushroom on a pillar → fire gauntlet → dash gap → stone staircase over lava → spike strips and fire → crumbling bridge → **finish portal**. There are 5 checkpoints.
@@ -88,8 +93,9 @@ js/art.js         sky, moon, clouds, castle, forest, fog, lighting, checkpoints,
 js/world.js       tile map, collision and textured tile art (cached in chunks)
 js/level1.js      Level 1 layout (+ the LEVELS list)
 js/level2.js      Level 2 layout
+js/levelgen.js    Levels 3–20 (built from tested obstacle pieces) + boss arenas
 js/entities.js    player, mini enemies, obby obstacles (rafts, crumbling stones, bounce pads, fire bars)
-js/boss.js        The Grave Warden (Level 10 boss, ready for when Level 10 is built)
+js/boss.js        The Grave Warden (Level 10) and The Frozen Widow (Level 20)
 js/game.js        game loop, camera, checkpoints, deaths/timer, HUD
 js/heads.js       head art and perks
 js/audio.js       synthesized sound effects + boss-only music

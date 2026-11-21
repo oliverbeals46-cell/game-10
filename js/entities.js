@@ -322,7 +322,7 @@ class Crawler {
         const midTy = Math.floor((this.y + this.h / 2) / TILE);
         if (!g.world.standable(tx, footTy) || g.world.solid(tx, midTy) || g.world.isHazard(tx, footTy - 1) || g.world.isHazard(tx, footTy)) this.dir *= -1;
       }
-      this.vx = this.dir * 55 * (this.speedMul || 1);
+      this.vx = this.dir * (this.baseSpeed || 55) * (this.speedMul || 1);
     }
     this.vy = Math.min(this.vy + PHYS.GRAV * dt, PHYS.MAXFALL);
     moveEntity(g.world, this, dt);
@@ -446,7 +446,7 @@ class Skitter {
         const near = Math.abs(dx) < 260 && Math.abs(p.y - this.y) < 120 && !p.dead;
         this.facing = near ? Math.sign(dx) || 1 : (this.x > this.home ? -1 : 1);
         const tx = Math.floor((this.x + this.w / 2 + this.facing * 70) / TILE), ty = Math.floor((this.y + this.h + 4) / TILE);
-        if (g.world.standable(tx, ty) && !g.world.isHazard(tx, ty - 1)) { this.vy = -520; this.vx = this.facing * 140 * (this.speedMul || 1); Sfx.play('skitter'); }
+        if (g.world.standable(tx, ty) && !g.world.isHazard(tx, ty - 1)) { this.vy = -(this.hop || 520); this.vx = this.facing * 140 * (this.speedMul || 1); Sfx.play('skitter'); }
         this.hopT = near ? 0.9 : 1.6;
       }
     }
@@ -487,6 +487,64 @@ class Skitter {
     clearGlow(ctx);
     ctx.strokeStyle = c('#4a4232'); ctx.lineWidth = 0.6;
     for (let x = -3; x <= 4; x += 1.8) Draw.line(ctx, x, -6.5, x, -3);
+    ctx.restore();
+  }
+}
+
+/* ---------- Levels 11–20 mini enemies (frozen) ---------- */
+// Frost Mite: an icy beetle that crawls faster than a Grave Mite.
+class FrostMite extends Crawler {
+  constructor(x, y) { super(x, y); this.baseSpeed = 75; }
+  draw(ctx, t) {
+    const f = this.flash > 0;
+    const c = (col) => (f ? '#ffffff' : col);
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; Draw.ell(ctx, this.x + this.w / 2, this.y + this.h, 15, 3);
+    ctx.translate(this.x + this.w / 2, this.y + this.h); ctx.scale(this.dir, 1);
+    ctx.strokeStyle = c('#0e1a2a'); ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) { const ph = Math.sin(this.anim * 18 + i * 2) * 2.5; ctx.beginPath(); ctx.moveTo(-8 + i * 7, -6); ctx.lineTo(-11 + i * 7 + ph, -3); ctx.lineTo(-10 + i * 7 + ph, 0); ctx.stroke(); }
+    ctx.fillStyle = f ? '#fff' : shade(ctx, -2, -12, 16, '#e8fbff', '#6ab8e0', '#123a5a');
+    ctx.beginPath(); ctx.ellipse(0, -9, 15, 11, 0, Math.PI, 0); ctx.lineTo(15, -5); ctx.lineTo(-15, -5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c('#dff6ff'); // ice spikes on the shell
+    for (let i = -10; i <= 6; i += 6) Draw.poly(ctx, [i - 2.5, -15 + Math.abs(i) * 0.3, i + 2.5, -15 + Math.abs(i) * 0.3, i, -23 + Math.abs(i) * 0.3]);
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 12, -8, 6, '#ffffff', '#9fc8e0', '#2a4a6a'); Draw.ell(ctx, 12, -8, 6, 5);
+    ctx.fillStyle = c('#5ae0ff'); if (!f) setGlow(ctx, '#3ad0ff', 8); Draw.circ(ctx, 14, -9, 1.8); clearGlow(ctx);
+    ctx.restore();
+  }
+}
+
+// Ice Wisp: a floating blue flame with a frozen face. Chases you like a bat.
+class IceWisp extends Bat {
+  draw(ctx, t) {
+    const f = this.flash > 0;
+    const cx = this.x + this.w / 2, cy = this.y + this.h / 2;
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(this.facing, 1);
+    if (!f) setGlow(ctx, '#3ab0ff', 16);
+    const fl = Math.sin(this.anim * 10) * 2;
+    ctx.fillStyle = f ? '#fff' : lin(ctx, 0, -16, 0, 10, ['#ffffff', '#7ad8ff', 'rgba(30,90,180,0.2)']);
+    ctx.beginPath(); ctx.moveTo(-10, 4);
+    ctx.quadraticCurveTo(-12, -8, -2, -16 + fl); ctx.quadraticCurveTo(2, -8, 6, -14 - fl);
+    ctx.quadraticCurveTo(14, -4, 10, 6); ctx.quadraticCurveTo(0, 12, -10, 4); ctx.fill();
+    clearGlow(ctx);
+    ctx.fillStyle = f ? '#fff' : '#0a1a30'; Draw.ell(ctx, -2, -2, 2, 2.8); Draw.ell(ctx, 4, -2, 2, 2.8);
+    ctx.fillStyle = '#ffffff'; Draw.circ(ctx, -1.6, -2.6, 0.7); Draw.circ(ctx, 4.4, -2.6, 0.7);
+    ctx.restore();
+  }
+}
+
+// Snow Skull: a frosted skull on spider legs that hops higher than a Skitter Skull.
+class SnowSkull extends Skitter {
+  constructor(x, y) { super(x, y); this.hop = 600; }
+  draw(ctx, t) {
+    super.draw(ctx, t);
+    if (this.flash > 0) return;
+    const cx = this.x + this.w / 2, by = this.y + this.h;
+    ctx.save(); ctx.translate(cx, by); ctx.scale(this.facing, 1);
+    ctx.fillStyle = 'rgba(230,250,255,0.9)'; // snow cap
+    ctx.beginPath(); ctx.ellipse(0, -18, 7, 3, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#bff0ff'; Draw.poly(ctx, [-4, -15, -2.5, -15, -3.2, -11]); Draw.poly(ctx, [5, -15, 6.5, -15, 5.8, -12]);
+    ctx.fillStyle = '#5ae0ff'; setGlow(ctx, '#3ad0ff', 8);
+    Draw.circ(ctx, -1.2, -11.2, 0.9); Draw.circ(ctx, 4.3, -11.2, 0.9); clearGlow(ctx);
     ctx.restore();
   }
 }
@@ -615,9 +673,9 @@ class FireBar {
     ctx.fillStyle = shade(ctx, this.cx, this.cy, 11, '#fffaf0', '#cfc6ae', '#4a4232');
     Draw.circ(ctx, this.cx, this.cy, 10);
     ctx.fillStyle = '#120a14'; Draw.circ(ctx, this.cx - 3.5, this.cy - 1, 2.6); Draw.circ(ctx, this.cx + 3.5, this.cy - 1, 2.6);
-    setGlow(ctx, '#ff5a00', 16);
+    setGlow(ctx, THEME.fireGlow, 16);
     for (const b of this.balls()) {
-      ctx.fillStyle = shade(ctx, b.x, b.y, 9, '#fff8c0', '#ffa020', '#c02800');
+      ctx.fillStyle = shade(ctx, b.x, b.y, 9, THEME.fire[0], THEME.fire[1], THEME.fire[2]);
       Draw.circ(ctx, b.x, b.y, 8 + Math.sin(t * 20 + b.x) * 0.8);
     }
     clearGlow(ctx);
@@ -632,7 +690,8 @@ class Projectile {
     this.hostile = type !== 'wisp';
     this.breakable = type === 'seed' || type === 'debris';
     this.hitSet = new Set();
-    if (type === 'seed') { this.w = 14; this.h = 14; this.grav = 1300; }
+    if (type === 'seed' || type === 'icicle') { this.w = 14; this.h = 14; this.grav = 1300; this.breakable = true; }
+    if (type === 'frostwave') { this.w = 26; this.h = 26; this.grav = 0; this.life = 3.5; }
     if (type === 'wave') { this.w = 26; this.h = 26; this.grav = 0; this.life = 3.5; }
     if (type === 'debris') { this.w = 18; this.h = 18; this.grav = 0; this.warn = 0.7; }
     if (type === 'wisp') { this.w = 30; this.h = 18; this.grav = 0; this.life = 1.3; this.dmg = 6; }
@@ -645,9 +704,10 @@ class Projectile {
     this.vy += (this.grav || 0) * dt;
     this.x += this.vx * dt; this.y += this.vy * dt;
     const cx = this.x + this.w / 2, cy = this.y + this.h / 2;
-    if (this.type === 'wave') {
+    if (this.type === 'wave' || this.type === 'frostwave') {
+      const fw = this.type === 'frostwave';
       if (g.world.solidAt(this.vx > 0 ? this.x + this.w : this.x, cy)) this.dead = true;
-      if (Math.random() < 0.7) g.particles.push(makeParticle(cx + rand(-8, 8), this.y + this.h, rand(-30, 30), rand(-160, -60), 0.4, Math.random() < 0.5 ? '#ff8a1a' : '#ffd84d', 3, 0));
+      if (Math.random() < 0.7) g.particles.push(makeParticle(cx + rand(-8, 8), this.y + this.h, rand(-30, 30), rand(-160, -60), 0.4, fw ? (Math.random() < 0.5 ? '#bff4ff' : '#ffffff') : (Math.random() < 0.5 ? '#ff8a1a' : '#ffd84d'), 3, 0));
     } else if (g.world.solidAt(cx, cy)) {
       this.dead = true;
       g.burst(cx, cy, 6, this.type === 'wisp' ? '#bff8ff' : '#c8a86a', 140);
@@ -660,12 +720,18 @@ class Projectile {
     if (this.type === 'seed') { // bone shard
       ctx.translate(cx, cy); ctx.rotate(this.t * 10);
       ctx.fillStyle = shade(ctx, 0, 0, 7, '#ffffff', '#d8d0b8', '#5a5240'); Draw.rr(ctx, -7, -2, 14, 4, 2); ctx.fill(); Draw.circ(ctx, -7, -2, 2.4); Draw.circ(ctx, -7, 2, 2.4); Draw.circ(ctx, 7, -2, 2.4); Draw.circ(ctx, 7, 2, 2.4);
-    } else if (this.type === 'wave') {
-      setGlow(ctx, '#ff7a1a', 16);
+    } else if (this.type === 'icicle') {
+      ctx.translate(cx, cy); ctx.rotate(Math.atan2(this.vy, this.vx) + Math.PI / 2);
+      setGlow(ctx, '#7ae0ff', 10);
+      ctx.fillStyle = lin(ctx, -4, 0, 4, 0, ['#ffffff', '#9fe8ff', '#3a8ac0']);
+      Draw.poly(ctx, [-4, -8, 4, -8, 0, 10]);
+    } else if (this.type === 'wave' || this.type === 'frostwave') {
+      const fw = this.type === 'frostwave';
+      setGlow(ctx, fw ? '#5ad0ff' : '#ff7a1a', 16);
       const fl = Math.sin(this.t * 30) * 3;
-      ctx.fillStyle = '#ff7a1a';
+      ctx.fillStyle = fw ? '#7ad8ff' : '#ff7a1a';
       ctx.beginPath(); ctx.moveTo(this.x, this.y + this.h); ctx.quadraticCurveTo(cx, this.y - 10 + fl, this.x + this.w, this.y + this.h); ctx.fill();
-      ctx.fillStyle = '#ffe07a';
+      ctx.fillStyle = fw ? '#ffffff' : '#ffe07a';
       ctx.beginPath(); ctx.moveTo(this.x + 6, this.y + this.h); ctx.quadraticCurveTo(cx, this.y + 6 - fl, this.x + this.w - 6, this.y + this.h); ctx.fill();
     } else if (this.type === 'debris') {
       if (this.warn > 0) {
@@ -674,8 +740,13 @@ class Projectile {
         Draw.poly(ctx, [cx - 8, this.y - 4, cx + 8, this.y - 4, cx, this.y + 8]);
         ctx.globalAlpha = 1;
       }
-      ctx.translate(cx, cy); ctx.rotate(this.t * 4);
-      ctx.fillStyle = shade(ctx, 0, 0, 10, '#7a6c96', '#3a2f4f', '#120c1e'); Draw.poly(ctx, [-9, -6, 0, -10, 9, -4, 7, 8, -6, 9]);
+      if (THEME.snow) {
+        ctx.translate(cx, cy);
+        ctx.fillStyle = lin(ctx, -6, 0, 6, 0, ['#ffffff', '#9fe8ff', '#3a8ac0']); Draw.poly(ctx, [-6, -10, 6, -10, 0, 12]);
+      } else {
+        ctx.translate(cx, cy); ctx.rotate(this.t * 4);
+        ctx.fillStyle = shade(ctx, 0, 0, 10, '#7a6c96', '#3a2f4f', '#120c1e'); Draw.poly(ctx, [-9, -6, 0, -10, 9, -4, 7, 8, -6, 9]);
+      }
     } else if (this.type === 'wisp') {
       setGlow(ctx, '#2ee6ff', 20);
       ctx.translate(cx, cy); ctx.scale(Math.sign(this.vx) || 1, 1);

@@ -79,11 +79,19 @@ function worldForLevel(n) { return WORLDS.find((w) => n >= w.levels[0] && n <= w
 function isBossLevel(n) { return n % 10 === 0; }
 
 // Small per-level changes inside a world: moon position, fog thickness, a slight colour tint.
+// Hazard colours per group (lava/water, fire, spikes, snow). Groups without their own use these.
+const HAZARD_LOOK = {
+  1: { liquid: ['#ffdc60', '#ff7a10', '#c02a08', '#4a0a04'], bubble: [255, 230, 120], fire: ['#fff8c0', '#ffa020', '#c02800'], fireGlow: '#ff5a00',
+       spike: ['#e8e6f0', '#9a96a8', '#3a3644', 'rgba(140,60,30,0.45)'], snow: false },
+  2: { liquid: ['#eaffff', '#6ad8f0', '#12507a', '#04142a'], bubble: [220, 250, 255], fire: ['#f0ffff', '#7ae0ff', '#1a60c0'], fireGlow: '#3ab0ff',
+       spike: ['#ffffff', '#bfe8f8', '#4a7a9a', 'rgba(200,240,255,0.5)'], snow: true },
+};
+
 function themeForLevel(n) {
   const w = worldForLevel(n);
   const v = (n - 1) % 10;
   const r = mulberry32(n * 97);
-  return Object.assign({}, w.pal, {
+  return Object.assign({}, HAZARD_LOOK[1], HAZARD_LOOK[w.id] || {}, w.pal, {
     world: w, level: n,
     moonX: 560 + r() * 300, moonY: 90 + r() * 60,
     fogMul: 0.8 + r() * 0.6,
@@ -109,8 +117,9 @@ function nextAttack() { return ATTACKS.find((a) => !Save.data.unlocks[a.id]); }
 function difficultyForLevel(n) {
   const d = n - 1;
   return {
-    speed: 1 + d * 0.035,                       // rafts, fire bars, crumble speed
-    enemy: 1 + d * 0.03,                        // mini monster speed
+    speed: 1 + d * 0.035,                       // fire bars
+    platform: Math.min(1.25, 1 + d * 0.015),    // rafts and crumbling stones (capped so jumps stay fair)
+    enemy: Math.min(1.5, 1 + d * 0.03),         // mini monster speed
     checkpoints: Math.max(3, 6 - Math.floor(d / 10)), // fewer checkpoints in later groups of levels
   };
 }

@@ -1,7 +1,7 @@
 // Tile world: collision + rendering.
 // Static tiles are painted once into cached "chunks" so we can afford detailed, textured art.
 const TILE = 32;
-const T = { EMPTY: 0, SOLID: 1, ONEWAY: 2, SPIKE: 3, GATE: 4, LAVA: 5 };
+const T = { EMPTY: 0, SOLID: 1, ONEWAY: 2, SPIKE: 3, GATE: 4, LAVA: 5, EXIT: 6 };
 const CHUNK = 16; // tiles per chunk side
 
 function hash2(x, y) {
@@ -15,6 +15,7 @@ class World {
     this.w = def.w; this.h = def.h;
     this.tiles = Uint8Array.from(def.tiles);
     this.gateClosed = false;
+    this.exitOpen = false;
     this.chunks = new Map();
     this.chunkScale = 0;
     this.lavaTiles = [];
@@ -31,7 +32,7 @@ class World {
     if (ty >= this.h) return T.SOLID;
     return this.tiles[ty * this.w + tx];
   }
-  solid(tx, ty) { const t = this.get(tx, ty); return t === T.SOLID || (t === T.GATE && this.gateClosed); }
+  solid(tx, ty) { const t = this.get(tx, ty); return t === T.SOLID || (t === T.GATE && this.gateClosed) || (t === T.EXIT && !this.exitOpen); }
   standable(tx, ty) { const t = this.get(tx, ty); return t === T.SOLID || t === T.ONEWAY || (t === T.GATE && this.gateClosed); }
   isSpike(tx, ty) { return this.get(tx, ty) === T.SPIKE; }
   isHazard(tx, ty) { const t = this.get(tx, ty); return t === T.SPIKE || t === T.LAVA; }
@@ -194,10 +195,11 @@ class World {
     for (let i = 0; i < 4; i++) {
       const bx = px + 1 + i * 7.75, h = 17 + hash2(tx, i) * 6, top = py + TILE - 6 - h;
       const g = ctx.createLinearGradient(bx, 0, bx + 7.5, 0);
-      g.addColorStop(0, '#e8e6f0'); g.addColorStop(0.45, '#9a96a8'); g.addColorStop(1, '#3a3644');
+      const SP = THEME.spike;
+      g.addColorStop(0, SP[0]); g.addColorStop(0.45, SP[1]); g.addColorStop(1, SP[2]);
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.moveTo(bx, py + TILE - 6); ctx.lineTo(bx + 3.75, top); ctx.lineTo(bx + 7.5, py + TILE - 6); ctx.fill();
-      ctx.fillStyle = 'rgba(140,60,30,0.45)'; // rust
+      ctx.fillStyle = SP[3]; // rust or frost
       ctx.beginPath(); ctx.moveTo(bx + 1, py + TILE - 6); ctx.lineTo(bx + 3.75, py + TILE - 12); ctx.lineTo(bx + 6.5, py + TILE - 6); ctx.fill();
     }
   }
@@ -209,7 +211,8 @@ class World {
       if (px + TILE < cam.x || px > cam.x + VIEW_W || py > cam.y + VIEW_H || py + TILE * 3 < cam.y) continue;
       let depth = 0; while (depth < 4 && this.get(tx, ty + depth) === T.LAVA) depth++;
       const g = ctx.createLinearGradient(0, py, 0, py + depth * TILE);
-      g.addColorStop(0, '#ffdc60'); g.addColorStop(0.15, '#ff7a10'); g.addColorStop(0.6, '#c02a08'); g.addColorStop(1, '#4a0a04');
+      const LQ = THEME.liquid;
+      g.addColorStop(0, LQ[0]); g.addColorStop(0.15, LQ[1]); g.addColorStop(0.6, LQ[2]); g.addColorStop(1, LQ[3]);
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.moveTo(px, py + depth * TILE);
@@ -217,13 +220,14 @@ class World {
       ctx.lineTo(px + TILE, py + depth * TILE); ctx.closePath(); ctx.fill();
       // bubbles
       const b = (t * 0.7 + hash2(tx, 3)) % 1;
-      if (hash2(tx, 9) > 0.5) { ctx.fillStyle = `rgba(255,230,120,${1 - b})`; Draw.circ(ctx, px + 8 + hash2(tx, 1) * 16, py + 8 - b * 8, 2 + b * 2); }
+      if (hash2(tx, 9) > 0.5) { ctx.fillStyle = hexA(THEME.bubble, 1 - b); Draw.circ(ctx, px + 8 + hash2(tx, 1) * 16, py + 8 - b * 8, 2 + b * 2); }
     }
     // gate
     const x0 = Math.max(0, Math.floor(cam.x / TILE)), x1 = Math.min(this.w - 1, Math.ceil((cam.x + VIEW_W) / TILE));
     const y0 = Math.max(0, Math.floor(cam.y / TILE)), y1 = Math.min(this.h - 1, Math.ceil((cam.y + VIEW_H) / TILE));
     for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
-      if (this.get(tx, ty) !== T.GATE || !this.gateClosed) continue;
+      const tt = this.get(tx, ty);
+      if (!((tt === T.GATE && this.gateClosed) || (tt === T.EXIT && !this.exitOpen))) continue;
       const px = tx * TILE, py = ty * TILE;
       for (let i = 0; i < 3; i++) { ctx.fillStyle = lin(ctx, px + 4 + i * 10, 0, px + 9 + i * 10, 0, ['#6a6a7e', '#2b2b38']); ctx.fillRect(px + 4 + i * 10, py, 5, TILE); }
     }
