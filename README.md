@@ -60,6 +60,9 @@ Saves live in each browser, so a different computer or a private/incognito windo
 | 31–40 | Underground clockwork tombs | Gear Spider, Chain Ghoul, Tick-Tock Skull | The Grandfather Clock (L40) |
 | 41–50 | Burning cathedral, orange embers | Ember Imp, Candle Wraith, Ash Bat | The Hollow Saint (L50) |
 
+### Level 2 obstacles
+Small stepping stones under spinning fire → an up-and-down raft to a high ledge → a sliding raft over lava → tiny crumbling stones → a bounce mushroom on a pillar → fire gauntlet → dash gap → stone staircase over lava → spike strips and fire → crumbling bridge → **finish portal**. There are 5 checkpoints.
+
 ### Level 1 obstacles
 Floating stones over spikes → moving rafts → crumbling stones over lava → bounce mushrooms up a cliff → spinning fire bars → dash pillars → double-jump ledge climb → spike strips → a raft over lava → **finish portal**. There are 6 checkpoints along the way.
 
@@ -83,7 +86,8 @@ index.html        screens: home, shop, how to play, controls, credits, pause, le
 js/themes.js      the look/enemies/boss for each group of 10 levels + the attack unlock schedule
 js/art.js         sky, moon, clouds, castle, forest, fog, lighting, checkpoints, portal, decorations
 js/world.js       tile map, collision and textured tile art (cached in chunks)
-js/level1.js      Level 1 layout
+js/level1.js      Level 1 layout (+ the LEVELS list)
+js/level2.js      Level 2 layout
 js/entities.js    player, mini enemies, obby obstacles (rafts, crumbling stones, bounce pads, fire bars)
 js/boss.js        The Grave Warden (Level 10 boss, ready for when Level 10 is built)
 js/game.js        game loop, camera, checkpoints, deaths/timer, HUD
