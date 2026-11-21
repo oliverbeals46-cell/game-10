@@ -1,0 +1,123 @@
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: #05030a;
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: #ece6ff;
+}
+#stage {
+  position: absolute; left: 0; top: 0;
+  width: 960px; height: 540px;
+  transform-origin: 0 0;
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(120, 60, 200, 0.25);
+}
+#game { position: absolute; inset: 0; width: 960px; height: 540px; display: block; }
+
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.hidden { display: none !important; }
+
+/* ---------- Home ---------- */
+#screen-menu { align-items: flex-start; padding-left: 80px; }
+.title {
+  font-family: 'Creepster', 'Nunito', cursive;
+  font-weight: normal;
+  font-size: 72px; line-height: 0.92; margin: 0 0 4px;
+  color: #ff8c26;
+  text-shadow: 0 0 18px rgba(255, 120, 20, 0.6), 0 4px 0 #5a1d00;
+  letter-spacing: 3px;
+}
+.title span { display: block; color: #b98cff; text-shadow: 0 0 18px rgba(160, 100, 255, 0.6), 0 4px 0 #2a0f55; }
+.tagline { margin: 2px 0 16px; color: #a99cc8; font-size: 15px; }
+
+.menu { display: flex; flex-direction: column; gap: 8px; }
+.menu.row { flex-direction: row; justify-content: center; }
+.menu button, .back, .shop-card button {
+  font-family: inherit; font-weight: 900; font-size: 18px;
+  color: #f4eeff; background: linear-gradient(#3a2560, #24163f);
+  border: 2px solid #6a4aa3; border-radius: 10px;
+  padding: 7px 26px; min-width: 210px; text-align: left;
+  cursor: pointer; letter-spacing: 1px;
+  transition: transform .08s, border-color .15s, box-shadow .15s;
+}
+.menu.row button { min-width: 0; text-align: center; }
+.menu button:hover, .menu button:focus-visible, .back:hover, .back:focus-visible {
+  border-color: #ff9f40; box-shadow: 0 0 14px rgba(255, 140, 40, 0.45); transform: translateX(4px); outline: none;
+}
+.menu-foot {
+  position: absolute; left: 80px; bottom: 16px;
+  display: flex; gap: 22px; font-size: 14px; color: #bfb2e0;
+}
+.menu-foot span b { color: #ffb45e; }
+
+/* ---------- Panels ---------- */
+.panel { background: rgba(6, 3, 14, 0.72); }
+.card {
+  background: linear-gradient(#1d1333, #140c24);
+  border: 2px solid #5b3f8c; border-radius: 16px;
+  padding: 22px 30px; width: 640px; max-height: 500px; overflow: auto;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(120, 70, 200, 0.12);
+}
+.card.wide { width: 900px; padding: 16px 24px; max-height: 520px; }
+.card.small { width: 340px; }
+.card.center { text-align: center; }
+.card.center .menu { align-items: center; }
+.card h2 {
+  font-family: 'Creepster', 'Nunito', cursive; font-weight: normal;
+  font-size: 44px; margin: 0 0 12px; color: #ff9f40;
+  text-shadow: 0 0 12px rgba(255, 140, 40, 0.5); letter-spacing: 2px;
+}
+.bullets { margin: 0 0 16px; padding-left: 20px; line-height: 1.45; font-size: 15px; }
+.bullets li { margin-bottom: 7px; }
+.bullets b { color: #ffc27a; }
+.back { margin-top: 6px; min-width: 0; text-align: center; padding: 8px 30px; }
+
+table.keys { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 15px; }
+table.keys td { padding: 5px 6px; border-bottom: 1px solid #2d2048; }
+table.keys td:first-child { color: #c9b8f0; width: 44%; }
+kbd {
+  display: inline-block; min-width: 24px; padding: 1px 7px; margin: 0 2px;
+  font-family: inherit; font-weight: 900; font-size: 13px; text-align: center;
+  background: #2c1f47; border: 1px solid #6a4aa3; border-bottom-width: 3px; border-radius: 6px; color: #fff;
+}
+.credit-role { margin: 10px 0 0; color: #a99cc8; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; }
+.credit-name { margin: 2px 0 4px; font-size: 19px; font-weight: 900; color: #fff; }
+
+/* ---------- Shop ---------- */
+.shop-head { display: flex; align-items: baseline; gap: 18px; }
+.shop-head h2 { margin-bottom: 4px; font-size: 38px; }
+.season {
+  font-size: 12px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;
+  color: #1a0d00; background: #ff9f40; padding: 3px 10px; border-radius: 20px;
+}
+.wallet { margin-left: auto; font-size: 20px; font-weight: 900; color: #ffb45e; }
+.shop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px; }
+.shop-card {
+  background: #1a1030; border: 2px solid #3d2a63; border-radius: 12px;
+  padding: 6px 8px 8px; text-align: center; display: flex; flex-direction: column; align-items: center;
+}
+.shop-card.equipped { border-color: #ff9f40; box-shadow: 0 0 14px rgba(255, 140, 40, 0.35); }
+.shop-card canvas { width: 84px; height: 70px; }
+.shop-card .name { font-weight: 900; font-size: 15px; margin-top: 2px; }
+.shop-card .perk { font-size: 12px; color: #b4a6d6; min-height: 30px; margin: 2px 0 5px; line-height: 1.3; }
+.shop-card button { min-width: 0; width: 100%; font-size: 14px; padding: 6px 8px; text-align: center; }
+.shop-card button.buy { background: linear-gradient(#7a3b0c, #4d2306); border-color: #ff9f40; }
+.shop-card button.locked { opacity: 0.5; cursor: not-allowed; }
+.shop-card button.on { background: #2a5a2a; border-color: #6fd46f; cursor: default; }
+
+/* ---------- Victory ---------- */
+.sub { margin: 0 0 10px; color: #c9b8f0; }
+.sub.dim { color: #8a7ca8; font-size: 13px; margin-top: 10px; }
+.stats { display: flex; justify-content: center; gap: 26px; margin: 6px 0 12px; }
+.stats div { font-size: 13px; color: #a99cc8; }
+.stats b { display: block; font-size: 22px; color: #fff; }
+.unlock {
+  border: 2px dashed #7cf4ff; border-radius: 12px; padding: 10px; margin: 0 40px;
+  background: rgba(124, 244, 255, 0.06);
+}
+.unlock-title { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #7cf4ff; }
+.unlock-name { font-family: 'Creepster', cursive; font-size: 32px; color: #c9fbff; text-shadow: 0 0 12px #7cf4ff; }
+.unlock-desc { font-size: 14px; color: #d9d0f0; }
