@@ -65,7 +65,7 @@ class Player {
     const w = g.world, I = Input;
     this.anim += dt;
     this.invuln -= dt; this.ctrlLock -= dt; this.dashCd -= dt; this.attackCd -= dt; this.boltCd -= dt;
-    this.dropT -= dt; this.landT -= dt;
+    this.dropT -= dt; this.landT -= dt; this.flipT = (this.flipT || 0) - dt;
     if (this.attackT > 0) this.attackT -= dt;
 
 
@@ -113,6 +113,7 @@ class Player {
         if (this.airJumps > 0) {
           // DOUBLE JUMP
           this.airJumps--;
+          this.flipT = 0.32;
           this.vy = -PHYS.JUMP * 0.9 * this.st.jump;
           this.jumping = true; this.jumpBuf = 0;
           Sfx.play('djump');
@@ -171,136 +172,212 @@ class Player {
 }
 
 /* ---------- player art: a small hooded wanderer with a scarf and a sword ---------- */
+// ---------- realistic player animation (visual only; physics are unchanged) ----------
+// Pose is built from a simple skeleton: hips, knees, feet, shoulders, hands. Angles in radians,
+// measured like canvas rotation (0 = pointing forward, +π/2 = straight down), facing right.
+// Darken a #rrggbb colour by k (0 = same, 1 = black).
+function darken(hex, k) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v) => Math.round(v * (1 - k));
+  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+}
+function limb(ctx, x1, y1, x2, y2, x3, y3, w, col) {
+  ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y3); ctx.stroke();
+}
+
 function drawPlayer(ctx, p, t) {
   if (p.dead) return;
-  let alpha = 1;
-  if (p.hazardT > 0) alpha = Math.max(0, p.hazardT / 0.45 - 0.2);
-  else if (p.invuln > 0 && Math.floor(t * 18) % 2 === 0) alpha = 0.35;
+  let alpha = p.ghost !== undefined ? p.ghost : 1;
+  if (p.invuln > 0 && p.ghost === undefined && Math.floor(t * 18) % 2 === 0) alpha *= 0.45;
   const cx = p.x + p.w / 2, by = p.y + p.h;
   const accent = headById(p.head).accent;
+  const speed = clamp(Math.abs(p.vx) / 250, 0, 1.2);
   const running = p.onGround && Math.abs(p.vx) > 30;
-  const airborne = !p.onGround;
+  const air = !p.onGround, dashing = p.dashT > 0;
+  const ph = (p.anim || 0) * 13;
+  const fwdVel = p.vx * p.facing;
 
   ctx.save();
   ctx.globalAlpha = alpha;
-  // ground shadow
-  if (p.onGround) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; Draw.ell(ctx, cx, by, 12, 3); }
+  if (p.onGround && p.ghost === undefined) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; Draw.ell(ctx, cx, by, 12 - (p.landT > 0 ? 0 : 0), 3); }
   ctx.translate(cx, by);
-  let sx = 1, sy = 1;
-  if (p.landT > 0) { sx = 1.12; sy = 0.9; }
-  else if (airborne && p.dashT <= 0) { sy = clamp(1 + -p.vy / 4500, 0.93, 1.1); sx = 2 - sy; }
-  if (p.dashT > 0) { sx = 1.18; sy = 0.9; }
-  ctx.scale(p.facing * sx, sy);
+  ctx.scale(p.facing, 1);
+  if (p.flipT > 0) { const k = 1 - p.flipT / 0.32; ctx.translate(0, -16); ctx.rotate(k * Math.PI * 2); ctx.translate(0, 16); }
 
-  const ph = running ? p.anim * 16 : 0;
-  const leg = (offset, back) => {
-    const s = Math.sin(ph + offset);
-    const hipX = back ? -2.5 : 2.5;
-    let kneeX = hipX + (running ? s * 4 : 0), kneeY = -5 - (running ? Math.max(0, -s) * 2 : 0);
-    let footX = hipX + (running ? s * 6 : 0), footY = 0 - (running ? Math.max(0, -s) * 3 : 0);
-    if (airborne) { kneeX = hipX + (back ? -1 : 3); kneeY = -6; footX = hipX + (back ? -3 : 1); footY = -2; }
-    ctx.strokeStyle = back ? '#16121f' : '#231d30'; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(hipX, -10); ctx.lineTo(kneeX, kneeY); ctx.lineTo(footX, footY - 1.5); ctx.stroke();
-    ctx.fillStyle = back ? '#1a120c' : '#3a2616';
-    Draw.rr(ctx, footX - 2, footY - 3, 6, 3, 1.2); ctx.fill();
+  // ---- body pose ----
+  let crouch = p.landT > 0 ? 3.2 * (p.landT / 0.12) : 0;
+  let bob = 0, lean = 0;
+  if (dashing) lean = 0.42;
+  else if (running) { bob = Math.abs(Math.sin(ph)) * 1.6; lean = 0.08 + 0.1 * speed; }
+  else if (!air) bob = Math.sin(t * 2.2) * 0.45; // breathing
+  if (air && !dashing) lean = clamp(fwdVel / 2600, -0.08, 0.14);
+  if (dashing) crouch = 2.5;
+  const hipY = -11 - bob + crouch;
+  const shX = Math.sin(lean) * 11, shY = hipY - Math.cos(lean) * 11;
+
+  // ---- legs ----
+  const legPose = (side) => {
+    let th, kn;
+    if (dashing) { th = side ? -1.0 : 0.35; kn = side ? 0.5 : 1.0; }
+    else if (air) {
+      if (p.vy < 0) { th = side ? -0.25 : 0.75; kn = side ? 0.7 : 1.35; }  // tucked while rising
+      else { th = side ? -0.3 : 0.3; kn = side ? 0.35 : 0.25; }           // reaching for the ground
+    } else if (running) {
+      const s = Math.min(1, speed);
+      th = Math.sin(ph + side * Math.PI) * 0.8 * s;
+      kn = 0.15 + Math.max(0, Math.sin(ph + side * Math.PI + 1.3)) * 1.2 * s;
+    } else { th = side ? -0.1 : 0.12; kn = 0.12; }
+    kn += crouch * 0.28; th += side ? -crouch * 0.12 : crouch * 0.12;
+    const hx = side ? -1.6 : 1.6;
+    const kx = hx + Math.sin(th) * 6, ky = hipY + Math.cos(th) * 6;
+    const sa = th - kn;
+    const fx = kx + Math.sin(sa) * 6, fy = ky + Math.cos(sa) * 6;
+    return { hx, kx, ky, fx, fy, sa };
   };
-  leg(Math.PI, true);
-
-  // scarf tail flowing behind
-  const flow = clamp(Math.abs(p.vx) / 250, 0, 1);
-  ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(-3, -21);
-  for (let i = 1; i <= 4; i++) {
-    const wave = Math.sin(t * 9 - i * 1.2) * (1 + flow * 1.5);
-    ctx.lineTo(-3 - i * (2.5 + flow * 2.5), -21 + i * (2 - flow * 1.2) + wave + (airborne ? p.vy * 0.004 * i : 0));
-  }
-  ctx.stroke();
-
-  // back arm
-  ctx.strokeStyle = '#1c1728'; ctx.lineWidth = 3;
-  const armSwing = running ? Math.sin(ph) * 3 : 0;
-  Draw.line(ctx, -4, -18, -6 - armSwing, -11);
-
-  // cloak / tunic body with shading
-  const sway = running ? Math.sin(p.anim * 9) * 1.2 : Math.sin(t * 2) * 0.6;
-  const flare = airborne ? 2.5 : 0;
-  const body = ctx.createLinearGradient(-8, -22, 8, -6);
-  body.addColorStop(0, '#4a4166'); body.addColorStop(0.55, '#2c2640'); body.addColorStop(1, '#141020');
-  ctx.fillStyle = body;
-  ctx.beginPath();
-  ctx.moveTo(-6, -23);
-  ctx.quadraticCurveTo(0, -25, 6, -23);
-  ctx.lineTo(9 + flare - sway, -8);
-  ctx.quadraticCurveTo(0, -5, -9 - flare - sway, -8);
-  ctx.closePath(); ctx.fill();
-  // folds
-  ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 0.8;
-  Draw.line(ctx, -2, -20, -4 - sway, -8); Draw.line(ctx, 3, -20, 4 - sway, -8);
-  // belt
-  ctx.fillStyle = '#3a2616'; ctx.fillRect(-7, -14, 14, 2.4);
-  ctx.fillStyle = '#c9a04a'; ctx.fillRect(1, -14.3, 3, 3);
-  // scarf wrap around the neck
-  ctx.fillStyle = accent; Draw.rr(ctx, -6.5, -24.5, 13, 4, 2); ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(-6.5, -21.5, 13, 1);
-  leg(0, false);
-
-  // front arm + sword
-  if (p.attackT <= 0) {
-    ctx.strokeStyle = '#2c2640'; ctx.lineWidth = 3;
-    const hx = 6 + armSwing, hy = -12;
-    Draw.line(ctx, 4, -19, hx, hy);
-    ctx.save(); ctx.translate(hx, hy); ctx.rotate(running ? 0.9 : 1.15);
-    drawSword(ctx);
+  const drawLeg = (side) => {
+    const L = legPose(side);
+    limb(ctx, L.hx, hipY, L.kx, L.ky, L.fx, L.fy, 3.6, side ? '#15111d' : '#221c30');
+    ctx.save(); ctx.translate(L.fx, L.fy); ctx.rotate(-L.sa * 0.3);
+    ctx.fillStyle = side ? '#1a120c' : '#3a2616'; Draw.rr(ctx, -2, -2, 6.5, 3.2, 1.3); ctx.fill();
     ctx.restore();
-  } else {
-    ctx.strokeStyle = '#2c2640'; ctx.lineWidth = 3;
-    Draw.line(ctx, 4, -19, 9, -17);
-  }
+  };
 
-  // head
-  const bob = p.onGround && !running ? Math.sin(t * 3) * 0.6 : (running ? Math.abs(Math.sin(ph)) * -1 : 0);
-  ctx.translate(0, -31 + bob);
-  ctx.scale(0.92, 0.92);
-  drawHead(ctx, p.head, t, { flash: p.invuln > 0.7 });
-  ctx.restore();
+  // ---- arms ----
+  const armSwing = running ? Math.sin(ph) * 0.9 * Math.min(1, speed) : 0;
+  const backArmA = dashing ? 2.6 : air ? (p.vy < 0 ? -0.6 : 0.9) : 1.45 + armSwing;
+  const drawBackArm = () => {
+    const ex = shX - 1 + Math.cos(backArmA) * 4, ey = shY + 1 + Math.sin(backArmA) * 4;
+    const hx = ex + Math.cos(backArmA + 0.35) * 4, hy = ey + Math.sin(backArmA + 0.35) * 4;
+    limb(ctx, shX - 1, shY + 1, ex, ey, hx, hy, 2.8, '#17121f');
+  };
 
-  // slash arc with the sword at the leading edge
-  if (p.attackT > 0) {
-    const k = 1 - p.attackT / 0.14;
-    const r = p.st.reach;
-    ctx.save();
-    ctx.translate(cx, p.y + p.h / 2 - 2);
-    if (p.attackDir === 'up') ctx.rotate(-Math.PI / 2);
-    else if (p.attackDir === 'down') ctx.rotate(Math.PI / 2);
-    else ctx.scale(p.facing, 1);
-    ctx.globalAlpha = (1 - k * 0.75) * alpha;
-    const g = ctx.createRadialGradient(0, 0, 20 * r, 0, 0, 42 * r);
-    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.7, 'rgba(255,255,255,0.85)'); g.addColorStop(1, accent);
-    ctx.fillStyle = g;
-    const a0 = -1.2 + k * 0.4, a1 = 1.2 + k * 0.4;
-    ctx.beginPath();
-    ctx.arc(4, 0, 42 * r, a0, a1);
-    ctx.arc(-6, 0, 32 * r, a1 - 0.15, a0 + 0.15, true);
+  // ---- scarf: a darker, tapered, tattered cloth that blows with movement ----
+  const drawScarf = () => {
+    const wind = clamp(Math.abs(fwdVel) / 250, 0, 1.6) + (dashing ? 1.2 : 0);
+    const pts = [];
+    for (let i = 0; i <= 5; i++) {
+      const wave = Math.sin(t * 10 - i * 1.1) * (0.6 + wind * 1.2) * (i / 5);
+      pts.push([shX - 2 - i * (1.4 + wind * 2.2), shY + 1 + i * (2.4 - wind * 1.2) + wave + (air ? p.vy * 0.0035 * i : 0)]);
+    }
+    const top = [], bot = [];
+    pts.forEach(([x, y], i) => { const w = 2.2 * (1 - i / 6); top.push([x, y - w]); bot.push([x + (i === 5 ? -1.5 : 0), y + w]); });
+    ctx.fillStyle = darken(accent, 0.45);
+    ctx.beginPath(); ctx.moveTo(top[0][0], top[0][1]);
+    for (const [x, y] of top) ctx.lineTo(x, y);
+    const [ex, ey] = pts[5]; ctx.lineTo(ex - 2, ey + 1.5); ctx.lineTo(ex, ey + 0.5); ctx.lineTo(ex - 1.2, ey + 3); // frayed tip
+    for (let i = bot.length - 1; i >= 0; i--) ctx.lineTo(bot[i][0], bot[i][1]);
     ctx.closePath(); ctx.fill();
-    ctx.globalAlpha = alpha;
-    const ang = a0 + (a1 - a0) * Math.min(1, k * 1.3);
-    ctx.rotate(ang);
-    ctx.translate(14, 0);
-    ctx.rotate(-Math.PI / 2 + Math.PI);
-    drawSword(ctx);
+  };
+
+  // ---- cloak ----
+  const drawCloak = () => {
+    const wind = -(fwdVel) * 0.012 - (dashing ? 6 : 0);
+    const lift = air ? clamp(-p.vy * 0.006, -4, 4) : 0;
+    const g = ctx.createLinearGradient(shX - 8, shY, shX + 8, hipY + 5);
+    g.addColorStop(0, '#4a4166'); g.addColorStop(0.55, '#2c2640'); g.addColorStop(1, '#120e1c');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(shX - 6, shY);
+    ctx.quadraticCurveTo(shX, shY - 2, shX + 6, shY);
+    ctx.lineTo(9 + Math.min(0, wind) * 0.2 - lift, hipY + 5 - lift * 0.5);
+    for (let i = 0; i <= 4; i++) {
+      const hx = 9 - i * 4.5 + wind * (i / 4) - lift * 0.3;
+      ctx.lineTo(hx, hipY + 5 + (i % 2 ? 1.5 : 0) + Math.sin(t * 6 + i) * 0.6 - lift * (0.5 + i * 0.2));
+    }
+    ctx.lineTo(-9 + wind - lift, hipY + 3 - lift);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 0.8;
+    Draw.line(ctx, shX - 2, shY + 2, -3 + wind * 0.5, hipY + 4); Draw.line(ctx, shX + 3, shY + 2, 3 + wind * 0.3, hipY + 4);
+    // belt
+    const bx = (shX + 0) * 0.45, byy = (shY + hipY) / 2 + 3;
+    ctx.fillStyle = '#3a2616'; ctx.save(); ctx.translate(bx, byy); ctx.rotate(lean); ctx.fillRect(-7, -1.2, 14, 2.4); ctx.fillStyle = '#c9a04a'; ctx.fillRect(1, -1.6, 3, 3); ctx.restore();
+    // collar
+    ctx.fillStyle = accent; Draw.rr(ctx, shX - 6.5, shY - 1.5, 13, 3.8, 1.8); ctx.fill();
+  };
+
+  // ---- sword arm (idle / moving) ----
+  const reach = p.st ? p.st.reach : 1;
+  const drawSwordArm = () => {
+    let a, blade;
+    if (dashing) { a = 2.5; blade = 3.0; }
+    else if (air) { a = p.vy < 0 ? 0.9 : 1.1; blade = p.vy < 0 ? 2.2 : 1.7; }
+    else if (running) { a = 1.6 - armSwing * 0.8; blade = 2.45 - armSwing * 0.4; }
+    else { a = 1.2 + Math.sin(t * 2.2) * 0.04; blade = 1.5; }
+    const ex = shX + 1 + Math.cos(a) * 4, ey = shY + 1 + Math.sin(a) * 4;
+    const hx = ex + Math.cos(a - 0.3) * 4, hy = ey + Math.sin(a - 0.3) * 4;
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(blade); drawBlade(ctx, 17 * reach); ctx.restore();
+    limb(ctx, shX + 1, shY + 1, ex, ey, hx, hy, 2.9, '#2c2640');
+  };
+
+  // ---- attack swing with motion smear ----
+  const drawAttack = () => {
+    const k = clamp(1 - p.attackT / 0.14, 0, 1);
+    const e = 1 - Math.pow(1 - k, 3);
+    const arcs = { side: [-2.1, 1.05], up: [0.7, -2.7], down: [-0.7, 2.7] };
+    const [a0, a1] = arcs[p.attackDir] || arcs.side;
+    const a = a0 + (a1 - a0) * e;
+    const ox = shX + 1, oy = shY + 1;
+    const L = 17 * reach, R2 = 8 + L + 4, R1 = 9;
+    // smear: a tapered crescent from where the blade started to where it is now
+    const fade = 1 - Math.max(0, (k - 0.55) / 0.45);
+    const dir = a1 > a0 ? 1 : -1;
+    const start = a0 + (a1 - a0) * Math.max(0, e - 0.65);
+    const g = ctx.createRadialGradient(ox, oy, R1, ox, oy, R2 + 4);
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.6, `rgba(255,255,255,${0.35 * fade})`);
+    g.addColorStop(0.88, `rgba(255,255,255,${0.9 * fade})`); g.addColorStop(1, accent);
+    ctx.save();
+    ctx.globalAlpha = alpha * fade;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(ox, oy, R2, start, a, dir < 0);
+    ctx.arc(ox, oy, R1 + (R2 - R1) * 0.45, a, start, dir > 0);
+    ctx.closePath(); ctx.fill();
+    // speed lines inside the smear
+    ctx.strokeStyle = `rgba(255,255,255,${0.5 * fade})`; ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) { const r = R2 - 3 - i * 4; ctx.beginPath(); ctx.arc(ox, oy, r, start + (a - start) * 0.25, a - (a - start) * 0.05, dir < 0); ctx.stroke(); }
+    ctx.restore();
+    // arm + blade at the current angle
+    const hx = ox + Math.cos(a) * 8, hy = oy + Math.sin(a) * 8;
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(a); drawBlade(ctx, L, true); ctx.restore();
+    limb(ctx, ox, oy, ox + Math.cos(a) * 4, oy + Math.sin(a) * 4 + 0.5, hx, hy, 3, '#2c2640');
+  };
+
+  drawLeg(1);
+  drawBackArm();
+  drawScarf();
+  drawCloak();
+  drawLeg(0);
+  if (p.attackT > 0) {
+    // head first so the slash sweeps in front of it
+    ctx.save(); ctx.translate(shX * 0.9, shY - 9 + (running ? -Math.abs(Math.sin(ph)) * 0.6 : 0)); ctx.scale(0.92, 0.92);
+    drawHead(ctx, p.head, t);
+    ctx.restore();
+    drawAttack();
+  } else {
+    drawSwordArm();
+    ctx.save(); ctx.translate(shX * 0.9, shY - 9 + (running ? -Math.abs(Math.sin(ph)) * 0.6 : 0)); ctx.rotate(lean * 0.4); ctx.scale(0.92, 0.92);
+    drawHead(ctx, p.head, t);
     ctx.restore();
   }
+  ctx.restore();
 }
 
-function drawSword(ctx) {
-  // drawn pointing down (+y) from the hand at (0,0)
-  ctx.fillStyle = '#3a2616'; ctx.fillRect(-1.2, -4, 2.4, 5);
-  ctx.fillStyle = '#c9a04a'; Draw.rr(ctx, -4, 0.5, 8, 2, 1); ctx.fill();
-  const g = ctx.createLinearGradient(-2, 0, 2, 0);
-  g.addColorStop(0, '#eef2ff'); g.addColorStop(0.5, '#a8b0c8'); g.addColorStop(1, '#5a6078');
+// Sword pointing along +x from the hand at (0,0): grip, guard, steel blade with a moving glint.
+function drawBlade(ctx, L, swinging) {
+  ctx.fillStyle = '#3a2616'; ctx.fillRect(-4, -1.1, 5, 2.2);
+  ctx.fillStyle = '#c9a04a'; Draw.circ(ctx, -4.5, 0, 1.4);
+  ctx.fillStyle = lin(ctx, 0, -3.5, 0, 3.5, ['#e8c060', '#8a6420']); Draw.rr(ctx, 0.5, -3.5, 2, 7, 0.8); ctx.fill();
+  const g = ctx.createLinearGradient(0, -2, 0, 2);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#b8c0d8'); g.addColorStop(1, '#4a5068');
   ctx.fillStyle = g;
-  ctx.beginPath(); ctx.moveTo(-1.8, 2.5); ctx.lineTo(1.8, 2.5); ctx.lineTo(1.4, 15); ctx.lineTo(0, 18); ctx.lineTo(-1.4, 15); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(2.5, -1.8); ctx.lineTo(L - 3, -1.4); ctx.lineTo(L, 0); ctx.lineTo(L - 3, 1.4); ctx.lineTo(2.5, 1.8); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(40,44,60,0.6)'; ctx.lineWidth = 0.5; Draw.line(ctx, 3, 0, L - 4, 0);
+  if (swinging) { setGlow(ctx, '#ffffff', 8); ctx.fillStyle = 'rgba(255,255,255,0.9)'; Draw.circ(ctx, L - 4, -0.5, 1.4); clearGlow(ctx); }
 }
+
+// Kept for compatibility (old code points the sword down +y)
+function drawSword(ctx) { ctx.save(); ctx.rotate(Math.PI / 2); drawBlade(ctx, 17); ctx.restore(); }
 
 /* =========================== MINI ENEMIES =========================== */
 class Crawler {
@@ -712,7 +789,12 @@ class Projectile {
       this.dead = true;
       g.burst(cx, cy, 6, this.type === 'wisp' ? '#bff8ff' : '#c8a86a', 140);
     }
-    if (this.type === 'wisp' && Math.random() < 0.8) g.particles.push(makeParticle(cx, cy + rand(-5, 5), -this.vx * 0.1, rand(-20, 20), 0.35, '#9ff4ff', 3, 0));
+    if (this.type === 'wisp') {
+      this.trail = this.trail || [];
+      this.trail.unshift({ x: cx, y: cy + Math.sin(this.t * 30) * 2 });
+      if (this.trail.length > 14) this.trail.pop();
+      if (Math.random() < 0.6) g.particles.push(makeParticle(cx, cy + rand(-5, 5), -this.vx * 0.1, rand(-30, 30), 0.35, '#c8fbff', rand(1, 2.2), 0));
+    }
   }
   draw(ctx, t) {
     const cx = this.x + this.w / 2, cy = this.y + this.h / 2;
@@ -725,14 +807,29 @@ class Projectile {
       setGlow(ctx, '#7ae0ff', 10);
       ctx.fillStyle = lin(ctx, -4, 0, 4, 0, ['#ffffff', '#9fe8ff', '#3a8ac0']);
       Draw.poly(ctx, [-4, -8, 4, -8, 0, 10]);
-    } else if (this.type === 'wave' || this.type === 'frostwave') {
-      const fw = this.type === 'frostwave';
-      setGlow(ctx, fw ? '#5ad0ff' : '#ff7a1a', 16);
-      const fl = Math.sin(this.t * 30) * 3;
-      ctx.fillStyle = fw ? '#7ad8ff' : '#ff7a1a';
-      ctx.beginPath(); ctx.moveTo(this.x, this.y + this.h); ctx.quadraticCurveTo(cx, this.y - 10 + fl, this.x + this.w, this.y + this.h); ctx.fill();
-      ctx.fillStyle = fw ? '#ffffff' : '#ffe07a';
-      ctx.beginPath(); ctx.moveTo(this.x + 6, this.y + this.h); ctx.quadraticCurveTo(cx, this.y + 6 - fl, this.x + this.w - 6, this.y + this.h); ctx.fill();
+    } else if (this.type === 'frostwave') {
+      // jagged ice bursting out of the ground
+      const base = this.y + this.h;
+      setGlow(ctx, '#5ad0ff', 14);
+      for (let i = 0; i < 5; i++) {
+        const sx = this.x + 2 + i * 5.5, hgt = 12 + Math.abs(Math.sin(i * 2.1 + this.t * 8)) * 16;
+        ctx.fillStyle = lin(ctx, sx - 3, 0, sx + 3, 0, ['#ffffff', '#9fe8ff', '#2a7ab0']);
+        Draw.poly(ctx, [sx - 3.5, base, sx + 3.5, base, sx + Math.sin(i) * 2, base - hgt]);
+      }
+      clearGlow(ctx);
+      ctx.fillStyle = 'rgba(220,245,255,0.5)'; ctx.fillRect(this.x - 4, base - 2, this.w + 8, 2);
+    } else if (this.type === 'wave') {
+      // a rolling wall of flame
+      const base = this.y + this.h;
+      setGlow(ctx, '#ff6a1a', 18);
+      for (let i = 0; i < 6; i++) {
+        const fx = this.x + i * 5, fh = 14 + Math.abs(Math.sin(this.t * 22 + i * 1.7)) * 18;
+        const g = ctx.createLinearGradient(0, base - fh, 0, base);
+        g.addColorStop(0, 'rgba(255,240,160,0)'); g.addColorStop(0.3, '#ffd84d'); g.addColorStop(0.7, '#ff7a1a'); g.addColorStop(1, '#c02800');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.moveTo(fx - 4, base); ctx.quadraticCurveTo(fx - 3, base - fh * 0.6, fx + Math.sin(this.t * 30 + i) * 2, base - fh); ctx.quadraticCurveTo(fx + 4, base - fh * 0.5, fx + 5, base); ctx.fill();
+      }
+      clearGlow(ctx);
     } else if (this.type === 'debris') {
       if (this.warn > 0) {
         ctx.globalAlpha = 0.4 + Math.sin(t * 30) * 0.3;
@@ -748,12 +845,22 @@ class Projectile {
         ctx.fillStyle = shade(ctx, 0, 0, 10, '#7a6c96', '#3a2f4f', '#120c1e'); Draw.poly(ctx, [-9, -6, 0, -10, 9, -4, 7, 8, -6, 9]);
       }
     } else if (this.type === 'wisp') {
-      setGlow(ctx, '#2ee6ff', 20);
+      // flowing ghost trail
+      const tr = this.trail || [];
+      for (let i = tr.length - 1; i >= 0; i--) {
+        const k = 1 - i / tr.length;
+        ctx.globalAlpha = k * 0.55;
+        ctx.fillStyle = i % 2 ? '#7ae8ff' : '#c8fbff';
+        Draw.circ(ctx, tr[i].x, tr[i].y, 2 + k * 7);
+      }
+      ctx.globalAlpha = 1;
+      setGlow(ctx, '#2ee6ff', 22);
       ctx.translate(cx, cy); ctx.scale(Math.sign(this.vx) || 1, 1);
-      ctx.fillStyle = 'rgba(160,245,255,0.6)';
-      ctx.beginPath(); ctx.moveTo(10, 0); ctx.quadraticCurveTo(-4, -12, -22, -2 + Math.sin(this.t * 40) * 3); ctx.quadraticCurveTo(-4, 12, 10, 0); ctx.fill();
-      ctx.fillStyle = '#ecfeff'; Draw.circ(ctx, 6, 0, 7);
-      ctx.fillStyle = '#1a3a40'; Draw.circ(ctx, 8, -2, 1.3); Draw.circ(ctx, 8, 2.5, 1.3);
+      const og = ctx.createRadialGradient(4, -2, 1, 4, 0, 10);
+      og.addColorStop(0, '#ffffff'); og.addColorStop(0.5, '#bff8ff'); og.addColorStop(1, 'rgba(60,200,255,0.2)');
+      ctx.fillStyle = og; Draw.circ(ctx, 4, 0, 10);
+      clearGlow(ctx);
+      ctx.fillStyle = '#0e2a38'; Draw.ell(ctx, 6, -2.5, 1.2, 1.8); Draw.ell(ctx, 6, 2.5, 1.2, 1.8);
     }
     ctx.restore();
   }

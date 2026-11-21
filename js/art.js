@@ -437,3 +437,42 @@ function drawArenaBackdrop(ctx, A, t) {
     clearGlow(ctx);
   }
 }
+
+// Colours used when a monster shatters.
+const ENEMY_COLORS = { Crawler: '#54437a', Bat: '#45295f', Skitter: '#d8d0b8', FrostMite: '#9fd8f0', IceWisp: '#7ad8ff', SnowSkull: '#e8f6ff' };
+
+// Particles: soft dots, streaking sparks, expanding rings, drifting smoke, and tumbling shards.
+function drawParticles(ctx, list) {
+  for (const q of list) {
+    const k = Math.max(0, q.life / q.max);
+    ctx.globalAlpha = k;
+    switch (q.type) {
+      case 'spark': {
+        const l = 0.03;
+        ctx.strokeStyle = q.color; ctx.lineWidth = q.size; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x - q.vx * l, q.y - q.vy * l); ctx.stroke();
+        break;
+      }
+      case 'ring': {
+        ctx.strokeStyle = q.color; ctx.lineWidth = 2.5 * k;
+        ctx.beginPath(); ctx.arc(q.x, q.y, q.size * (1.15 - k), 0, Math.PI * 2); ctx.stroke();
+        break;
+      }
+      case 'smoke': {
+        ctx.globalAlpha = k * 0.8;
+        ctx.fillStyle = q.color; Draw.circ(ctx, q.x, q.y, q.size * (1.6 - k * 0.6));
+        break;
+      }
+      case 'shard': {
+        ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rot);
+        ctx.fillStyle = q.color; Draw.poly(ctx, [-q.size, -q.size * 0.4, q.size * 0.6, -q.size * 0.7, q.size, q.size * 0.5, -q.size * 0.3, q.size * 0.6]);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)'; Draw.poly(ctx, [-q.size, -q.size * 0.4, q.size * 0.6, -q.size * 0.7, 0, 0]);
+        ctx.restore();
+        break;
+      }
+      default:
+        ctx.fillStyle = q.color; Draw.circ(ctx, q.x, q.y, q.size * (0.5 + k * 0.5));
+    }
+  }
+  ctx.globalAlpha = 1;
+}

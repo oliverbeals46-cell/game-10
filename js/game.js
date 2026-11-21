@@ -269,7 +269,10 @@ const Game = {
 
   updateParticles(dt) {
     for (const q of this.particles) {
-      q.life -= dt; q.vy += q.grav * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= 0.98;
+      q.life -= dt; q.vy += q.grav * dt; q.x += q.vx * dt; q.y += q.vy * dt;
+      const drag = q.type === 'smoke' ? 0.94 : 0.98; q.vx *= drag; if (q.type === 'smoke') q.vy *= drag;
+      if (q.rot !== undefined) q.rot += q.vr * dt;
+      if (q.type === 'shard' && q.y > q.floor) { q.y = q.floor; q.vy *= -0.3; q.vx *= 0.6; q.vr *= 0.6; }
     }
     this.particles = this.particles.filter((q) => q.life > 0);
     if (this.particles.length > 700) this.particles.splice(0, this.particles.length - 700);
@@ -293,17 +296,17 @@ const Game = {
   resolvePlayerAttack(p) {
     const box = p.attackBox();
     const dmg = 2 * p.st.dmg;
-    let hit = false;
+    let hit = false, hitAt = null;
     for (const e of this.enemies) {
       if (e.dead || p.hitSet.has(e) || !rectsOverlap(box, e)) continue;
       p.hitSet.add(e);
       e.hurt(dmg, p.attackDir === 'side' ? p.facing : 0, this);
-      hit = true;
+      hit = true; hitAt = { x: e.x + e.w / 2, y: e.y + e.h / 2 };
     }
     const b = this.boss;
     if (b && !b.dying && !p.hitSet.has(b) && rectsOverlap(box, b.hitbox())) {
       p.hitSet.add(b);
-      if (b.hurt(dmg, this)) hit = true;
+      if (b.hurt(dmg, this)) { hit = true; const hb = b.hitbox(); hitAt = { x: clamp(p.x + p.w / 2 + p.facing * 30, hb.x, hb.x + hb.w), y: clamp(p.y + p.h / 2, hb.y, hb.y + hb.h) }; }
     }
     for (const pr of this.projectiles) {
       if (pr.hostile && pr.breakable && !pr.dead && rectsOverlap(box, pr)) {
@@ -312,6 +315,11 @@ const Game = {
       }
     }
     if (hit) {
+      if (hitAt) {
+        const dir = p.attackDir === 'up' ? -Math.PI / 2 : p.attackDir === 'down' ? Math.PI / 2 : (p.facing > 0 ? 0 : Math.PI);
+        this.sparks(hitAt.x, hitAt.y, 10, dir);
+        this.ring(hitAt.x, hitAt.y, 'rgba(255,255,255,0.9)', 22);
+      }
       this.freeze = Math.max(this.freeze, 0.045);
       this.shake = Math.max(this.shake, 4);
       Sfx.play('hit');
@@ -334,7 +342,11 @@ const Game = {
   killEnemy(e) {
     e.dead = true;
     Sfx.play('kill');
-    this.burst(e.x + e.w / 2, e.y + e.h / 2, 18, '#a99cc8', 260);
+    // the monster shatters into pieces, with a puff of ash and a shock ring
+    const col = ENEMY_COLORS[e.constructor.name] || '#a99cc8';
+    this.shatter(e.x + e.w / 2, e.y + e.h / 2, col, 9, e.y + e.h);
+    this.smoke(e.x + e.w / 2, e.y + e.h / 2, 7, 'rgba(60,50,80,0.5)');
+    this.ring(e.x + e.w / 2, e.y + e.h / 2, '#ffffff', 34);
     for (let i = 0; i < (e.shards || 3); i++) this.pickups.push(new Shard(e.x + e.w / 2, e.y, { drop: true }));
   },
 
@@ -358,8 +370,10 @@ const Game = {
     this.saveResume();
     Sfx.play('die');
     this.shake = 8; this.flashRed = 0.3;
-    this.burst(p.x + p.w / 2, p.y + p.h / 2, 30, headById(p.head).accent, 320);
-    this.burst(p.x + p.w / 2, p.y + p.h / 2, 14, '#1a1428', 200);
+    this.shatter(p.x + p.w / 2, p.y + p.h / 2, headById(p.head).accent, 8, p.y + p.h);
+    this.shatter(p.x + p.w / 2, p.y + p.h / 2, '#2c2640', 8, p.y + p.h);
+    this.smoke(p.x + p.w / 2, p.y + p.h / 2, 8);
+    this.ring(p.x + p.w / 2, p.y + p.h / 2, headById(p.head).accent, 40);
   },
 
   respawn() {
@@ -431,14 +445,38 @@ const Game = {
     for (let i = 0; i < 12; i++) this.pickups.push(new Shard(b.x + b.w / 2, b.y + 30, { drop: true, big: i < 4 }));
   },
 
+  // ---- effects ----
   burst(x, y, n, color, speed) {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, s = Math.random() * speed;
-      this.particles.push(makeParticle(x, y, Math.cos(a) * s, Math.sin(a) * s - speed * 0.2, rand(0.3, 0.8), color, rand(2, 4.5)));
+      const q = makeParticle(x, y, Math.cos(a) * s, Math.sin(a) * s - speed * 0.2, rand(0.3, 0.8), color, rand(1.5, 3.5));
+      if (i % 3 === 0) q.type = 'spark';
+      this.particles.push(q);
+    }
+  },
+  sparks(x, y, n, dir, color = '#fff6d0') {
+    for (let i = 0; i < n; i++) {
+      const a = dir + rand(-0.9, 0.9), s = rand(180, 520);
+      const q = makeParticle(x, y, Math.cos(a) * s, Math.sin(a) * s, rand(0.12, 0.3), color, rand(1, 2), 500);
+      q.type = 'spark'; this.particles.push(q);
+    }
+  },
+  ring(x, y, color, r = 30) { const q = makeParticle(x, y, 0, 0, 0.22, color, r, 0); q.type = 'ring'; this.particles.push(q); },
+  smoke(x, y, n, color = 'rgba(110,95,130,0.45)') {
+    for (let i = 0; i < n; i++) { const q = makeParticle(x + rand(-6, 6), y + rand(-4, 4), rand(-60, 60), rand(-70, -10), rand(0.5, 0.9), color, rand(4, 8), -20); q.type = 'smoke'; this.particles.push(q); }
+  },
+  shatter(x, y, color, n, floorY) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, s = rand(120, 340);
+      const q = makeParticle(x, y, Math.cos(a) * s, Math.sin(a) * s - 180, rand(0.6, 1.0), color, rand(3, 6), 1300);
+      q.type = 'shard'; q.rot = Math.random() * 6; q.vr = rand(-14, 14); q.floor = floorY - 2; this.particles.push(q);
     }
   },
   dust(x, y, n) {
-    for (let i = 0; i < n; i++) this.particles.push(makeParticle(x + rand(-8, 8), y - 2, rand(-90, 90), rand(-80, -10), rand(0.25, 0.5), '#6a5a7a', rand(2, 4), 200));
+    for (let i = 0; i < n; i++) {
+      const q = makeParticle(x + rand(-8, 8), y - 2, rand(-80, 80), rand(-50, -10), rand(0.3, 0.55), THEME && THEME.snow ? 'rgba(230,245,255,0.55)' : 'rgba(120,105,140,0.5)', rand(3, 6), 60);
+      q.type = 'smoke'; this.particles.push(q);
+    }
   },
   toast(text, dur = 2.5) {
     if (this.toasts.some((m) => m.text === text)) return;
@@ -474,22 +512,11 @@ const Game = {
     for (const c of this.pickups) if (onScreen(c.x, 40)) c.draw(ctx, t);
     for (const e of this.enemies) if (onScreen(e.x)) e.draw(ctx, t);
     if (this.boss) this.boss.draw(ctx, t);
-    for (const a of this.afterimages) {
-      ctx.save(); ctx.globalAlpha = a.life * 1.4;
-      ctx.translate(a.x + 10, a.y + 30); ctx.scale(a.facing, 1);
-      ctx.fillStyle = headById(a.head).accent;
-      Draw.ell(ctx, 0, -31, 11, 11); Draw.ell(ctx, 0, -14, 8, 10);
-      ctx.restore();
-    }
+    for (const a of this.afterimages) drawPlayer(ctx, Object.assign({}, p, a, { ghost: a.life * 1.2, attackT: 0, invuln: 0, flipT: 0 }), t);
     drawPlayer(ctx, p, t);
     for (const f of this.firebars) if (onScreen(f.cx)) f.draw(ctx, t);
     for (const pr of this.projectiles) pr.draw(ctx, t);
-    for (const q of this.particles) {
-      ctx.globalAlpha = Math.max(0, q.life / q.max);
-      ctx.fillStyle = q.color;
-      ctx.fillRect(q.x - q.size / 2, q.y - q.size / 2, q.size, q.size);
-    }
-    ctx.globalAlpha = 1;
+    drawParticles(ctx, this.particles);
     ctx.restore();
 
     drawLighting(ctx, this.collectLights(cam), cam, THEME.ambient);
