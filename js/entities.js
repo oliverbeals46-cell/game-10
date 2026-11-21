@@ -349,7 +349,7 @@ class Crawler {
         const midTy = Math.floor((this.y + this.h / 2) / TILE);
         if (!g.world.standable(tx, footTy) || g.world.solid(tx, midTy) || g.world.isHazard(tx, footTy - 1) || g.world.isHazard(tx, footTy)) this.dir *= -1;
       }
-      this.vx = this.dir * 55;
+      this.vx = this.dir * 55 * (this.speedMul || 1);
     }
     this.vy = Math.min(this.vy + PHYS.GRAV * dt, PHYS.MAXFALL);
     moveEntity(g.world, this, dt);
@@ -407,7 +407,7 @@ class Bat {
       this.vx = (tx - this.x) * 2; this.vy = (ty - this.y) * 2;
       if (d < 200 && !p.dead) this.state = 'chase';
     } else {
-      const sp = 115;
+      const sp = 115 * (this.speedMul || 1);
       this.vx = approach(this.vx, (dx / (d || 1)) * sp, 360 * dt);
       this.vy = approach(this.vy, (dy / (d || 1)) * sp + Math.sin(this.anim * 6) * 40, 360 * dt);
       // bats are easy to skip: they give up once you get away from their roost
@@ -521,7 +521,7 @@ class Platform {
     this.ax = (o.dx || 0) * TILE; this.ay = (o.dy || 0) * TILE;
     this.period = o.period || 4; this.phase = o.phase || 0;
     this.dx = 0; this.dy = 0;
-    this.state = 'solid'; this.timer = 0; this.shakeX = 0;
+    this.state = 'solid'; this.timer = 0; this.shakeX = 0; this.crumbleT = o.crumble || 0.5;
   }
   get active() { return this.state !== 'gone'; }
   update(dt, g) {
@@ -543,7 +543,7 @@ class Platform {
     }
     this.dx = this.x - px; this.dy = this.y - py;
   }
-  stoodOn() { if (this.kind === 'crumble' && this.state === 'solid') { this.state = 'shaking'; this.timer = 0.5; } }
+  stoodOn() { if (this.kind === 'crumble' && this.state === 'solid') { this.state = 'shaking'; this.timer = this.crumbleT; } }
   draw(ctx, t) {
     if (this.state === 'gone') {
       ctx.globalAlpha = 0.15; ctx.strokeStyle = '#a99cc8'; ctx.setLineDash([4, 4]);

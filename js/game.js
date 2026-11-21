@@ -56,15 +56,18 @@ const Game = {
     this.spawnPoint = { x: s.x * TILE + 6, y: (s.y + 1) * TILE - 30 };
     this.checkpoint = { ...this.spawnPoint };
     this.player = new Player(this.checkpoint.x, this.checkpoint.y, Save.data.equipped);
+    const D = difficultyForLevel(def.number);
+    this.difficulty = D;
     this.enemies = def.enemies.map((e) => {
       if (e.type === 'bat') return new Bat(e.x * TILE, e.y * TILE);
       if (e.type === 'pumpling') return new Pumpling(e.x * TILE + 4, (e.y + 1) * TILE);
       return new Crawler(e.x * TILE + 1, (e.y + 1) * TILE);
     });
+    this.enemies.forEach((e) => (e.speedMul = D.enemy));
     this.pickups = def.candy.map(([x, y]) => new Candy(x * TILE + 10, y * TILE + 10));
-    this.platforms = def.platforms.map((p) => new Platform(p));
+    this.platforms = def.platforms.map((p) => new Platform(Object.assign({}, p, { period: (p.period || 4) / D.speed, crumble: 0.5 / D.speed })));
     this.pads = def.pads.map((p) => new JumpPad(p));
-    this.firebars = def.firebars.map((f) => new FireBar(f));
+    this.firebars = def.firebars.map((f) => new FireBar(Object.assign({}, f, { speed: (f.speed || 1.6) * D.speed })));
     this.checkpoints = def.checkpoints.map((c, i) => ({ x: c.x * TILE + 16, y: (c.y + 1) * TILE, lit: false, n: i + 1 }));
     this.finish = { x: def.finish.x * TILE + 16, y: (def.finish.y + 1) * TILE };
     this.projectiles = []; this.particles = []; this.afterimages = []; this.toasts = [];
@@ -490,21 +493,13 @@ const Game = {
       ctx.fillText(ready ? 'Wisp Bolt ready [V]' : 'Wisp Bolt recharging...', 18, 62);
     }
 
-    // obby progress bar (top-center)
+    // level + checkpoint label (top-center)
     const lit = this.checkpoints.filter((c) => c.lit).length;
-    const bw = 300, bx = (VIEW_W - bw) / 2, by = 22;
-    ctx.fillStyle = 'rgba(8,5,16,0.6)'; Draw.rr(ctx, bx - 10, by - 10, bw + 20, 34, 10); ctx.fill();
-    ctx.fillStyle = '#2a2140'; Draw.rr(ctx, bx, by, bw, 6, 3); ctx.fill();
-    const span = this.finish.x - this.spawnPoint.x;
-    const prog = clamp((p.x - this.spawnPoint.x) / span, 0, 1);
-    ctx.fillStyle = lin(ctx, bx, 0, bx + bw, 0, ['#ff8c26', '#c070ff']); Draw.rr(ctx, bx, by, Math.max(6, bw * prog), 6, 3); ctx.fill();
-    for (const c of this.checkpoints) {
-      const cx = bx + bw * clamp((c.x - this.spawnPoint.x) / span, 0, 1);
-      ctx.fillStyle = c.lit ? '#5cff9a' : '#6a6080'; Draw.circ(ctx, cx, by + 3, 4);
-    }
-    ctx.fillStyle = '#c070ff'; Draw.circ(ctx, bx + bw, by + 3, 5);
-    ctx.font = '700 11px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#d8ccf0';
-    ctx.fillText(`Level 1   ·   Checkpoint ${lit} / ${this.checkpoints.length}`, VIEW_W / 2, by + 16);
+    ctx.font = '700 12px Nunito, sans-serif'; ctx.textAlign = 'center';
+    const label = `Level ${this.def.number}   ·   Checkpoint ${lit} / ${this.checkpoints.length}`;
+    const lw = ctx.measureText(label).width + 24;
+    ctx.fillStyle = 'rgba(8,5,16,0.55)'; Draw.rr(ctx, VIEW_W / 2 - lw / 2, 14, lw, 26, 9); ctx.fill();
+    ctx.fillStyle = '#d8ccf0'; ctx.fillText(label, VIEW_W / 2, 28);
 
     // deaths, time and best time (top-right)
     const best = Save.data.best.l1;

@@ -101,3 +101,16 @@ const ATTACKS = [
   // { level: 40, ... }, { level: 60, ... } — added as those levels are built.
 ];
 function nextAttack() { return ATTACKS.find((a) => !Save.data.unlocks[a.id]); }
+
+// Levels get PROGRESSIVELY HARDER. Every level is a bit tougher than the one before:
+// obstacles move faster, crumbling stones fall sooner, monsters are quicker.
+// Level designers should also use smaller platforms, wider gaps (still jumpable!),
+// fewer checkpoints and more obstacles combined together as the level number goes up.
+function difficultyForLevel(n) {
+  const d = n - 1;
+  return {
+    speed: 1 + d * 0.035,                       // rafts, fire bars, crumble speed
+    enemy: 1 + d * 0.03,                        // mini monster speed
+    checkpoints: Math.max(3, 6 - Math.floor(d / 10)), // fewer checkpoints in later groups of levels
+  };
+}

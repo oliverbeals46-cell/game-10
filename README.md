@@ -34,6 +34,7 @@ No build step is needed. It's plain HTML, CSS and JavaScript.
 ## Level plan
 
 - Levels are just numbered (Level 1, 2, 3...). There are no separate named worlds.
+- **Levels get progressively harder.** `difficultyForLevel()` in `js/themes.js` speeds up rafts, fire bars, crumbling stones and monsters with each level number. New levels should also use smaller platforms, longer combos of obstacles and fewer checkpoints as the numbers go up.
 - **Every 10 levels** the game changes: a new colour scheme and setting (same realistic, scary style), new mini enemies that match it, and a **boss on Level 10, 20, 30...** See `js/themes.js`.
 - Inside each group of 10, every level is a little different (moon position, fog, tint) so no two look the same.
 - **One new attack every 20 levels** (Level 20, 40, ...), each one helpful against the next boss. The first is the Wisp Bolt (`ATTACKS` in `js/themes.js`).
