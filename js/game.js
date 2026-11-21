@@ -631,7 +631,7 @@ const Game = {
 
   renderMenuScene(ctx, dt) {
     const t = this.t;
-    const camX = t * 25;
+    const camX = t * 10; // slow, calm drift on the menu
     drawBackground(ctx, camX, 300, t);
     // ground strip
     const gg = ctx.createLinearGradient(0, 470, 0, 540);
@@ -640,7 +640,7 @@ const Game = {
     ctx.fillStyle = '#3e6448'; ctx.fillRect(0, 468, VIEW_W, 4);
     for (let i = 0; i < 6; i++) {
       const gx = ((i * 230 - camX) % 1380 + 1380) % 1380 - 200;
-      drawDecor(ctx, { type: i % 3 === 0 ? 'tree' : i % 2 ? 'grave' : 'shroom', px: gx, py: 470, x: i }, t);
+      drawDecor(ctx, { type: i % 3 === 0 ? 'tree' : i % 2 ? 'grave' : 'shroom', px: gx, py: 470, seed: i + 1 }, t);
     }
     const d = this.menuDummy;
     d.anim = t;

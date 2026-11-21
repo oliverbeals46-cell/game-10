@@ -240,9 +240,11 @@ function drawLeaves(ctx, dt, t) {
 function drawDecor(ctx, d, t) {
   const x = d.px !== undefined ? d.px : d.x * TILE + 16;
   const y = d.py !== undefined ? d.py : (d.y + 1) * TILE;
+  // a fixed number per decoration, so its look never changes while it moves across the screen
+  const seed = d.seed !== undefined ? d.seed : (d.x || 0) * 7 + (d.y || 0);
   if (d.type === 'grave') {
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; Draw.ell(ctx, x + 2, y, 16, 3);
-    ctx.save(); ctx.translate(x, y); ctx.rotate((hash2(x, 1) - 0.5) * 0.12);
+    ctx.save(); ctx.translate(x, y); ctx.rotate((hash2(seed, 1) - 0.5) * 0.12);
     ctx.fillStyle = lin(ctx, -12, 0, 12, 0, ['#6a6478', '#45405a', '#24202f']);
     ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-12, -24); ctx.arc(0, -24, 12, Math.PI, 0); ctx.lineTo(12, 0); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(-11, -24, 2, 24);
@@ -252,11 +254,11 @@ function drawDecor(ctx, d, t) {
     ctx.beginPath(); ctx.moveTo(6, -34); ctx.lineTo(4, -26); ctx.lineTo(7, -20); ctx.stroke();
     ctx.restore();
   } else if (d.type === 'tree') {
-    const sp = Art.trees[Math.min(3, Math.floor(hash2(d.x || x, 5) * 4))];
+    const sp = Art.trees[Math.min(3, Math.floor(hash2(seed, 5) * 4))];
     const k = 0.8;
     ctx.drawImage(sp.cv, x - sp.w * k / 2, y - sp.h * k + 2, sp.w * k, sp.h * k);
   } else if (d.type === 'shroom') {
-    const gl = 0.65 + Math.sin(t * 2 + x) * 0.2;
+    const gl = 0.65 + Math.sin(t * 2 + seed) * 0.2;
     ctx.fillStyle = lin(ctx, x - 2, 0, x + 2, 0, ['#e8f4f0', '#9ab8b0']); ctx.fillRect(x - 2, y - 10, 4, 10); ctx.fillRect(x + 8, y - 6, 3, 6); ctx.fillRect(x - 9, y - 5, 2.5, 5);
     setGlow(ctx, '#5cffd0', 14);
     ctx.fillStyle = `rgba(92,255,208,${gl})`;
