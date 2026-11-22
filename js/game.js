@@ -68,6 +68,7 @@ const Game = {
     const D = difficultyForLevel(def.number);
     this.difficulty = D;
     this.enemies = def.enemies.map((e) => {
+      if (ENEMY_SKINS[e.type]) return makeSkinnedEnemy(e.type, e.x, e.y);
       if (e.type === 'bat') return new Bat(e.x * TILE, e.y * TILE);
       if (e.type === 'skitter') return new Skitter(e.x * TILE + 4, (e.y + 1) * TILE);
       if (e.type === 'snowskull') return new SnowSkull(e.x * TILE + 4, (e.y + 1) * TILE);
@@ -78,6 +79,8 @@ const Game = {
     this.enemies.forEach((e) => (e.speedMul = D.enemy));
     this.platforms = def.platforms.map((p) => new Platform(Object.assign({}, p, { period: (p.period || 4) / D.platform, phase: (p.phase || 0) / D.platform, crumble: 0.5 / D.platform })));
     this.pads = def.pads.map((p) => new JumpPad(p));
+    this.droppers = (def.droppers || []).map((d) => new Dropper(d));
+    this.chasers = (def.chases || []).map((c) => new Chaser(c));
     this.firebars = def.firebars.map((f) => new FireBar(Object.assign({}, f, { speed: (f.speed || 1.6) * D.speed })));
     this.checkpoints = def.checkpoints.map((c, i) => ({ x: c.x * TILE + 16, y: (c.y + 1) * TILE, lit: false, n: i + 1 }));
     this.finish = { x: def.finish.x * TILE + 16, y: (def.finish.y + 1) * TILE };
@@ -186,12 +189,14 @@ const Game = {
     this.enemies = this.enemies.filter((e) => !e.dead);
 
     for (const pad of this.pads) pad.update(dt, this);
+    for (const d of this.droppers) if (Math.abs(d.x - p.x) < 1100) d.update(dt, this);
+    for (const c of this.chasers) c.update(dt, this);
     for (const f of this.firebars) f.update(dt, this);
 
     const A = this.def.arena;
     if (A && !this.bossStarted && !this.bossDefeated && p.x > A.triggerX) {
       this.bossStarted = true;
-      const Cls = A.boss === 'widow' ? FrozenWidow : GraveWarden;
+      const Cls = { widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing }[A.boss] || GraveWarden;
       this.startBoss(new Cls(A.bossSpawn.x, A.bossSpawn.y, A));
       this.bossTitleT = 3.4;
     }
@@ -229,6 +234,7 @@ const Game = {
         for (const o of this.checkpoints) if (o.n < c.n) o.lit = true;
         c.lit = true;
         this.checkpoint = { x: c.x - 10, y: c.y - 30 };
+        p.shield = p.st.shield;
         Sfx.play('checkpoint');
         this.burst(c.x, c.y - 30, 26, '#7dffb0', 220);
         this.toast(`Checkpoint ${c.n} / ${this.checkpoints.length}!`, 2);
@@ -261,7 +267,7 @@ const Game = {
       const prevTop = pl.y - pl.dy;
       if (p.prevBottom <= Math.max(pl.y, prevTop) + 3 && p.y + p.h >= pl.y) {
         p.y = pl.y - p.h; p.vy = 0; p.onGround = true; p.platform = pl;
-        pl.stoodOn();
+        pl.stoodOn(p);
         return;
       }
     }
@@ -332,6 +338,16 @@ const Game = {
     }
   },
 
+  // Spin Slash: hits every monster (and the boss) within reach all around you, once per spin.
+  resolveSpin(p) {
+    const cx = p.x + p.w / 2, cy = p.y + p.h / 2, R = 62, dmg = 3 * p.st.dmg;
+    const near = (o) => { const nx = clamp(cx, o.x, o.x + o.w), ny = clamp(cy, o.y, o.y + o.h); return (nx - cx) ** 2 + (ny - cy) ** 2 < R * R; };
+    for (const e of this.enemies) if (!e.dead && !p.spinHits.has(e) && near(e)) { p.spinHits.add(e); e.hurt(dmg, Math.sign(e.x - p.x) || 1, this); this.sparks(e.x + e.w / 2, e.y + e.h / 2, 8, Math.atan2(e.y - p.y, e.x - p.x)); }
+    const b = this.boss;
+    if (b && !b.dying && !p.spinHits.has(b) && near(b.hitbox())) { p.spinHits.add(b); if (b.hurt(dmg, this)) { this.sparks(cx + p.facing * 40, cy, 12, 0); this.freeze = 0.05; } }
+    for (const pr of this.projectiles) if (pr.hostile && pr.breakable && !pr.dead && near(pr)) { pr.dead = true; this.burst(pr.x + pr.w / 2, pr.y + pr.h / 2, 6, '#ffffff', 160); }
+  },
+
   pogo(p) {
     if (p.pogoDone) return;
     p.pogoDone = true;
@@ -343,7 +359,7 @@ const Game = {
     e.dead = true;
     Sfx.play('kill');
     // the monster shatters into pieces, with a puff of ash and a shock ring
-    const col = ENEMY_COLORS[e.constructor.name] || '#a99cc8';
+    const col = e.skin ? (e.skin.shell || e.skin.body || e.skin.skull)[1] : (ENEMY_COLORS[e.constructor.name] || '#a99cc8');
     this.shatter(e.x + e.w / 2, e.y + e.h / 2, col, 9, e.y + e.h);
     this.smoke(e.x + e.w / 2, e.y + e.h / 2, 7, 'rgba(60,50,80,0.5)');
     this.ring(e.x + e.w / 2, e.y + e.h / 2, '#ffffff', 34);
@@ -352,7 +368,8 @@ const Game = {
 
   // Shards are collected in levels (and dropped by monsters). They buy heads in the shop.
   collectShard(s) {
-    Save.data.shards += s.value;
+    const val = s.small ? s.value * this.player.st.shardMul : s.value;   // Pie Phantom: small shards worth 2
+    Save.data.shards += val;
     this.stats.shards += s.value;
     if (s.id !== undefined) this.taken.push(s.id);
     if (s.big) { Sfx.play('bigshard'); this.popups.push({ x: s.x + s.w / 2, y: s.y - 6, t: 1, text: '+5 shards' }); this.burst(s.x + s.w / 2, s.y + s.h / 2, 14, '#c070ff', 200); }
@@ -381,6 +398,8 @@ const Game = {
     this.player.invuln = 1;
     this.projectiles = [];
     for (const pl of this.platforms) if (pl.kind === 'crumble') { pl.state = 'solid'; pl.y = pl.y0; pl.shakeX = 0; }
+    for (const d of this.droppers) d.reset();
+    for (const c of this.chasers) if (c.state !== 'done') c.reset();
     if (this.boss && !this.bossDefeated) { this.boss = null; this.bossLock = false; this.world.gateClosed = false; Sfx.stopMusic(); }
     if (!this.bossDefeated) this.bossStarted = false;
     this.updateCamera(1, true);
@@ -425,14 +444,13 @@ const Game = {
   },
   spawnShockwaves(b) {
     const y = b.y + b.h - 26, cx = b.x + b.w / 2, sp = b.phase === 2 ? 420 : 340, ty = b.waveType || 'wave';
-    this.projectiles.push(new Projectile(ty, cx - 53, y, -sp, 0));
-    this.projectiles.push(new Projectile(ty, cx + 27, y, sp, 0));
+    for (const [ox, v] of [[-53, -sp], [27, sp]]) { const pr = new Projectile(ty, cx + ox, y, v, 0); pr.skin = b.waveSkin; this.projectiles.push(pr); }
   },
   spawnDebris(n) {
     const A = this.def.arena;
     for (let i = 0; i < n; i++) {
       const d = new Projectile('debris', rand(A.x1 + 20, A.x2 - 40), A.ceilY + 2, 0, 0);
-      d.warn = 0.6 + i * 0.12;
+      d.warn = 0.6 + i * 0.12; d.skin = this.boss ? this.boss.debrisSkin : null;
       this.projectiles.push(d);
     }
   },
@@ -513,7 +531,9 @@ const Game = {
     for (const e of this.enemies) if (onScreen(e.x)) e.draw(ctx, t);
     if (this.boss) this.boss.draw(ctx, t);
     for (const a of this.afterimages) drawPlayer(ctx, Object.assign({}, p, a, { ghost: a.life * 1.2, attackT: 0, invuln: 0, flipT: 0 }), t);
+    for (const d of this.droppers) if (onScreen(d.x)) d.draw(ctx, t);
     drawPlayer(ctx, p, t);
+    for (const c of this.chasers) c.draw(ctx, t);
     for (const f of this.firebars) if (onScreen(f.cx)) f.draw(ctx, t);
     for (const pr of this.projectiles) pr.draw(ctx, t);
     drawParticles(ctx, this.particles);
@@ -548,12 +568,14 @@ const Game = {
     const L = [];
     const p = this.player;
     const inView = (x, y, r) => x > cam.x - r && x < cam.x + VIEW_W + r && y > cam.y - r && y < cam.y + VIEW_H + r;
-    if (!p.dead) L.push({ x: p.x + p.w / 2, y: p.y + 4, r: 240, i: 0.95, c: p.head === 'wick' ? 'rgba(255,170,60,0.22)' : 'rgba(255,220,180,0.06)' });
+    if (!p.dead) L.push({ x: p.x + p.w / 2, y: p.y + 4, r: 240 * p.st.light, i: 0.95, c: p.head === 'wick' ? 'rgba(255,170,60,0.22)' : 'rgba(255,220,180,0.06)' });
     L.push({ x: cam.x + THEME.moonX - (cam.x * 0.02) % 300, y: cam.y + THEME.moonY, r: 380, i: 0.5 });
     for (const c of this.checkpoints) if (inView(c.x, c.y, 200)) L.push({ x: c.x, y: c.y - 40, r: c.lit ? 200 : 90, i: c.lit ? 0.9 : 0.4, c: c.lit ? 'rgba(80,255,150,0.18)' : null });
     if (inView(this.finish.x, this.finish.y, 300)) L.push({ x: this.finish.x, y: this.finish.y - 60, r: 320, i: 1, c: 'rgba(190,90,255,0.35)' });
     for (const d of this.def.decor) if (d.type === 'shroom') { const x = d.x * TILE + 16, y = (d.y + 1) * TILE - 8; if (inView(x, y, 120)) L.push({ x, y, r: 110, i: 0.7, c: 'rgba(80,255,200,0.16)' }); }
     for (const f of this.firebars) if (inView(f.cx, f.cy, 200)) L.push({ x: f.cx, y: f.cy, r: 190, i: 0.9, c: THEME.snow ? 'rgba(60,170,255,0.3)' : 'rgba(255,110,20,0.3)' });
+    for (const d of this.droppers) if (d.style === 'chandelier' && d.state !== 'gone' && inView(d.x, d.y, 160)) L.push({ x: d.x + 10, y: d.y + d.h - 16, r: 150, i: 0.8, c: 'rgba(255,170,60,0.2)' });
+    for (const c of this.chasers) if (c.state === 'chase' && (c.style === 'fire' || c.style === 'void')) L.push({ x: c.front - 40, y: c.floor - 120, r: 360, i: 0.9, c: c.style === 'fire' ? 'rgba(255,100,20,0.3)' : 'rgba(160,60,255,0.2)' });
     for (const pad of this.pads) if (inView(pad.x, pad.y, 120)) L.push({ x: pad.x + 14, y: pad.y - 10, r: 100, i: 0.7, c: 'rgba(255,150,40,0.2)' });
     for (const lt of this.world.lavaTiles) {
       if (lt.tx % 2) continue;

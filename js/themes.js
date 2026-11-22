@@ -31,23 +31,24 @@ const WORLDS = [
       leaves: ['#ffffff', '#d8ecf8', '#bcd8ea', '#eaf6ff'], dark: [2, 6, 16], ambient: 0.5,
     },
   },
+  // ---- From Level 21 on, you have fallen underground. Every level has a CHASE and falling hazards. ----
   {
     id: 3, levels: [21, 30],
-    look: 'A sinking swamp under a red moon, full of rotten roots and toxic slime.',
-    enemies: ['Bog Leech', 'Swamp Lantern', 'Croaking Skull'],
-    boss: 'The Mire Hag (Level 30)',
+    look: 'A deep cave: stalagmites, dripping rock, glowing crystals, and stalactites that fall when you run under them.',
+    enemies: ['Rock Crawler', 'Cave Bat', 'Pebble Imp'],
+    boss: 'The Troll (Level 30)',
     pal: {
-      sky: ['#0a0204', '#2a0a10', '#4a1416', '#3a1a10'], star: '#ffe0d8', moon: [255, 120, 100],
-      far: ['#3a1418', '#22080c'], mid: ['#1e1410', '#140c08'], near: ['#0c0a06', '#080604'],
-      castle: '#2a0c10', windows: '#ff5a3a', tree: '#0c0806', bgTree: '#1a0e0a',
-      fog: [120, 160, 80], haze: [150, 80, 70],
-      stone: [52, 44, 36], grass: ['#5a6a2a', '#3e4a1c', '#7a8a3a', '#2e3a14', '#6a5a2a'], grassTop: ['#4a5a22', '#2a3412'], moss: [110, 140, 50],
-      leaves: ['#6a7a2a', '#4a3a1a', '#8a6a2a', '#3a2a10'], dark: [10, 4, 4], ambient: 0.58,
+      sky: ['#040302', '#0e0a08', '#16100c', '#1a120c'], star: '#ffd8a0', moon: [255, 200, 140],
+      far: ['#1a1410', '#120e0a'], mid: ['#120e0a', '#0c0906'], near: ['#080604', '#050403'],
+      castle: '#140e0a', windows: '#ffb060', tree: '#0a0806', bgTree: '#120e0a',
+      fog: [150, 130, 110], haze: [120, 100, 80],
+      stone: [58, 50, 44], grass: ['#5a5040', '#463e30', '#6e6250', '#3a3228', '#544838'], grassTop: ['#5a5040', '#3a3228'], moss: [90, 120, 80],
+      leaves: ['#8a7a6a', '#6a5a4a', '#a89880', '#4a3e34'], dark: [6, 4, 2], ambient: 0.66,
     },
   },
   {
     id: 4, levels: [31, 40],
-    look: 'Underground tombs full of ticking gears, chains and green candlelight.',
+    look: 'Underground clockwork tombs full of ticking gears, chains and green candlelight.',
     enemies: ['Gear Spider', 'Chain Ghoul', 'Tick-Tock Skull'],
     boss: 'The Grandfather Clock (Level 40)',
     pal: {
@@ -56,13 +57,13 @@ const WORLDS = [
       castle: '#0c1e14', windows: '#7aff9a', tree: '#06100a', bgTree: '#0c1a10',
       fog: [120, 200, 150], haze: [90, 150, 110],
       stone: [46, 50, 44], grass: ['#8a8a6a', '#6a6a4a', '#aaa880', '#4a4a34', '#7a7a5a'], grassTop: ['#7a7a5a', '#4a4a34'], moss: [90, 140, 100],
-      leaves: ['#c8a040', '#8a7030', '#e0c060', '#6a5020'], dark: [2, 8, 4], ambient: 0.6,
+      leaves: ['#c8a040', '#8a7030', '#e0c060', '#6a5020'], dark: [2, 8, 4], ambient: 0.62,
     },
   },
   {
     id: 5, levels: [41, 50],
-    look: 'A burning cathedral at the end of the night, glowing with orange embers.',
-    enemies: ['Ember Imp', 'Candle Wraith', 'Ash Bat'],
+    look: 'A burning cathedral, glowing with orange embers and stained glass.',
+    enemies: ['Ash Crawler', 'Ember Bat', 'Cinder Skull'],
     boss: 'The Hollow Saint (Level 50)',
     pal: {
       sky: ['#0a0402', '#2a100a', '#4a1e0c', '#6a2a0e'], star: '#fff0d8', moon: [255, 180, 90],
@@ -70,7 +71,21 @@ const WORLDS = [
       castle: '#24100a', windows: '#ffd06a', tree: '#0e0602', bgTree: '#1e0e06',
       fog: [220, 120, 60], haze: [180, 100, 60],
       stone: [56, 44, 40], grass: ['#7a5a3a', '#5a3a22', '#9a7a4a', '#3a2614', '#6a4a2a'], grassTop: ['#6a4a2a', '#3a2614'], moss: [140, 90, 50],
-      leaves: ['#ff6a2a', '#c8401a', '#ff8a3a', '#6a2a14'], dark: [10, 4, 2], ambient: 0.55,
+      leaves: ['#ff6a2a', '#c8401a', '#ff8a3a', '#6a2a14'], dark: [10, 4, 2], ambient: 0.58,
+    },
+  },
+  {
+    id: 6, levels: [51, 60],
+    look: 'The Void: broken stone floating in purple nothingness, under a swirling dark eye.',
+    enemies: ['Void Crawler', 'Void Eye', 'Void Skull'],
+    boss: 'The Void King (Level 60)',
+    pal: {
+      sky: ['#020006', '#0e0420', '#1e0838', '#2a0a44'], star: '#f0d8ff', moon: [200, 120, 255],
+      far: ['#1e0a34', '#12061e'], mid: ['#140620', '#0c0416'], near: ['#08020e', '#05010a'],
+      castle: '#160828', windows: '#d080ff', tree: '#0a0414', bgTree: '#140822',
+      fog: [170, 90, 230], haze: [130, 70, 190],
+      stone: [44, 36, 62], grass: ['#7a5aa8', '#5a3a88', '#9a7ac8', '#3a2460', '#6a4a98'], grassTop: ['#6a4a98', '#3a2460'], moss: [150, 90, 220],
+      leaves: ['#c890ff', '#8a5ad8', '#f0d0ff', '#5a2aa8'], dark: [4, 1, 10], ambient: 0.6,
     },
   },
 ];
@@ -85,6 +100,15 @@ const HAZARD_LOOK = {
        spike: ['#e8e6f0', '#9a96a8', '#3a3644', 'rgba(140,60,30,0.45)'], snow: false },
   2: { liquid: ['#eaffff', '#6ad8f0', '#12507a', '#04142a'], bubble: [220, 250, 255], fire: ['#f0ffff', '#7ae0ff', '#1a60c0'], fireGlow: '#3ab0ff',
        spike: ['#ffffff', '#bfe8f8', '#4a7a9a', 'rgba(200,240,255,0.5)'], snow: true },
+  // underground groups: `under` picks the background, `drop` the falling hazard, `chase` what hunts you
+  3: { liquid: ['#ffdc60', '#ff7a10', '#c02a08', '#4a0a04'], bubble: [255, 230, 120], fire: ['#fff0c0', '#ffb040', '#c04a08'], fireGlow: '#ff8a20',
+       spike: ['#b8a890', '#7a6a58', '#2e2620', 'rgba(60,50,40,0.4)'], under: 'cave', drop: 'stalactite', chase: 'boulder', crystal: '#5ad8ff' },
+  4: { liquid: ['#d8ff80', '#6ad04a', '#1e6a2a', '#06200c'], bubble: [210, 255, 170], fire: ['#f0fff0', '#7aff9a', '#1a8a3a'], fireGlow: '#3aff7a',
+       spike: ['#e0d8a8', '#a8984a', '#4a3e1a', 'rgba(120,100,40,0.4)'], under: 'crypt', drop: 'gear', chase: 'gears', crystal: '#7aff9a' },
+  5: { liquid: ['#ffe880', '#ff8a10', '#c02a08', '#3a0602'], bubble: [255, 220, 120], fire: ['#fff8c0', '#ffa020', '#c02800'], fireGlow: '#ff5a00',
+       spike: ['#e0c8a0', '#a07a50', '#3a2414', 'rgba(255,120,40,0.35)'], under: 'cathedral', drop: 'chandelier', chase: 'fire', crystal: '#ffb040' },
+  6: { liquid: ['#f0d0ff', '#a050ff', '#40108a', '#10022a'], bubble: [230, 190, 255], fire: ['#ffffff', '#d080ff', '#6a1ad0'], fireGlow: '#b050ff',
+       spike: ['#e8d8ff', '#9a7ad8', '#2e1a5a', 'rgba(180,120,255,0.4)'], under: 'void', drop: 'shard', chase: 'void', crystal: '#d080ff' },
 };
 
 function themeForLevel(n) {
@@ -106,6 +130,7 @@ let THEME = null;
 // One new attack every 20 levels. Each one helps against the boss that comes after it.
 const ATTACKS = [
   { level: 20, id: 'wisp', name: 'Wisp Bolt', key: 'V', desc: 'Fire a ghostly bolt that zips through monsters. Great for hitting bosses from far away.' },
+  { level: 40, id: 'spin', name: 'Spin Slash', key: 'B', desc: 'Spin your sword all the way around you, hitting everything close by. Perfect when bosses get close.' },
   // { level: 40, ... }, { level: 60, ... } — added as those levels are built.
 ];
 function nextAttack() { return ATTACKS.find((a) => !Save.data.unlocks[a.id]); }

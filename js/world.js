@@ -165,6 +165,11 @@ class World {
 
   paintRoots(ctx, tx, ty) {
     const px = tx * TILE, py = ty * TILE + TILE;
+    if (THEME.under === 'cave') { // little stone drips under cave rock
+      const k = hash2(tx, ty + 5);
+      if (k > 0.45) { ctx.fillStyle = lin(ctx, px, 0, px + 12, 0, ['#8a7a68', '#4a3e34']); const sx = px + 4 + k * 16, l = 6 + k * 14; Draw.poly(ctx, [sx - 4, py - 1, sx + 4, py - 1, sx, py + l]); }
+      return;
+    }
     const n = Math.floor(hash2(tx, ty + 11) * 3);
     ctx.strokeStyle = 'rgba(60,44,40,0.9)'; ctx.lineWidth = 1.3;
     for (let i = 0; i < n; i++) {

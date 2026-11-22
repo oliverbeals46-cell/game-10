@@ -148,6 +148,7 @@ function mulberry32(a) {
 /* ---------------- background ---------------- */
 function drawBackground(ctx, camX, camY, t) {
   const TH = THEME;
+  if (TH.under) { drawUnderground(ctx, camX, camY, t, TH); return; }
   const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
   g.addColorStop(0, TH.sky[0]); g.addColorStop(0.45, TH.sky[1]); g.addColorStop(0.8, TH.sky[2]); g.addColorStop(1, TH.sky[3]);
   ctx.fillStyle = g; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
@@ -242,6 +243,22 @@ function drawDecor(ctx, d, t) {
   const y = d.py !== undefined ? d.py : (d.y + 1) * TILE;
   // a fixed number per decoration, so its look never changes while it moves across the screen
   const seed = d.seed !== undefined ? d.seed : (d.x || 0) * 7 + (d.y || 0);
+  if (THEME && THEME.under && (d.type === 'grave' || d.type === 'tree')) {
+    if (d.type === 'grave') { // glowing crystal cluster
+      setGlow(ctx, THEME.crystal, 14);
+      for (const [ox, h, w] of [[-7, 16, 5], [0, 24, 6], [7, 14, 5]]) {
+        ctx.fillStyle = lin(ctx, x + ox - w, 0, x + ox + w, 0, ['#ffffff', THEME.crystal, 'rgba(0,0,0,0.6)']);
+        Draw.poly(ctx, [x + ox - w, y, x + ox + w, y, x + ox + w * 0.6, y - h * 0.7, x + ox, y - h, x + ox - w * 0.6, y - h * 0.7]);
+      }
+      clearGlow(ctx);
+    } else { // rock stalagmite
+      const h = 50 + hash2(seed, 3) * 50;
+      ctx.fillStyle = lin(ctx, x - 14, 0, x + 14, 0, [`rgb(${THEME.stone[0] + 40},${THEME.stone[1] + 36},${THEME.stone[2] + 30})`, `rgb(${THEME.stone[0]},${THEME.stone[1]},${THEME.stone[2]})`, '#0a0806']);
+      Draw.poly(ctx, [x - 16, y, x + 16, y, x + 4, y - h * 0.6, x + 1, y - h, x - 4, y - h * 0.55]);
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1; Draw.line(ctx, x - 6, y - 4, x - 1, y - h * 0.7);
+    }
+    return;
+  }
   if (d.type === 'grave') {
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; Draw.ell(ctx, x + 2, y, 16, 3);
     ctx.save(); ctx.translate(x, y); ctx.rotate((hash2(seed, 1) - 0.5) * 0.12);
@@ -475,4 +492,90 @@ function drawParticles(ctx, list) {
     }
   }
   ctx.globalAlpha = 1;
+}
+
+// ---------------- underground backgrounds (Levels 21+) ----------------
+function drawUnderground(ctx, camX, camY, t, TH) {
+  const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
+  g.addColorStop(0, TH.sky[0]); g.addColorStop(0.5, TH.sky[2]); g.addColorStop(1, TH.sky[1]);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  const style = TH.under;
+
+  if (style === 'void') {
+    // a giant swirling eye of nothingness
+    const ex = 620 - (camX * 0.02) % 200, ey = 170 - camY * 0.02;
+    for (let i = 6; i > 0; i--) {
+      ctx.strokeStyle = `rgba(190,110,255,${0.05 + i * 0.02})`; ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.arc(ex, ey, 40 + i * 26, t * 0.2 * (i % 2 ? 1 : -1), t * 0.2 * (i % 2 ? 1 : -1) + 4.6); ctx.stroke();
+    }
+    const eg = ctx.createRadialGradient(ex, ey, 2, ex, ey, 44);
+    eg.addColorStop(0, '#000'); eg.addColorStop(0.45, '#1a0430'); eg.addColorStop(0.7, '#a050ff'); eg.addColorStop(1, 'rgba(160,80,255,0)');
+    ctx.fillStyle = eg; Draw.circ(ctx, ex, ey, 44);
+    // floating rocks
+    for (let i = 0; i < 7; i++) {
+      const rx = ((i * 310 - camX * (0.1 + i * 0.03)) % 1500 + 1500) % 1500 - 200, ry = 90 + (i * 97) % 300 + Math.sin(t * 0.6 + i) * 8 - camY * 0.05;
+      const sz = 18 + (i * 13) % 30;
+      ctx.fillStyle = TH.far[i % 2];
+      Draw.poly(ctx, [rx - sz, ry, rx + sz, ry - sz * 0.2, rx + sz * 0.5, ry + sz * 0.8, rx - sz * 0.3, ry + sz]);
+      ctx.fillStyle = 'rgba(200,140,255,0.25)'; ctx.fillRect(rx - sz, ry - 2, sz * 2, 2);
+    }
+  } else {
+    // far rock wall with parallax pillars / arches
+    const layer = (par, col, step, hmin, hvar, seed) => {
+      const ox = camX * par;
+      const start = Math.floor(ox / step) - 1;
+      ctx.fillStyle = col;
+      for (let i = start; i < start + VIEW_W / step + 3; i++) {
+        const r = hash2(i, seed), sx = i * step - ox;
+        const hh = hmin + r * hvar;
+        if (style === 'cave') {
+          // stalactites from the top, stalagmites from the bottom
+          Draw.poly(ctx, [sx - step * 0.35, -camY * par * 0.3, sx + step * 0.35, -camY * par * 0.3, sx + (r - 0.5) * 10, hh - camY * par * 0.3]);
+          Draw.poly(ctx, [sx - step * 0.3, VIEW_H, sx + step * 0.3, VIEW_H, sx + (r - 0.5) * 14, VIEW_H - hh * 0.8]);
+        } else {
+          // pillars and arches for crypt / cathedral
+          const pw = step * 0.22;
+          ctx.fillRect(sx - pw / 2, 0, pw, VIEW_H);
+          ctx.beginPath(); ctx.moveTo(sx + pw / 2, VIEW_H); ctx.lineTo(sx + pw / 2, hh + 60); ctx.arc(sx + step / 2, hh + 60, step / 2 - pw / 2, Math.PI, 0); ctx.lineTo(sx + step - pw / 2, VIEW_H); ctx.lineTo(sx + step - pw / 2, 0); ctx.lineTo(sx + pw / 2, 0); ctx.fill();
+        }
+      }
+    };
+    layer(0.1, TH.far[0], 140, 90, 120, 3);
+    // style details between layers
+    if (style === 'cave') {
+      for (let i = 0; i < 14; i++) { // glowing crystals in the rock
+        const cx = ((i * 211 - camX * 0.2) % 1600 + 1600) % 1600 - 200, cy = 120 + (i * 53) % 320 - camY * 0.15;
+        setGlow(ctx, TH.crystal, 14); ctx.fillStyle = TH.crystal; ctx.globalAlpha = 0.5 + Math.sin(t * 1.5 + i) * 0.2;
+        Draw.poly(ctx, [cx, cy - 10, cx + 4, cy, cx, cy + 6, cx - 4, cy]); Draw.poly(ctx, [cx + 6, cy - 4, cx + 9, cy + 2, cx + 6, cy + 6, cx + 3, cy + 2]);
+        ctx.globalAlpha = 1; clearGlow(ctx);
+      }
+    } else if (style === 'crypt') {
+      for (let i = 0; i < 5; i++) { // giant slow gears
+        const gx = ((i * 380 - camX * 0.15) % 1900 + 1900) % 1900 - 200, gy = 140 + (i * 131) % 240 - camY * 0.1, R = 40 + (i * 17) % 40;
+        ctx.save(); ctx.translate(gx, gy); ctx.rotate(t * (i % 2 ? 0.3 : -0.3)); ctx.fillStyle = 'rgba(120,110,60,0.25)';
+        for (let k = 0; k < 12; k++) { ctx.rotate(Math.PI / 6); ctx.fillRect(R - 4, -6, 14, 12); }
+        Draw.circ(ctx, 0, 0, R); ctx.fillStyle = TH.sky[1]; Draw.circ(ctx, 0, 0, R * 0.45);
+        ctx.restore();
+      }
+    } else if (style === 'cathedral') {
+      for (let i = 0; i < 4; i++) { // glowing stained-glass windows
+        const wx = ((i * 420 - camX * 0.12) % 1700 + 1700) % 1700 - 200, wy = 90 - camY * 0.08;
+        const wg = ctx.createLinearGradient(wx, wy, wx, wy + 180);
+        wg.addColorStop(0, 'rgba(255,190,80,0.55)'); wg.addColorStop(0.5, 'rgba(220,60,40,0.45)'); wg.addColorStop(1, 'rgba(120,40,160,0.35)');
+        ctx.fillStyle = wg;
+        ctx.beginPath(); ctx.moveTo(wx - 34, wy + 180); ctx.lineTo(wx - 34, wy + 40); ctx.arc(wx, wy + 40, 34, Math.PI, 0); ctx.lineTo(wx + 34, wy + 180); ctx.fill();
+        ctx.strokeStyle = 'rgba(20,8,4,0.8)'; ctx.lineWidth = 3;
+        Draw.line(ctx, wx, wy + 6, wx, wy + 180); Draw.line(ctx, wx - 34, wy + 90, wx + 34, wy + 90);
+      }
+    }
+    layer(0.3, TH.mid[0], 220, 60, 160, 9);
+    fogBand(ctx, 420 - camY * 0.1, 160, hexA(TH.haze, 0.18));
+    layer(0.5, TH.near[0], 300, 40, 120, 17);
+  }
+  // drifting motes / embers
+  ctx.fillStyle = hexA(TH.fog, 0.35);
+  for (let i = 0; i < 30; i++) {
+    const mx = ((i * 97 + t * (6 + i % 5) - camX * 0.3) % VIEW_W + VIEW_W) % VIEW_W, my = ((i * 61 - t * (4 + i % 3) * (style === 'cathedral' ? 4 : 1)) % VIEW_H + VIEW_H) % VIEW_H;
+    ctx.fillRect(mx, my, 2, 2);
+  }
 }

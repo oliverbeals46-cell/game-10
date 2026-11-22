@@ -46,6 +46,9 @@ const Sfx = (() => {
   const lib = {
     jump() { tone(220, 0.14, 'triangle', 0.18, 380); noise(0.05, 0.08, 2500); },
     djump() { tone(330, 0.16, 'triangle', 0.16, 500); noise(0.12, 0.1, 4000); },
+    rumble() { noise(0.4, 0.18, 180); },
+    crash() { noise(0.35, 0.35, 260); tone(70, 0.3, 'square', 0.2, -30); },
+    spin() { noise(0.25, 0.3, 2800); tone(500, 0.25, 'sine', 0.08, 600); },
     step() { noise(0.035, 0.07, 700 + Math.random() * 400); },
     pad() { tone(180, 0.35, 'sine', 0.3, 700); tone(360, 0.25, 'triangle', 0.12, 500, 0.03); },
     crumble() { noise(0.4, 0.3, 350); tone(90, 0.3, 'square', 0.12, -30); },

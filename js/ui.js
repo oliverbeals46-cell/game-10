@@ -42,12 +42,21 @@ const UI = {
   },
 
   // Level select: replay any level you've reached. Levels unlock in order.
-  openLevels() {
+  openLevels(page) {
     this.show('levels');
+    const d = Save.data;
+    // pages of 20 levels; open on the page with the newest level you've reached
+    if (page === undefined) { let top = 1; for (let n = 1; n <= PLANNED_LEVELS; n++) if (d.levels['l' + n]) top = n + 1; page = Math.min(Math.floor((Math.min(top, 60) - 1) / 20), 2); }
+    this.levelPage = page;
+    const tabs = document.getElementById('level-tabs');
+    tabs.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+      const tb = document.createElement('button'); tb.textContent = `${i * 20 + 1}–${i * 20 + 20}`; tb.className = i === page ? 'on' : '';
+      tb.addEventListener('click', () => { Sfx.play('click'); this.openLevels(i); }); tabs.appendChild(tb);
+    }
     const grid = document.getElementById('level-grid');
     grid.innerHTML = '';
-    const d = Save.data;
-    for (let n = 1; n <= 20; n++) {
+    for (let n = page * 20 + 1; n <= page * 20 + 20; n++) {
       const built = !!LEVELS[n];
       const unlocked = built && (n === 1 || d.levels['l' + (n - 1)] || d.devUnlock);
       const cleared = !!d.levels['l' + n];
@@ -101,12 +110,25 @@ const UI = {
     document.getElementById('menu-progress').innerHTML = `Levels cleared: <b>${cleared}</b>`;
   },
 
-  openShop() {
+  openShop(setId = this.shopSet || 'creepy') {
     this.show('shop');
+    this.shopSet = setId;
+    // page tabs: Creepy Collection / Christmas / Thanksgiving
+    const tabs = document.getElementById('shop-tabs');
+    tabs.innerHTML = '';
+    for (const s of HEAD_SETS) {
+      const b = document.createElement('button');
+      b.textContent = s.name + (s.season ? (setOnSale(s.id) ? ' · ON SALE' : '') : '');
+      b.className = (s.id === setId ? 'on ' : '') + 'set-' + s.id;
+      b.addEventListener('click', () => { Sfx.play('click'); this.openShop(s.id); });
+      tabs.appendChild(b);
+    }
+    const set = HEAD_SETS.find((s) => s.id === setId);
+    document.querySelector('#screen-shop .season').textContent = set.season ? `Limited: ${set.season}` : 'Creepy Collection';
     const grid = document.getElementById('shop-grid');
     grid.innerHTML = '';
     const canvases = [];
-    for (const h of HEADS) {
+    for (const h of HEADS.filter((x) => (x.set || 'creepy') === setId)) {
       const card = document.createElement('div');
       card.className = 'shop-card';
       const cv = document.createElement('canvas');
@@ -151,7 +173,10 @@ const UI = {
       c.btn.className = '';
       if (eq) { c.btn.textContent = 'Equipped'; c.btn.classList.add('on'); }
       else if (owned) c.btn.textContent = 'Equip';
-      else {
+      else if (c.h.set && !setOnSale(c.h.set)) {
+        c.btn.textContent = `Back ${HEAD_SETS.find((s) => s.id === c.h.set).season}`;
+        c.btn.classList.add('locked');
+      } else {
         c.btn.textContent = `Buy - ${c.h.price} shards`;
         c.btn.classList.add(d.shards >= c.h.price ? 'buy' : 'locked');
       }
@@ -162,6 +187,7 @@ const UI = {
     const d = Save.data;
     if (d.equipped === h.id) return;
     if (d.owned.includes(h.id)) { d.equipped = h.id; Sfx.play('click'); }
+    else if (h.set && !setOnSale(h.set)) { Sfx.play('deny'); return; }
     else if (d.shards >= h.price) { d.shards -= h.price; d.owned.push(h.id); d.equipped = h.id; Sfx.play('buy'); }
     else { Sfx.play('deny'); return; }
     Save.write();
@@ -188,6 +214,14 @@ const UI = {
     nb.disabled = !hasNext;
     nb.textContent = hasNext ? `Level ${Game.levelNum + 1}` : `Level ${Game.levelNum + 1} coming soon`;
     document.querySelector('#screen-victory h2').textContent = `Level ${Game.levelNum} Complete!`;
+    const STORY_END = {
+      20: 'The Frozen Widow falls... and the ice cracks beneath you. You fall deep, deep underground. Something down there is awake.',
+      30: 'The Troll crashes to the ground. Far below, you hear ticking...',
+      40: 'The Grandfather Clock stops. The floor gives way to a burning cathedral below.',
+      50: 'The Hollow Saint burns out. Beyond it, there is only the Void.',
+      60: 'The Void King is gone. You made it to the very bottom. For now...',
+    };
+    document.querySelector('#screen-victory .sub').textContent = STORY_END[Game.levelNum] || 'You made it to the portal!';
     this.show('victory');
   },
 };

@@ -160,3 +160,12 @@ kbd {
   color: #fff; background: #120a20; border: 2px solid #5b3f8c; border-radius: 10px; outline: none;
 }
 #code-input:focus { border-color: #c8323c; }
+
+.level-tabs { display: flex; gap: 8px; margin: -4px 0 8px; }
+.level-tabs button { font: inherit; font-weight: 900; font-size: 13px; color: #d8ccf0; background: #1a1030; border: 2px solid #4a3470; border-radius: 8px; padding: 4px 12px; cursor: pointer; }
+.level-tabs button.on { border-color: #c8323c; color: #fff; background: #3a0e18; }
+
+.shop-tabs { margin: 0 0 8px; }
+.shop-tabs button.set-christmas.on { border-color: #2a9a3a; background: #0e3a18; }
+.shop-tabs button.set-thanksgiving.on { border-color: #d88a3a; background: #3a2008; }
+.card.wide { max-height: 530px; }

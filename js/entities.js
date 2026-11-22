@@ -22,8 +22,8 @@ class Player {
     this.dashT = 0; this.dashCd = 0; this.canDash = true; this.dashDir = 1;
     this.attackT = 0; this.attackCd = 0; this.attackDir = 'side'; this.hitSet = new Set(); this.pogoDone = false;
     this.invuln = 0; this.ctrlLock = 0; this.wallSlide = 0; this.boltCd = 0;
-    this.dropT = 0; this.hazardT = 0; this.anim = 0; this.landT = 0;
-    this.platform = null; this.airJumps = 1;
+    this.dropT = 0; this.hazardT = 0; this.anim = 0; this.landT = 0; this.spinT = 0; this.spinCd = 0;
+    this.platform = null; this.airJumps = 1 + this.st.airJumps; this.airDashLeft = 1 + this.st.airDashes; this.shield = this.st.shield;
     this.lastSafe = { x, y };
     this.dead = false;
   }
@@ -55,8 +55,15 @@ class Player {
   }
 
   // Every level, every creature: touching a monster (or anything a boss throws) = you die and go back to your checkpoint.
-  hurt(g) {
+  hurt(g, dmg, srcX) {
     if (this.dead || this.invuln > 0) return false; // brief protection right after respawning
+    if (this.st.dashSafe && this.dashT > 0) return false;   // Cranberry Blob: can't be hurt while dashing
+    if (this.shield > 0) {                                  // Nutcracker: one free hit per checkpoint
+      this.shield--; this.invuln = 1;
+      this.vx = (this.x + this.w / 2 < (srcX || 0) ? -1 : 1) * 300; this.vy = -320; this.ctrlLock = 0.2;
+      Sfx.play('bump'); g.ring(this.x + this.w / 2, this.y + this.h / 2, '#d4af37', 40); g.toast('Iron jaw saved you!', 1.2);
+      return true;
+    }
     g.playerDied();
     return true;
   }
@@ -72,7 +79,7 @@ class Player {
     const ix = (I.down('right') ? 1 : 0) - (I.down('left') ? 1 : 0);
     const downHeld = I.down('down');
 
-    if (this.onGround) { this.coyote = 0.1; this.canDash = true; this.airJumps = 1; } else this.coyote -= dt;
+    if (this.onGround) { this.coyote = 0.1 * this.st.coyote; this.canDash = true; this.airJumps = 1 + this.st.airJumps; this.airDashLeft = 1 + this.st.airDashes; } else this.coyote -= dt;
     if (I.pressed('jump')) this.jumpBuf = 0.13; else this.jumpBuf -= dt;
 
     this.wallSlide = 0;
@@ -114,7 +121,7 @@ class Player {
           // DOUBLE JUMP
           this.airJumps--;
           this.flipT = 0.32;
-          this.vy = -PHYS.JUMP * 0.9 * this.st.jump;
+          this.vy = -PHYS.JUMP * 0.9 * this.st.jump * this.st.airJumpPow;
           this.jumping = true; this.jumpBuf = 0;
           Sfx.play('djump');
           for (let i = 0; i < 12; i++) {
@@ -131,7 +138,7 @@ class Player {
       this.facing = this.dashDir;
       this.dashT = PHYS.DASH_T * this.st.dash;
       this.dashCd = 0.45 * this.st.dashCd;
-      if (!this.onGround) this.canDash = false;
+      if (!this.onGround) { this.airDashLeft--; if (this.airDashLeft <= 0) this.canDash = false; }
       this.jumping = false; this.ctrlLock = 0; this.platform = null;
       Sfx.play('dash');
     }
@@ -139,11 +146,19 @@ class Player {
     // Attack
     if (I.pressed('attack') && this.attackCd <= 0 && this.dashT <= 0) {
       this.attackDir = I.down('up') ? 'up' : (downHeld && !this.onGround) ? 'down' : 'side';
-      this.attackT = 0.14; this.attackCd = 0.26;
+      this.attackT = 0.14; this.attackCd = 0.26 * this.st.atkCd;
       this.hitSet = new Set(); this.pogoDone = false;
       Sfx.play('swing');
     }
     if (this.attackT > 0) g.resolvePlayerAttack(this);
+
+    // Spin Slash (unlocks after Level 40): sword spins all the way around you
+    this.spinCd -= dt;
+    if (this.spinT > 0) { this.spinT -= dt; g.resolveSpin(this); }
+    if (I.pressed('spin')) {
+      if (!Save.data.unlocks.spin) g.toast('Spin Slash unlocks after Level 40!', 1.8);
+      else if (this.spinCd <= 0 && this.dashT <= 0) { this.spinT = 0.32; this.spinCd = 1.4 * this.st.spinCd; this.spinHits = new Set(); Sfx.play('spin'); }
+    }
 
     // Wisp Bolt (unlocks after Level 20) — runs on a cooldown, no meter
     if (I.pressed('spell')) {
@@ -151,6 +166,7 @@ class Player {
       else if (this.boltCd <= 0) {
         this.boltCd = BOLT_CD * this.st.boltCd;
         g.projectiles.push(new Projectile('wisp', this.facing > 0 ? this.x + this.w : this.x - 30, this.y + 6, this.facing * 720, 0));
+        if (this.st.doubleBolt) g.projectiles.push(new Projectile('wisp', this.facing > 0 ? this.x + this.w : this.x - 30, this.y - 14, this.facing * 720, -40));
         this.vx = -this.facing * 160; this.ctrlLock = 0.1;
         Sfx.play('bolt');
       }
@@ -343,6 +359,18 @@ function drawPlayer(ctx, p, t) {
     limb(ctx, ox, oy, ox + Math.cos(a) * 4, oy + Math.sin(a) * 4 + 0.5, hx, hy, 3, '#2c2640');
   };
 
+  if (p.spinT > 0) {
+    const k = 1 - p.spinT / 0.32, a = k * Math.PI * 4;
+    ctx.save(); ctx.translate(0, -16);
+    for (let i = 0; i < 3; i++) {
+      ctx.globalAlpha = alpha * (0.5 - i * 0.12);
+      ctx.strokeStyle = i ? accent : '#ffffff'; ctx.lineWidth = 6 - i * 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, 34 + i * 6, a - 1.6 - i * 0.3, a); ctx.stroke();
+    }
+    ctx.globalAlpha = alpha;
+    ctx.rotate(a); ctx.translate(10, 0); drawBlade(ctx, 22, true);
+    ctx.restore();
+  }
   drawLeg(1);
   drawBackArm();
   drawScarf();
@@ -423,13 +451,17 @@ class Crawler {
       ctx.beginPath(); ctx.moveTo(-8 + i * 7, -6); ctx.lineTo(-11 + i * 7 + ph, -3); ctx.lineTo(-10 + i * 7 + ph, 0); ctx.stroke();
     }
     // armored shell with highlights
-    ctx.fillStyle = f ? '#fff' : shade(ctx, -2, -12, 16, '#7a6aa0', '#3b2f57', '#120c1e');
+    const K = this.skin || {};
+    const sh3 = K.shell || ['#7a6aa0', '#3b2f57', '#120c1e'];
+    ctx.fillStyle = f ? '#fff' : shade(ctx, -2, -12, 16, sh3[0], sh3[1], sh3[2]);
     ctx.beginPath(); ctx.ellipse(0, -9, 15, 11, 0, Math.PI, 0); ctx.lineTo(15, -5); ctx.lineTo(-15, -5); ctx.closePath(); ctx.fill();
+    if (K.extra && !f) K.extra(ctx, this, t);
     ctx.strokeStyle = c('rgba(10,6,18,0.7)'); ctx.lineWidth = 1.3;
     Draw.line(ctx, -6, -19.5, -5, -5); Draw.line(ctx, 3, -19.5, 4, -5);
     if (!f) { ctx.fillStyle = 'rgba(220,200,255,0.35)'; Draw.ell(ctx, -6, -15, 5, 2, -0.3); }
-    ctx.fillStyle = f ? '#fff' : shade(ctx, 12, -8, 6, '#d8cff0', '#8a7cab', '#3a2f50'); Draw.ell(ctx, 12, -8, 6, 5);
-    ctx.fillStyle = c('#6cff9a'); if (!f) setGlow(ctx, '#3dff7a', 8);
+    const fc = K.face || ['#d8cff0', '#8a7cab', '#3a2f50'];
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 12, -8, 6, fc[0], fc[1], fc[2]); Draw.ell(ctx, 12, -8, 6, 5);
+    ctx.fillStyle = c(K.eye || '#6cff9a'); if (!f) setGlow(ctx, K.glow || '#3dff7a', 8);
     Draw.circ(ctx, 14, -9, 1.8);
     clearGlow(ctx);
     ctx.strokeStyle = c('#a99cc8'); ctx.lineWidth = 1;
@@ -482,7 +514,8 @@ class Bat {
     ctx.translate(this.x + this.w / 2, this.y + this.h / 2);
     ctx.scale(this.facing, 1);
     for (const s of [-1, 1]) {
-      ctx.fillStyle = f ? '#fff' : lin(ctx, 0, -10, s * 20, 4, ['#4a2d6a', '#24123a', '#0e0618']);
+      const K = this.skin || {};
+      ctx.fillStyle = f ? '#fff' : lin(ctx, 0, -10, s * 20, 4, K.wing || ['#4a2d6a', '#24123a', '#0e0618']);
       ctx.beginPath();
       ctx.moveTo(s * 4, -2);
       ctx.quadraticCurveTo(s * 14, -12 - flap * 8, s * 20, -4 - flap * 6);
@@ -491,9 +524,11 @@ class Bat {
       ctx.strokeStyle = c('rgba(150,110,200,0.4)'); ctx.lineWidth = 0.6;
       Draw.line(ctx, s * 4, -2, s * 16, 0 - flap * 3); Draw.line(ctx, s * 4, -2, s * 12, -1 - flap * 2);
     }
-    ctx.fillStyle = f ? '#fff' : shade(ctx, 0, 0, 8, '#7a5a9a', '#45295f', '#160a24'); Draw.ell(ctx, 0, 0, 7, 8);
+    const KB = this.skin || {}, bd = KB.body || ['#7a5a9a', '#45295f', '#160a24'];
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 0, 0, 8, bd[0], bd[1], bd[2]); Draw.ell(ctx, 0, 0, 7, 8);
     Draw.poly(ctx, [-5, -6, -3, -12, -1, -7]); Draw.poly(ctx, [5, -6, 3, -12, 1, -7]);
-    ctx.fillStyle = c('#ff3355'); if (!f) setGlow(ctx, '#ff0033', 8);
+    if (KB.extra && !f) KB.extra(ctx, this, t);
+    ctx.fillStyle = c(KB.eye || '#ff3355'); if (!f) setGlow(ctx, KB.glow || '#ff0033', 8);
     Draw.circ(ctx, -1, -2, 1.5); Draw.circ(ctx, 3.5, -2, 1.5);
     clearGlow(ctx);
     ctx.fillStyle = c('#fff'); Draw.poly(ctx, [0, 3, 1.4, 3, 0.7, 5.5]); Draw.poly(ctx, [2.4, 3, 3.8, 3, 3.1, 5.5]);
@@ -556,16 +591,50 @@ class Skitter {
       ctx.beginPath(); ctx.moveTo(s * 3, -9); ctx.lineTo(kx, ky - 4); ctx.lineTo(fx, fy); ctx.stroke();
     }
     ctx.scale(1 + sq * 0.2, 1 - sq * 0.2);
-    ctx.fillStyle = f ? '#fff' : shade(ctx, 0, -11, 9, '#fffaf0', '#cfc6ae', '#4a4232'); Draw.circ(ctx, 0, -11, 8);
-    ctx.fillStyle = f ? '#fff' : shade(ctx, 1, -5, 5, '#f4efe2', '#bdb49c', '#4a4232'); Draw.rr(ctx, -4, -7, 9, 5, 2); ctx.fill();
+    const KS = this.skin || {}, sk = KS.skull || ['#fffaf0', '#cfc6ae', '#4a4232'];
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 0, -11, 9, sk[0], sk[1], sk[2]); Draw.circ(ctx, 0, -11, 8);
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 1, -5, 5, sk[0], sk[1], sk[2]); Draw.rr(ctx, -4, -7, 9, 5, 2); ctx.fill();
+    if (KS.extra && !f) KS.extra(ctx, this, t);
     ctx.fillStyle = c('#0a0608'); Draw.ell(ctx, -1.5, -11.5, 2.2, 2.6); Draw.ell(ctx, 4, -11.5, 2.2, 2.6);
-    ctx.fillStyle = c('#ff3a3a'); if (!f) setGlow(ctx, '#ff0000', 8);
+    ctx.fillStyle = c(KS.eye || '#ff3a3a'); if (!f) setGlow(ctx, KS.glow || '#ff0000', 8);
     Draw.circ(ctx, -1.2, -11.2, 0.8); Draw.circ(ctx, 4.3, -11.2, 0.8);
     clearGlow(ctx);
     ctx.strokeStyle = c('#4a4232'); ctx.lineWidth = 0.6;
     for (let x = -3; x <= 4; x += 1.8) Draw.line(ctx, x, -6.5, x, -3);
     ctx.restore();
   }
+}
+
+/* ---------- Levels 21–60 mini enemies: themed skins on the three monster shapes ---------- */
+const spikes = (col) => (ctx, e) => { ctx.fillStyle = col; for (let i = -9; i <= 6; i += 5) Draw.poly(ctx, [i - 2.5, -16 + Math.abs(i) * 0.3, i + 2.5, -16 + Math.abs(i) * 0.3, i, -24 + Math.abs(i) * 0.3]); };
+const cog = (col) => (ctx, e, t) => { ctx.save(); ctx.translate(-2, -12); ctx.rotate(t * 3); ctx.fillStyle = col; for (let k = 0; k < 8; k++) { ctx.rotate(Math.PI / 4); ctx.fillRect(4, -1.5, 3, 3); } Draw.circ(ctx, 0, 0, 4.5); ctx.fillStyle = 'rgba(0,0,0,0.5)'; Draw.circ(ctx, 0, 0, 1.6); ctx.restore(); };
+const flames = (col) => (ctx, e, t) => { ctx.fillStyle = col; setGlow(ctx, col, 10); for (let i = -6; i <= 6; i += 6) { const h = 6 + Math.sin(t * 20 + i) * 2.5; ctx.beginPath(); ctx.moveTo(i - 3, -17); ctx.quadraticCurveTo(i, -17 - h * 2, i + 3, -17); ctx.fill(); } clearGlow(ctx); };
+const ENEMY_SKINS = {
+  // Levels 21–30: cave
+  rockcrawler: { base: 'crawler', name: 'Rock Crawler', shell: ['#b0a08a', '#5e5246', '#1a1410'], face: ['#d8c8b0', '#8a7a68', '#3a3028'], eye: '#ffb040', glow: '#ff8a00', speed: 62, extra: spikes('#cfc0a8') },
+  cavebat: { base: 'bat', name: 'Cave Bat', wing: ['#6a5440', '#3a2c20', '#140e08'], body: ['#9a8068', '#4a3828', '#1a120a'], eye: '#ffd040', glow: '#ffa000' },
+  pebbleimp: { base: 'skitter', name: 'Pebble Imp', skull: ['#d8c8b0', '#8a7a68', '#2e2620'], eye: '#ff9a2a', glow: '#ff7000', hop: 560 },
+  // Levels 31–40: clockwork crypt
+  gearspider: { base: 'crawler', name: 'Gear Spider', shell: ['#e8d080', '#9a7a2a', '#2a2008'], face: ['#d0c8a0', '#7a7050', '#2a2618'], eye: '#7aff9a', glow: '#3aff7a', speed: 75, extra: cog('#c8a040') },
+  chainghoul: { base: 'bat', name: 'Chain Ghoul', wing: ['#3a6a4a', '#1a3a24', '#06120a'], body: ['#9ac0a0', '#4a7a5a', '#0e2414'], eye: '#d8ff7a', glow: '#9aff3a' },
+  ticktock: { base: 'skitter', name: 'Tick-Tock Skull', skull: ['#f0e0a0', '#b09a4a', '#3a3010'], eye: '#7aff9a', glow: '#3aff7a', hop: 600 },
+  // Levels 41–50: burning cathedral
+  ashcrawler: { base: 'crawler', name: 'Ash Crawler', shell: ['#6a5a5a', '#2e2424', '#0a0606'], face: ['#a89090', '#5a4646', '#1a1010'], eye: '#ffd040', glow: '#ff6a00', speed: 85, extra: flames('#ff7a1a') },
+  emberbat: { base: 'bat', name: 'Ember Bat', wing: ['#ff8a3a', '#8a2a0a', '#2a0602'], body: ['#ffb060', '#a83a10', '#2a0802'], eye: '#fff0a0', glow: '#ffa000' },
+  cinderskull: { base: 'skitter', name: 'Cinder Skull', skull: ['#ffd8a0', '#a85a2a', '#2a0e04'], eye: '#ffe060', glow: '#ff8a00', hop: 640, extra: flames('#ff8a2a') },
+  // Levels 51–60: the void
+  voidcrawler: { base: 'crawler', name: 'Void Crawler', shell: ['#b08aff', '#4a1a9a', '#0a0220'], face: ['#e0d0ff', '#8a6ad8', '#2a1060'], eye: '#ffffff', glow: '#d080ff', speed: 95, extra: spikes('#e0c8ff') },
+  voideye: { base: 'bat', name: 'Void Eye', wing: ['#7a3ad8', '#2a0a6a', '#08021a'], body: ['#f0e0ff', '#a080e0', '#2a1060'], eye: '#1a0030', glow: '#d080ff' },
+  voidskull: { base: 'skitter', name: 'Void Skull', skull: ['#f0e0ff', '#9a7ad8', '#20084a'], eye: '#d080ff', glow: '#a040ff', hop: 660 },
+};
+function makeSkinnedEnemy(type, x, y) {
+  const k = ENEMY_SKINS[type];
+  let e;
+  if (k.base === 'bat') e = new Bat(x * TILE, y * TILE);
+  else if (k.base === 'skitter') { e = new Skitter(x * TILE + 4, (y + 1) * TILE); if (k.hop) e.hop = k.hop; }
+  else { e = new Crawler(x * TILE + 1, (y + 1) * TILE); if (k.speed) e.baseSpeed = k.speed; }
+  e.skin = k; e.skinName = type;
+  return e;
 }
 
 /* ---------- Levels 11–20 mini enemies (frozen) ---------- */
@@ -659,7 +728,7 @@ class Platform {
     }
     this.dx = this.x - px; this.dy = this.y - py;
   }
-  stoodOn() { if (this.kind === 'crumble' && this.state === 'solid') { this.state = 'shaking'; this.timer = this.crumbleT; } }
+  stoodOn(p) { if (this.kind === 'crumble' && this.state === 'solid') { this.state = 'shaking'; this.timer = this.crumbleT * (p ? p.st.crumbleSlow : 1); } }
   draw(ctx, t) {
     if (this.state === 'gone') {
       ctx.globalAlpha = 0.15; ctx.strokeStyle = '#a99cc8'; ctx.setLineDash([4, 4]);
@@ -699,7 +768,7 @@ class JumpPad {
     const p = g.player;
     if (p.dead || p.hazardT > 0) return;
     if (p.vy >= 0 && rectsOverlap(p, { x: this.x, y: this.y - 2, w: this.w, h: this.h + 2 })) {
-      p.vy = -PHYS.PAD; p.jumping = false; p.canDash = true; p.airJumps = 1; p.platform = null; p.dashT = 0;
+      p.vy = -PHYS.PAD * p.st.pad; p.jumping = false; p.canDash = true; p.airJumps = 1 + p.st.airJumps; p.airDashLeft = 1 + p.st.airDashes; p.platform = null; p.dashT = 0;
       p.y = Math.min(p.y, this.y - p.h);
       this.squish = 1;
       Sfx.play('pad');
@@ -759,6 +828,145 @@ class FireBar {
   }
 }
 
+/* =========================== LEVELS 21+ HAZARDS =========================== */
+// Dropper: hangs from the ceiling. When you run underneath it shakes, then falls. Touching it kills you.
+// Style follows the level group: stalactite (cave), gear (crypt), chandelier (cathedral), shard (void).
+class Dropper {
+  constructor(o) {
+    this.tx = o.x; this.x0 = o.x * TILE + 6; this.y0 = o.y * TILE; this.w = 20; this.h = o.big ? 46 : 34;
+    this.x = this.x0; this.y = this.y0; this.vy = 0; this.state = 'hang'; this.timer = 0; this.shake = 0; this.style = o.style;
+  }
+  reset() { this.state = 'hang'; this.y = this.y0; this.vy = 0; this.timer = 0; }
+  update(dt, g) {
+    const p = g.player;
+    this.timer -= dt;
+    if (this.state === 'hang') {
+      const dx = (p.x + p.w / 2) - (this.x + this.w / 2);
+      if (!p.dead && Math.abs(dx) < 46 && p.y > this.y) { this.state = 'shake'; this.timer = 0.45 * p.st.dropDelay; Sfx.play('rumble'); }
+    } else if (this.state === 'shake') {
+      this.shake = Math.sin(g.time * 80) * 1.6;
+      if (Math.random() < 0.4) g.particles.push(makeParticle(this.x + rand(0, this.w), this.y0, rand(-10, 10), rand(20, 60), 0.5, 'rgba(160,140,120,0.8)', rand(1, 2), 400));
+      if (this.timer <= 0) { this.state = 'fall'; this.shake = 0; }
+    } else if (this.state === 'fall') {
+      this.vy = Math.min(this.vy + 2200 * dt, 1000); this.y += this.vy * dt;
+      const bx = this.x + this.w / 2, byy = this.y + this.h;
+      if (g.world.solidAt(bx, byy) || g.world.isHazard(Math.floor(bx / TILE), Math.floor(byy / TILE)) || this.y > g.world.h * TILE) {
+        this.state = 'gone'; this.timer = 2.8;
+        const col = { stalactite: '#9a8a78', gear: '#c8a040', chandelier: '#ffb040', shard: '#c890ff' }[this.style] || '#9a8a78';
+        g.shatter(bx, byy - 6, col, 8, byy); g.smoke(bx, byy - 4, 4); Sfx.play('crash'); g.shake = Math.max(g.shake, 4);
+      }
+    } else if (this.state === 'gone' && this.timer <= 0) this.reset();
+    if (this.state === 'fall' && !p.dead && rectsOverlap({ x: p.x + 3, y: p.y + 4, w: p.w - 6, h: p.h - 4 }, { x: this.x + 4, y: this.y, w: this.w - 8, h: this.h })) g.playerDied();
+  }
+  draw(ctx, t) {
+    if (this.state === 'gone') {
+      if (this.style === 'stalactite') { ctx.fillStyle = 'rgba(120,105,90,0.5)'; Draw.poly(ctx, [this.x0 + 2, this.y0, this.x0 + 18, this.y0, this.x0 + 10, this.y0 + 6 + (2.8 - this.timer) * 8]); }
+      return;
+    }
+    const x = this.x + this.shake, y = this.y, w = this.w, h = this.h, cx = x + w / 2;
+    if (this.style === 'gear') {
+      ctx.strokeStyle = '#5a5040'; ctx.lineWidth = 1.5; if (this.state === 'hang' || this.state === 'shake') Draw.line(ctx, cx, this.y0, cx, y + 4);
+      ctx.save(); ctx.translate(cx, y + h / 2 + 4); ctx.rotate(this.state === 'fall' ? t * 12 : 0);
+      ctx.fillStyle = shade(ctx, 0, 0, 16, '#fff0b0', '#c8a040', '#4a3a10');
+      for (let k = 0; k < 10; k++) { ctx.rotate(Math.PI / 5); ctx.fillRect(10, -3, 6, 6); }
+      Draw.circ(ctx, 0, 0, 12); ctx.fillStyle = '#2a2010'; Draw.circ(ctx, 0, 0, 4);
+      ctx.restore();
+    } else if (this.style === 'chandelier') {
+      ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.5; if (this.state !== 'fall') Draw.line(ctx, cx, this.y0, cx, y + 8);
+      ctx.fillStyle = lin(ctx, x, 0, x + w, 0, ['#c8a050', '#6a4a1a']);
+      Draw.rr(ctx, x - 6, y + h - 14, w + 12, 5, 2); ctx.fill();
+      Draw.poly(ctx, [cx - 3, y + 8, cx + 3, y + 8, cx + 8, y + h - 14, cx - 8, y + h - 14]);
+      setGlow(ctx, '#ffa000', 12); ctx.fillStyle = '#ffd060';
+      for (const dx of [-7, 0, 7]) { ctx.beginPath(); ctx.moveTo(cx + dx - 2, y + h - 14); ctx.quadraticCurveTo(cx + dx, y + h - 24 - Math.sin(t * 12 + dx) * 2, cx + dx + 2, y + h - 14); ctx.fill(); }
+      clearGlow(ctx);
+    } else if (this.style === 'shard') {
+      setGlow(ctx, '#b050ff', 14);
+      ctx.fillStyle = lin(ctx, x, 0, x + w, 0, ['#f8e8ff', '#b070ff', '#3a0a8a']);
+      Draw.poly(ctx, [x + 2, y, x + w - 2, y, cx + 2, y + h]);
+      clearGlow(ctx);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; Draw.poly(ctx, [x + 5, y, cx, y, cx - 1, y + h * 0.7]);
+    } else {
+      // rock stalactite with ridges
+      ctx.fillStyle = lin(ctx, x, 0, x + w, 0, ['#c8b8a0', '#7a6a58', '#2e2620']);
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.lineTo(cx + 3, y + h * 0.6); ctx.lineTo(cx, y + h); ctx.lineTo(cx - 3, y + h * 0.55); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(30,24,20,0.5)'; ctx.lineWidth = 0.8; Draw.line(ctx, x + 6, y + 3, cx - 1, y + h * 0.7); Draw.line(ctx, x + 14, y + 3, cx + 2, y + h * 0.55);
+      ctx.fillStyle = 'rgba(160,220,255,0.8)'; Draw.circ(ctx, cx, y + h + 2 + ((t * 2 + this.tx) % 1) * 6, 1.2); // drip
+    }
+    if (this.state === 'shake') { ctx.fillStyle = 'rgba(255,80,60,0.18)'; ctx.fillRect(cx - 18, this.y0, 36, 260); }
+  }
+}
+
+// Chaser: the thing that hunts you in a chase sequence (Levels 21+). It starts rolling when you enter the
+// chase zone and keeps coming until the end. If it catches you, you die. Never stop running!
+class Chaser {
+  constructor(o) {
+    this.x1 = o.x1 * TILE; this.x2 = o.x2 * TILE; this.floor = o.g * TILE; this.style = o.style;
+    this.speed = o.speed; this.reset();
+  }
+  reset() { this.state = 'idle'; this.front = this.x1 - 8 * TILE; this.rot = 0; this.alpha = 1; }
+  update(dt, g) {
+    const p = g.player;
+    if (this.state === 'idle') {
+      if (!p.dead && p.x > this.x1 + TILE) { this.state = 'chase'; Sfx.play('roar'); g.shake = 10; g.toast('RUN!', 1.4); }
+      return;
+    }
+    if (this.state === 'chase') {
+      const sp = this.speed * (1 - p.st.chaseSlow);
+      this.front += sp * dt; this.rot += sp * dt / 70;
+      g.shake = Math.max(g.shake, 2.5);
+      if (Math.random() < 0.5) g.dust(this.front - 20, this.floor, 1);
+      if (!p.dead && p.x < this.front - 4) g.playerDied();
+      if (this.front >= this.x2) { this.state = 'done'; Sfx.play('crash'); g.shatter(this.front - 30, this.floor - 60, '#7a6a58', 14, this.floor); g.smoke(this.front - 30, this.floor - 40, 10); g.shake = 12; }
+    } else if (this.state === 'done') this.alpha = Math.max(0, this.alpha - dt * 2);
+  }
+  draw(ctx, t) {
+    if (this.state === 'idle' || this.alpha <= 0) return;
+    ctx.save(); ctx.globalAlpha = this.alpha;
+    const fx = this.front, fy = this.floor;
+    if (this.style === 'boulder') {
+      const R = 82, cx = fx - R, cy = fy - R;
+      ctx.fillStyle = 'rgba(0,0,0,0.45)'; Draw.ell(ctx, cx, fy, R * 0.9, 10);
+      ctx.translate(cx, cy); ctx.rotate(this.rot);
+      ctx.fillStyle = shade(ctx, 0, 0, R, '#b8a890', '#6a5a4a', '#1e1814'); Draw.circ(ctx, 0, 0, R);
+      ctx.strokeStyle = 'rgba(20,14,10,0.6)'; ctx.lineWidth = 3;
+      for (let i = 0; i < 6; i++) { ctx.rotate(1.05); ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(R * 0.6, 14); ctx.lineTo(R * 0.9, 4); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; Draw.ell(ctx, -R * 0.3, -R * 0.35, R * 0.35, R * 0.2, -0.5);
+    } else if (this.style === 'gears') {
+      for (let i = 0; i < 4; i++) {
+        const R = 46, cx = fx - R, cy = fy - R - i * 82;
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(this.rot * (i % 2 ? 1 : -1));
+        ctx.fillStyle = shade(ctx, 0, 0, R, '#fff0b0', '#b08a30', '#3a2a08');
+        for (let k = 0; k < 12; k++) { ctx.rotate(Math.PI / 6); ctx.fillRect(R - 6, -7, 14, 14); }
+        Draw.circ(ctx, 0, 0, R); ctx.fillStyle = '#2a2008'; Draw.circ(ctx, 0, 0, 12);
+        ctx.restore();
+      }
+      ctx.fillStyle = 'rgba(30,24,8,0.85)'; ctx.fillRect(fx - 2000, fy - 340, 2000 - 70, 340);
+    } else if (this.style === 'fire') {
+      const g2 = ctx.createLinearGradient(fx - 260, 0, fx, 0);
+      g2.addColorStop(0, 'rgba(120,20,0,0.95)'); g2.addColorStop(0.7, '#ff6a10'); g2.addColorStop(1, 'rgba(255,220,120,0)');
+      ctx.fillStyle = g2; ctx.fillRect(fx - 2000, fy - 340, 2000, 340);
+      setGlow(ctx, '#ff6a00', 20);
+      for (let i = 0; i < 14; i++) {
+        const y = fy - i * 24, h = 40 + Math.abs(Math.sin(t * 9 + i)) * 40;
+        ctx.fillStyle = i % 2 ? '#ffd060' : '#ff7a1a';
+        ctx.beginPath(); ctx.moveTo(fx - 40, y); ctx.quadraticCurveTo(fx - 10, y - 12, fx - 40 + h * 0.6, y - 18); ctx.quadraticCurveTo(fx - 30, y - 8, fx - 40, y - 24); ctx.fill();
+      }
+      clearGlow(ctx);
+    } else {
+      // the void: a wall of darkness full of eyes
+      const g2 = ctx.createLinearGradient(fx - 300, 0, fx, 0);
+      g2.addColorStop(0, '#05010c'); g2.addColorStop(0.8, '#1a0430'); g2.addColorStop(1, 'rgba(120,40,220,0)');
+      ctx.fillStyle = g2; ctx.fillRect(fx - 2000, fy - 400, 2000, 420);
+      for (let i = 0; i < 8; i++) {
+        const ex = fx - 50 - (i * 37) % 160, ey = fy - 40 - (i * 71) % 300, open = Math.max(0.1, Math.sin(t * 2 + i));
+        ctx.fillStyle = '#f0e0ff'; Draw.ell(ctx, ex, ey, 8, 5 * open);
+        ctx.fillStyle = '#a040ff'; setGlow(ctx, '#d080ff', 10); Draw.circ(ctx, ex + 2, ey, 2.4 * open); clearGlow(ctx);
+      }
+    }
+    ctx.restore();
+  }
+}
+
 /* =========================== PROJECTILES =========================== */
 class Projectile {
   constructor(type, x, y, vx, vy) {
@@ -799,7 +1007,13 @@ class Projectile {
   draw(ctx, t) {
     const cx = this.x + this.w / 2, cy = this.y + this.h / 2;
     ctx.save();
-    if (this.type === 'seed') { // bone shard
+    if (this.type === 'seed' && this.skin) {
+      ctx.translate(cx, cy); ctx.rotate(this.t * 8);
+      if (this.skin === 'rock') { ctx.fillStyle = shade(ctx, -2, -2, 10, '#c8b8a0', '#7a6a58', '#2a221c'); Draw.poly(ctx, [-9, -4, -3, -9, 6, -7, 9, 2, 3, 9, -7, 6]); }
+      else if (this.skin === 'gear') { ctx.fillStyle = shade(ctx, 0, 0, 9, '#fff0b0', '#c8a040', '#4a3a10'); for (let k = 0; k < 8; k++) { ctx.rotate(Math.PI / 4); ctx.fillRect(5, -2, 4, 4); } Draw.circ(ctx, 0, 0, 6); ctx.fillStyle = '#2a2008'; Draw.circ(ctx, 0, 0, 2); }
+      else if (this.skin === 'ember') { setGlow(ctx, '#ff6a00', 14); ctx.fillStyle = shade(ctx, 0, 0, 8, '#fff8c0', '#ffa020', '#c02800'); Draw.circ(ctx, 0, 0, 7); clearGlow(ctx); }
+      else { setGlow(ctx, '#b050ff', 14); ctx.fillStyle = shade(ctx, 0, 0, 8, '#ffffff', '#b070ff', '#2a0060'); Draw.circ(ctx, 0, 0, 7); clearGlow(ctx); ctx.fillStyle = '#000'; Draw.circ(ctx, 1, 0, 2); }
+    } else if (this.type === 'seed') { // bone shard
       ctx.translate(cx, cy); ctx.rotate(this.t * 10);
       ctx.fillStyle = shade(ctx, 0, 0, 7, '#ffffff', '#d8d0b8', '#5a5240'); Draw.rr(ctx, -7, -2, 14, 4, 2); ctx.fill(); Draw.circ(ctx, -7, -2, 2.4); Draw.circ(ctx, -7, 2, 2.4); Draw.circ(ctx, 7, -2, 2.4); Draw.circ(ctx, 7, 2, 2.4);
     } else if (this.type === 'icicle') {
@@ -818,6 +1032,18 @@ class Projectile {
       }
       clearGlow(ctx);
       ctx.fillStyle = 'rgba(220,245,255,0.5)'; ctx.fillRect(this.x - 4, base - 2, this.w + 8, 2);
+    } else if (this.type === 'wave' && this.skin && this.skin !== 'fire') {
+      const base = this.y + this.h;
+      if (this.skin === 'rock') {
+        for (let i = 0; i < 5; i++) { const sx = this.x + 2 + i * 5.5, hg = 10 + Math.abs(Math.sin(i * 2.1 + this.t * 8)) * 16; ctx.fillStyle = lin(ctx, sx - 3, 0, sx + 3, 0, ['#c8b8a0', '#7a6a58', '#2e2620']); Draw.poly(ctx, [sx - 4, base, sx + 4, base, sx + Math.sin(i) * 2, base - hg]); }
+      } else if (this.skin === 'gear') {
+        ctx.save(); ctx.translate(this.x + this.w / 2, base - 13); ctx.rotate(this.t * 14 * Math.sign(this.vx)); ctx.fillStyle = shade(ctx, 0, 0, 14, '#fff0b0', '#c8a040', '#4a3a10');
+        for (let k = 0; k < 10; k++) { ctx.rotate(Math.PI / 5); ctx.fillRect(9, -3, 5, 6); } Draw.circ(ctx, 0, 0, 11); ctx.fillStyle = '#2a2008'; Draw.circ(ctx, 0, 0, 3); ctx.restore();
+      } else {
+        setGlow(ctx, '#b050ff', 16);
+        for (let i = 0; i < 5; i++) { const sx = this.x + 2 + i * 5.5, hg = 12 + Math.abs(Math.sin(i * 2.1 + this.t * 10)) * 18; ctx.fillStyle = i % 2 ? '#d080ff' : '#5a1aa8'; ctx.beginPath(); ctx.moveTo(sx - 4, base); ctx.quadraticCurveTo(sx, base - hg * 1.2, sx + 4, base); ctx.fill(); }
+        clearGlow(ctx);
+      }
     } else if (this.type === 'wave') {
       // a rolling wall of flame
       const base = this.y + this.h;
@@ -837,7 +1063,15 @@ class Projectile {
         Draw.poly(ctx, [cx - 8, this.y - 4, cx + 8, this.y - 4, cx, this.y + 8]);
         ctx.globalAlpha = 1;
       }
-      if (THEME.snow) {
+      if (this.skin && this.skin !== 'stalactite') {
+        ctx.translate(cx, cy);
+        if (this.skin === 'gear') { ctx.rotate(this.t * 10); ctx.fillStyle = shade(ctx, 0, 0, 11, '#fff0b0', '#c8a040', '#4a3a10'); for (let k = 0; k < 8; k++) { ctx.rotate(Math.PI / 4); ctx.fillRect(6, -2.5, 5, 5); } Draw.circ(ctx, 0, 0, 8); }
+        else if (this.skin === 'chandelier') { setGlow(ctx, '#ffa000', 12); ctx.fillStyle = '#c8a050'; Draw.rr(ctx, -10, 0, 20, 4, 2); ctx.fill(); ctx.fillStyle = '#ffd060'; for (const d of [-6, 0, 6]) Draw.circ(ctx, d, -3, 2.5); clearGlow(ctx); }
+        else { setGlow(ctx, '#b050ff', 12); ctx.fillStyle = lin(ctx, -6, 0, 6, 0, ['#f8e8ff', '#b070ff', '#3a0a8a']); Draw.poly(ctx, [-6, -10, 6, -10, 0, 12]); clearGlow(ctx); }
+      } else if (this.skin === 'stalactite') {
+        ctx.translate(cx, cy);
+        ctx.fillStyle = lin(ctx, -7, 0, 7, 0, ['#c8b8a0', '#7a6a58', '#2e2620']); Draw.poly(ctx, [-7, -12, 7, -12, 0, 14]);
+      } else if (THEME.snow) {
         ctx.translate(cx, cy);
         ctx.fillStyle = lin(ctx, -6, 0, 6, 0, ['#ffffff', '#9fe8ff', '#3a8ac0']); Draw.poly(ctx, [-6, -10, 6, -10, 0, 12]);
       } else {
@@ -870,7 +1104,7 @@ class Projectile {
 // Glowing crystal shards to collect. Small = 1, big = 5. Spend them on heads in the shop.
 class Shard {
   constructor(x, y, opts = {}) {
-    this.big = !!opts.big; this.value = this.big ? 5 : 1;
+    this.big = !!opts.big; this.value = this.big ? 5 : 1; this.small = !this.big;
     this.w = this.big ? 18 : 12; this.h = this.w;
     this.x = x - this.w / 2; this.y = y - this.h / 2;
     this.physics = !!opts.drop; this.vx = this.physics ? rand(-160, 160) : 0; this.vy = this.physics ? rand(-520, -260) : 0;
@@ -881,7 +1115,7 @@ class Shard {
     const p = g.player;
     const cx = this.x + this.w / 2, cy = this.y + this.h / 2;
     const dx = (p.x + p.w / 2) - cx, dy = (p.y + p.h / 2) - cy, d = Math.hypot(dx, dy);
-    if (this.delay <= 0 && d < 64 && !p.dead) {
+    if (this.delay <= 0 && d < 64 * p.st.magnet && !p.dead) {
       this.physics = false;
       this.x += (dx / d) * 440 * dt; this.y += (dy / d) * 440 * dt;
     } else if (this.physics) {

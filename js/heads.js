@@ -10,11 +10,46 @@ const HEADS = [
   { id: 'wrapz',    name: 'Wrapz',         price: 130, accent: '#7cf4ff', perk: 'Floaty: hold jump to fall slowly', stats: { floaty: 0.3 } },
   { id: 'rotter',   name: 'The Rotter',    price: 160, accent: '#8aa070', perk: '+50% attack damage', stats: { dmg: 1.5 } },
   { id: 'wick',     name: 'Wick',          price: 200, accent: '#ffb347', perk: 'Much longer slash reach', stats: { reach: 1.35 } },
+
+  // ---- CHRISTMAS (creepy holiday heads; on sale Nov 20 – Jan 6, yours forever once bought) ----
+  { id: 'snowman',   set: 'christmas', name: 'Frostbite',      price: 120, accent: '#e8f6ff', perk: 'TRIPLE jump: two jumps in the air', stats: { airJumps: 1 } },
+  { id: 'krampus',   set: 'christmas', name: 'Krampus',        price: 140, accent: '#a0201e', perk: 'Spin Slash recharges twice as fast', stats: { spinCd: 0.5 } },
+  { id: 'ginger',    set: 'christmas', name: 'Gingerdead',     price: 150, accent: '#c87838', perk: 'Shard magnet: pulls in shards from far away', stats: { magnet: 3 } },
+  { id: 'elf',       set: 'christmas', name: 'Wicked Elf',     price: 160, accent: '#2a9a3a', perk: 'Quick hands: slashes much faster', stats: { atkCd: 0.55 } },
+  { id: 'nutcracker',set: 'christmas', name: 'Nutcracker',     price: 180, accent: '#c8102e', perk: 'Iron jaw: survives one monster hit per checkpoint', stats: { shield: 1 } },
+  { id: 'rudolph',   set: 'christmas', name: 'Rudolph Skull',  price: 190, accent: '#ff3a2a', perk: 'Glowing nose lights up the dark much farther', stats: { light: 1.7 } },
+  { id: 'ornament',  set: 'christmas', name: 'Cracked Bauble', price: 210, accent: '#d4af37', perk: 'Two dashes in the air', stats: { airDashes: 1 } },
+  { id: 'darksanta', set: 'christmas', name: 'Dark Santa',     price: 240, accent: '#8a0a14', perk: 'Chasers move 15% slower behind you', stats: { chaseSlow: 0.15 } },
+
+  // ---- THANKSGIVING (creepy harvest heads; on sale all of November, yours forever once bought) ----
+  { id: 'turkey',    set: 'thanksgiving', name: 'Turkey Terror',   price: 120, accent: '#a0522d', perk: 'Bounce mushrooms launch you much higher', stats: { pad: 1.2 } },
+  { id: 'pilgrim',   set: 'thanksgiving', name: 'Pilgrim Skull',   price: 140, accent: '#2a2a2a', perk: 'Falling hazards wait twice as long before dropping', stats: { dropDelay: 2 } },
+  { id: 'pie',       set: 'thanksgiving', name: 'Pie Phantom',     price: 150, accent: '#d88a3a', perk: 'Every small shard is worth 2', stats: { shardMul: 2 } },
+  { id: 'cornhusk',  set: 'thanksgiving', name: 'Corn Husk',       price: 160, accent: '#e8c860', perk: 'Ledge grace: you can still jump a moment after running off an edge', stats: { coyote: 2.5 } },
+  { id: 'cranberry', set: 'thanksgiving', name: 'Cranberry Blob',  price: 180, accent: '#b0123a', perk: 'Squishy: monsters cannot hurt you while you dash', stats: { dashSafe: 1 } },
+  { id: 'scarecrow', set: 'thanksgiving', name: 'Harvest Crow',    price: 190, accent: '#c8a050', perk: 'Crumbling stones take twice as long to fall', stats: { crumbleSlow: 2 } },
+  { id: 'cornucopia',set: 'thanksgiving', name: 'Horn of Plenty',  price: 210, accent: '#b8803a', perk: 'Wisp Bolt fires two bolts at once', stats: { doubleBolt: 1 } },
+  { id: 'gravy',     set: 'thanksgiving', name: 'Gravy Ghoul',     price: 240, accent: '#8a5a2a', perk: 'Much higher double jump', stats: { airJumpPow: 1.3 } },
 ];
+
+// Shop pages. Seasonal pages can only be BOUGHT during their season; once owned, a head is yours forever.
+const HEAD_SETS = [
+  { id: 'creepy', name: 'Creepy Collection' },
+  { id: 'christmas', name: 'Christmas', season: 'Nov 20 – Jan 6' },
+  { id: 'thanksgiving', name: 'Thanksgiving', season: 'November' },
+];
+function setOnSale(setId, date = new Date()) {
+  const m = date.getMonth(), d = date.getDate();
+  if (setId === 'christmas') return (m === 10 && d >= 20) || m === 11 || (m === 0 && d <= 6);
+  if (setId === 'thanksgiving') return m === 10;
+  return true;
+}
 
 function headById(id) { return HEADS.find((h) => h.id === id) || HEADS[0]; }
 function headStats(id) {
-  return Object.assign({ dmg: 1, speed: 1, jump: 1, dash: 1, dashCd: 1, reach: 1, pogo: 1, boltCd: 1, floaty: 1 }, headById(id).stats);
+  return Object.assign({ dmg: 1, speed: 1, jump: 1, dash: 1, dashCd: 1, reach: 1, pogo: 1, boltCd: 1, floaty: 1,
+    airJumps: 0, spinCd: 1, magnet: 1, atkCd: 1, shield: 0, light: 1, airDashes: 0, chaseSlow: 0, pad: 1, dropDelay: 1,
+    shardMul: 1, coyote: 1, dashSafe: 0, crumbleSlow: 1, doubleBolt: 0, airJumpPow: 1 }, headById(id).stats);
 }
 
 const Draw = {
@@ -262,6 +297,183 @@ function drawHead(ctx, id, t, opts = {}) {
       clearGlow(ctx);
       ctx.strokeStyle = c('#2a1608'); ctx.lineWidth = 1.1;
       ctx.beginPath(); ctx.arc(1, 5.5, 2.5, 0.2, Math.PI - 0.2); ctx.stroke();
+      break;
+    }
+    // ================= CHRISTMAS =================
+    case 'snowman': {
+      ctx.fillStyle = flash ? W : lin(ctx, 0, -20, 0, -12, ['#2a2a30', '#0a0a10']); ctx.fillRect(-7, -22, 14, 10); ctx.fillRect(-11, -13, 22, 3);
+      ctx.fillStyle = c('#a0201e'); ctx.fillRect(-7, -15, 14, 2);
+      ctx.fillStyle = S('#ffffff', '#e0ecf4', '#7a8a9a', 0, 1, 12); Draw.circ(ctx, 0, 1, 11.5);
+      ctx.fillStyle = c('#111'); for (const [ex, ey] of [[-3.5, -2], [5, -2]]) Draw.circ(ctx, ex, ey, 1.8);
+      ctx.fillStyle = c('#ff3a2a'); G('#ff0000', 8); Draw.circ(ctx, -3.5, -2, 0.6); Draw.circ(ctx, 5, -2, 0.6); clearGlow(ctx);
+      ctx.fillStyle = c('#ff8a1a'); Draw.poly(ctx, [0, 0, 0, 3, 11, 2]);
+      ctx.fillStyle = c('#111'); for (let i = 0; i < 6; i++) Draw.circ(ctx, -5 + i * 2.2, 6 + Math.sin(i * 0.9) * 1.2, 0.9);
+      break;
+    }
+    case 'krampus': {
+      ctx.fillStyle = flash ? W : lin(ctx, 0, -20, 0, -6, ['#e8dcc0', '#6a5a3a']);
+      ctx.beginPath(); ctx.moveTo(-6, -8); ctx.quadraticCurveTo(-16, -14, -12, -24); ctx.quadraticCurveTo(-11, -15, -3, -10); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(6, -8); ctx.quadraticCurveTo(16, -14, 12, -24); ctx.quadraticCurveTo(11, -15, 3, -10); ctx.fill();
+      ctx.fillStyle = S('#5a3a2a', '#2a1810', '#000', 0, 0, 13); Draw.ell(ctx, 0, 0, 11, 12);
+      ctx.fillStyle = c('#1a0e08'); for (let i = -10; i <= 10; i += 3) Draw.poly(ctx, [i - 2, 6, i + 2, 6, i, 13]);
+      ctx.fillStyle = c('#ffcc30'); G('#ff8a00', 10); Draw.ell(ctx, -3.5, -2, 2.4, 1.6); Draw.ell(ctx, 5, -2, 2.4, 1.6); clearGlow(ctx);
+      ctx.fillStyle = c('#c0203a'); ctx.beginPath(); ctx.moveTo(-1, 5); ctx.quadraticCurveTo(2, 14, -2, 17); ctx.quadraticCurveTo(4, 14, 3, 5); ctx.fill();
+      ctx.fillStyle = c('#fff'); Draw.poly(ctx, [-4, 4, -2, 4, -3, 7]); Draw.poly(ctx, [4, 4, 6, 4, 5, 7]);
+      break;
+    }
+    case 'ginger': {
+      ctx.save(); ctx.beginPath(); ctx.rect(-20, -20, 40, 40); ctx.arc(10, -8, 5, 0, Math.PI * 2); ctx.clip('evenodd'); // bite taken out
+      ctx.fillStyle = S('#e09050', '#b0642a', '#4a2408', 0, 0, 13); Draw.circ(ctx, 0, 0, 11.5);
+      ctx.restore();
+      ctx.strokeStyle = c('#ffffff'); ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(0, 0, 9.5, 2.6, 5.9); ctx.stroke();
+      ctx.beginPath(); ctx.arc(1, 4, 4.5, 0.2, Math.PI - 0.2); ctx.stroke();
+      for (let x = -3; x <= 5; x += 2) Draw.line(ctx, x, 6.5, x, 8.5);
+      ctx.fillStyle = c('#1a0a04'); Draw.circ(ctx, -3, -2, 1.8); Draw.circ(ctx, 5, -2, 1.8);
+      ctx.fillStyle = c('#ff3a3a'); G('#ff0000', 6); Draw.circ(ctx, -3, -2, 0.7); Draw.circ(ctx, 5, -2, 0.7); clearGlow(ctx);
+      ctx.fillStyle = c('#2a9a3a'); Draw.circ(ctx, -1, -9, 1.3); ctx.fillStyle = c('#c0203a'); Draw.circ(ctx, 2, -9.5, 1.3);
+      break;
+    }
+    case 'elf': {
+      ctx.fillStyle = flash ? W : lin(ctx, 0, -26, 0, -8, ['#3aba4a', '#1a6a2a']);
+      ctx.beginPath(); ctx.moveTo(-10, -7); ctx.quadraticCurveTo(0, -18, 12, -28 + Math.sin(t * 3)); ctx.quadraticCurveTo(6, -14, 10, -7); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = c('#ffd040'); Draw.circ(ctx, 12, -28 + Math.sin(t * 3), 2.2);
+      ctx.fillStyle = S('#f8dcc8', '#d0a088', '#6a3a2a', 0, 1, 12);
+      Draw.poly(ctx, [-9, -1, -17, -8, -10, 4]); Draw.poly(ctx, [9, -1, 17, -8, 10, 4]);
+      Draw.ell(ctx, 0, 1, 10, 11);
+      ctx.fillStyle = c('#c0203a'); ctx.fillRect(-10, -8, 20, 3);
+      ctx.fillStyle = c('#1a0a04'); Draw.ell(ctx, -3.5, 0, 2.2, 1.4); Draw.ell(ctx, 5, 0, 2.2, 1.4);
+      ctx.fillStyle = c('#7aff6a'); G('#3aff3a', 6); Draw.circ(ctx, -3.2, 0, 0.7); Draw.circ(ctx, 5.3, 0, 0.7); clearGlow(ctx);
+      ctx.strokeStyle = c('#5a1a1a'); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(1, 3, 6, 0.3, Math.PI - 0.3); ctx.stroke();
+      ctx.fillStyle = c('#fff'); for (let x = -3; x <= 5; x += 2) Draw.poly(ctx, [x, 8, x + 1.5, 8, x + 0.75, 9.8]);
+      break;
+    }
+    case 'nutcracker': {
+      ctx.fillStyle = flash ? W : lin(ctx, 0, -26, 0, -10, ['#2a2a3a', '#0a0a14']); Draw.rr(ctx, -9, -26, 18, 16, 3); ctx.fill();
+      ctx.fillStyle = c('#d4af37'); ctx.fillRect(-9, -13, 18, 2.5); Draw.circ(ctx, 0, -20, 2.5);
+      ctx.fillStyle = S('#f8e0c8', '#d0a888', '#6a4a3a', 0, 0, 12); Draw.rr(ctx, -9, -11, 18, 16, 3); ctx.fill();
+      ctx.fillStyle = c('#ffffff'); Draw.rr(ctx, -10, 4, 20, 9, 3); ctx.fill(); // beard
+      ctx.fillStyle = c('#1a0a04'); Draw.rr(ctx, -6, 2, 13, 5 + Math.abs(Math.sin(t * 4)) * 2, 1); ctx.fill(); // big jaw
+      ctx.fillStyle = c('#fff'); for (let x = -5; x <= 5; x += 2.5) ctx.fillRect(x, 2, 1.6, 2);
+      ctx.fillStyle = c('#111'); Draw.circ(ctx, -3.5, -5, 1.6); Draw.circ(ctx, 4.5, -5, 1.6);
+      ctx.fillStyle = c('#c8102e'); Draw.circ(ctx, -6, -1, 1.6); Draw.circ(ctx, 7, -1, 1.6);
+      ctx.strokeStyle = c('#111'); ctx.lineWidth = 1.2; Draw.line(ctx, -6, -8, -1, -7); Draw.line(ctx, 2, -7, 7, -8);
+      break;
+    }
+    case 'rudolph': {
+      ctx.strokeStyle = c('#c8b8a0'); ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sd * 5, -9); ctx.lineTo(sd * 10, -20); ctx.lineTo(sd * 15, -24); ctx.moveTo(sd * 9, -17); ctx.lineTo(sd * 15, -17); ctx.moveTo(sd * 10, -20); ctx.lineTo(sd * 7, -26); ctx.stroke(); }
+      ctx.fillStyle = S('#fffaf0', '#d8d0b8', '#5a5240', 0, -1, 12); Draw.ell(ctx, 0, -1, 10, 11);
+      Draw.rr(ctx, -4, 4, 13, 8, 3); ctx.fill();
+      ctx.fillStyle = c('#0a0608'); Draw.ell(ctx, -3, -3, 2.8, 3.4); Draw.ell(ctx, 5, -3, 2.8, 3.4);
+      ctx.fillStyle = c('#ff3a2a'); G('#ff2000', 18); Draw.circ(ctx, 9, 6, 3.6); clearGlow(ctx);
+      ctx.fillStyle = c('rgba(255,255,255,0.6)'); Draw.circ(ctx, 8, 5, 1);
+      break;
+    }
+    case 'ornament': {
+      ctx.fillStyle = flash ? W : lin(ctx, -3, -16, 3, -11, ['#f0e0a0', '#8a7a30']); ctx.fillRect(-3, -15, 6, 4);
+      ctx.strokeStyle = c('#d4af37'); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, -17, 2.5, Math.PI, 0); ctx.stroke();
+      ctx.fillStyle = S('#ff6a6a', '#b0102a', '#2a0006', 0, 0, 13); Draw.circ(ctx, 0, 0, 11.5);
+      ctx.strokeStyle = c('#d4af37'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(0, 0, 11.5, 3, 0, 0, Math.PI * 2); ctx.stroke();
+      // crack with a ghost peeking out
+      ctx.fillStyle = c('#0a0004'); Draw.poly(ctx, [-2, -6, 6, -9, 9, -2, 4, 3, -1, 1]);
+      ctx.fillStyle = c('#e8f0ff'); G('#b9a7ff', 10); Draw.ell(ctx, 4, -3, 3.5, 3); clearGlow(ctx);
+      ctx.fillStyle = c('#0a0004'); Draw.circ(ctx, 3, -3.5, 0.8); Draw.circ(ctx, 5.5, -3.5, 0.8);
+      if (!flash) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; Draw.ell(ctx, -5, -6, 2.5, 1.5, -0.6); }
+      break;
+    }
+    case 'darksanta': {
+      ctx.fillStyle = flash ? W : lin(ctx, 0, -22, 0, -6, ['#c0102a', '#5a0010']);
+      ctx.beginPath(); ctx.moveTo(-11, -6); ctx.quadraticCurveTo(0, -18, 10, -24 + Math.sin(t * 3)); ctx.quadraticCurveTo(8, -14, 11, -6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = c('#f0f0f0'); Draw.rr(ctx, -12, -8, 24, 4, 2); ctx.fill(); Draw.circ(ctx, 10, -24 + Math.sin(t * 3), 2.5);
+      ctx.fillStyle = S('#4a3a3a', '#1a1010', '#000', 0, 0, 12); Draw.ell(ctx, 0, 0, 10, 9);
+      ctx.fillStyle = c('#e8e8e8'); ctx.beginPath(); ctx.moveTo(-11, 2); ctx.quadraticCurveTo(-10, 16, 0, 18); ctx.quadraticCurveTo(10, 16, 11, 2); ctx.quadraticCurveTo(0, 8, -11, 2); ctx.fill();
+      ctx.fillStyle = c('#000'); Draw.ell(ctx, -3.5, -1, 2.5, 2); Draw.ell(ctx, 5, -1, 2.5, 2);
+      ctx.fillStyle = c('#ff2020'); G('#ff0000', 10); Draw.circ(ctx, -3.5, -1, 0.9); Draw.circ(ctx, 5, -1, 0.9); clearGlow(ctx);
+      break;
+    }
+    // ================= THANKSGIVING =================
+    case 'turkey': {
+      for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * 0.38; ctx.fillStyle = c(['#8a3a1a', '#c8701a', '#e0a040', '#6a2a10'][i % 4]); Draw.ell(ctx, -3 + Math.cos(a) * 12, -4 + Math.sin(a) * 12, 3.5, 7, a + Math.PI / 2); }
+      ctx.fillStyle = S('#9a6a4a', '#5a3a22', '#1a0e06', 2, 0, 11); Draw.ell(ctx, 2, 0, 9, 10);
+      ctx.fillStyle = c('#ffc040'); Draw.poly(ctx, [8, 0, 15, 2, 8, 4]);
+      ctx.fillStyle = c('#c0102a'); ctx.beginPath(); ctx.moveTo(9, 4); ctx.quadraticCurveTo(12, 10 + Math.sin(t * 5), 9, 12); ctx.quadraticCurveTo(7, 8, 9, 4); ctx.fill();
+      ctx.fillStyle = c('#ff2a2a'); G('#ff0000', 8); Draw.circ(ctx, 4, -3, 1.7); clearGlow(ctx);
+      ctx.fillStyle = c('#000'); Draw.circ(ctx, 4.3, -3, 0.6);
+      break;
+    }
+    case 'pilgrim': {
+      ctx.fillStyle = flash ? W : lin(ctx, 0, -24, 0, -9, ['#2a2a2a', '#000']); ctx.fillRect(-7, -24, 14, 13); ctx.fillRect(-13, -12, 26, 3);
+      ctx.fillStyle = c('#d4af37'); Draw.rr(ctx, -3, -17, 6, 5, 1); ctx.fill(); ctx.fillStyle = c('#000'); ctx.fillRect(-1.5, -16, 3, 3);
+      ctx.fillStyle = S('#fffaf0', '#d8d0b8', '#5a5240', 0, 0, 12); Draw.ell(ctx, 0, 0, 10, 10);
+      Draw.rr(ctx, -6, 4, 13, 8, 3); ctx.fill();
+      ctx.fillStyle = c('#ffffff'); Draw.poly(ctx, [-10, 10, 10, 10, 6, 15, -6, 15]); // collar
+      ctx.fillStyle = c('#0a0608'); Draw.ell(ctx, -3, -1, 2.8, 3.2); Draw.ell(ctx, 5, -1, 2.8, 3.2);
+      ctx.fillStyle = c('#ffb040'); G('#ff8a00', 8); Draw.circ(ctx, -2.6, -0.6, 0.8); Draw.circ(ctx, 5.4, -0.6, 0.8); clearGlow(ctx);
+      break;
+    }
+    case 'pie': {
+      ctx.fillStyle = S('#f0c070', '#c8803a', '#5a3008', 0, 0, 13); Draw.poly(ctx, [-12, 8, 12, 8, 0, -14]);
+      ctx.fillStyle = c('#e08a2a'); Draw.poly(ctx, [-8, 5, 8, 5, 0, -8]);
+      ctx.fillStyle = flash ? W : lin(ctx, 0, 6, 0, 12, ['#e0a050', '#8a5020']); ctx.fillRect(-12, 7, 24, 5);
+      ctx.fillStyle = c('#ffffff'); Draw.ell(ctx, 0, -10, 4, 2.5);
+      ctx.fillStyle = c('#2a0e04'); Draw.circ(ctx, -3, -1, 1.6); Draw.circ(ctx, 4, -1, 1.6);
+      ctx.fillStyle = c('#ffe060'); G('#ff8a00', 6); Draw.circ(ctx, -3, -1, 0.6); Draw.circ(ctx, 4, -1, 0.6); clearGlow(ctx);
+      ctx.strokeStyle = c('#2a0e04'); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0.5, 2, 3, 0.2, Math.PI - 0.2); ctx.stroke();
+      break;
+    }
+    case 'cornhusk': {
+      ctx.fillStyle = flash ? W : lin(ctx, -12, 0, 12, 0, ['#f0d890', '#c8a050', '#7a5a20']);
+      for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * 4, -16); ctx.quadraticCurveTo(i * 7, -2, i * 5, 12); ctx.lineTo(i * 5 + 3, 12); ctx.quadraticCurveTo(i * 7 + 3, -2, i * 4 + 3, -16); ctx.fill(); }
+      ctx.fillStyle = S('#f8e8b0', '#d8b860', '#6a4a10', 0, 0, 11); Draw.ell(ctx, 1, 0, 8, 10);
+      ctx.fillStyle = c('#c8a050'); ctx.fillRect(-9, 6, 20, 2.5);
+      ctx.fillStyle = c('#2a1a08'); Draw.circ(ctx, -2, -2, 1.8); Draw.circ(ctx, 5, -2, 1.8);
+      ctx.fillStyle = c('#6a4a2a'); for (const [dx, dy] of [[-0.7, -0.7], [0.7, 0.7]]) { Draw.circ(ctx, -2 + dx, -2 + dy, 0.4); Draw.circ(ctx, 5 + dx, -2 + dy, 0.4); }
+      ctx.strokeStyle = c('#2a1a08'); ctx.lineWidth = 0.9; Draw.line(ctx, -2, 3, 5, 3);
+      for (let x = -1; x <= 4; x += 1.6) Draw.line(ctx, x, 2, x, 4);
+      break;
+    }
+    case 'cranberry': {
+      const wob = Math.sin(t * 6) * 0.8;
+      ctx.fillStyle = flash ? W : lin(ctx, -10, 0, 10, 0, ['#ff4a6a', '#b0123a', '#4a0014']);
+      ctx.beginPath(); ctx.moveTo(-10 - wob, 10); ctx.lineTo(-10 + wob, -9); ctx.quadraticCurveTo(0, -13, 10 - wob, -9); ctx.lineTo(10 + wob, 10); ctx.quadraticCurveTo(0, 12, -10 - wob, 10); ctx.fill();
+      ctx.strokeStyle = c('rgba(80,0,20,0.5)'); ctx.lineWidth = 1; for (const y of [-4, 2, 8]) Draw.line(ctx, -10, y, 10, y);
+      if (!flash) { ctx.fillStyle = 'rgba(255,200,210,0.6)'; Draw.ell(ctx, -5, -6, 2, 4, 0.2); }
+      ctx.fillStyle = c('#ffffff'); Draw.circ(ctx, -3, -1, 2.4); Draw.circ(ctx, 5, -1, 2.4);
+      ctx.fillStyle = c('#000'); Draw.circ(ctx, -2.5, -0.5, 1.1); Draw.circ(ctx, 5.5, -0.5, 1.1);
+      ctx.strokeStyle = c('#4a0014'); ctx.beginPath(); ctx.arc(1, 4, 3, 0.2, Math.PI - 0.2); ctx.stroke();
+      break;
+    }
+    case 'scarecrow': {
+      ctx.fillStyle = flash ? W : lin(ctx, 0, -16, 0, -8, ['#e8c870', '#a07a30']);
+      Draw.ell(ctx, 0, -9, 16, 3.5); ctx.beginPath(); ctx.moveTo(-8, -10); ctx.quadraticCurveTo(-7, -20, 0, -20); ctx.quadraticCurveTo(7, -20, 8, -10); ctx.fill();
+      ctx.fillStyle = c('#8a2a1a'); ctx.fillRect(-8, -12.5, 16, 2.5);
+      ctx.fillStyle = S('#d8b87a', '#a08040', '#3a2a10', 0, 1, 12); Draw.ell(ctx, 0, 1, 10, 10);
+      ctx.strokeStyle = c('#e8c860'); ctx.lineWidth = 1; for (let i = -9; i <= 9; i += 3) Draw.line(ctx, i, 9, i + (i % 2) * 2, 14);
+      ctx.fillStyle = c('#0a0604'); Draw.poly(ctx, [-6, -3, -1, -3, -3.5, 1]); Draw.poly(ctx, [2, -3, 7, -3, 4.5, 1]);
+      ctx.fillStyle = c('#ffd040'); G('#ff9a00', 8); Draw.circ(ctx, -3.5, -2, 0.8); Draw.circ(ctx, 4.5, -2, 0.8); clearGlow(ctx);
+      ctx.strokeStyle = c('#0a0604'); ctx.lineWidth = 1; Draw.line(ctx, -5, 5, 6, 5); for (let x = -4; x <= 5; x += 2) Draw.line(ctx, x, 4, x, 6);
+      // a tiny crow on the hat brim
+      ctx.fillStyle = c('#111'); Draw.ell(ctx, 12, -12, 3, 2.2); Draw.circ(ctx, 14, -14, 1.6); ctx.fillStyle = c('#ffb040'); Draw.poly(ctx, [15, -14, 17.5, -13.5, 15, -13]);
+      break;
+    }
+    case 'cornucopia': {
+      ctx.fillStyle = flash ? W : lin(ctx, -12, 0, 12, 0, ['#e0b060', '#a8742a', '#4a2a08']);
+      ctx.beginPath(); ctx.moveTo(-14, -6); ctx.quadraticCurveTo(-10, -14, 0, -12); ctx.lineTo(11, -10); ctx.quadraticCurveTo(14, 0, 11, 10); ctx.lineTo(0, 11); ctx.quadraticCurveTo(-10, 10, -14, -6); ctx.fill();
+      ctx.strokeStyle = c('rgba(60,30,4,0.5)'); ctx.lineWidth = 1; for (let i = -8; i <= 8; i += 4) Draw.line(ctx, i, -11, i + 2, 10);
+      ctx.fillStyle = c('#c0203a'); Draw.circ(ctx, 10, -6, 3); ctx.fillStyle = c('#7a2aa0'); Draw.circ(ctx, 12, 0, 2.6); ctx.fillStyle = c('#e8c040'); Draw.circ(ctx, 10, 6, 2.8);
+      ctx.fillStyle = c('#1a0a04'); Draw.ell(ctx, -3, -1, 2.4, 3); Draw.ell(ctx, 4, -1, 2.4, 3);
+      ctx.fillStyle = c('#7aff6a'); G('#3aff3a', 8); Draw.circ(ctx, -3, -1, 0.9); Draw.circ(ctx, 4, -1, 0.9); clearGlow(ctx);
+      break;
+    }
+    case 'gravy': {
+      ctx.fillStyle = S('#f8f4ec', '#d8d0c0', '#6a6050', 0, 2, 13); Draw.ell(ctx, 0, 3, 12, 8);
+      ctx.fillStyle = c('#f0ece0'); Draw.poly(ctx, [9, 0, 16, -3, 11, 4]);
+      ctx.fillStyle = flash ? W : lin(ctx, 0, -6, 0, 2, ['#a8723a', '#5a3410']); Draw.ell(ctx, 0, -2, 10, 4);
+      ctx.fillStyle = c('#7a4a1a'); for (const [dx, l] of [[-7, 6], [-1, 9], [6, 5]]) { Draw.rr(ctx, dx, 4, 2.4, l + Math.sin(t * 3 + dx) * 1.5, 1.2); ctx.fill(); }
+      ctx.strokeStyle = c('#d8d0c0'); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(-12, 3, 4, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
+      ctx.fillStyle = c('#2a1404'); Draw.circ(ctx, -3, -3, 1.8); Draw.circ(ctx, 4, -3, 1.8);
+      ctx.fillStyle = c('#ffe060'); G('#ff9a00', 8); Draw.circ(ctx, -3, -3, 0.7); Draw.circ(ctx, 4, -3, 0.7); clearGlow(ctx);
       break;
     }
   }

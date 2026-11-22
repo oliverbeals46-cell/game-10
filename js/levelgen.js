@@ -25,6 +25,10 @@ const SIGN_TEXT = {
 };
 
 const BOSSES = {
+  30: { id: 'troll', name: 'THE TROLL', sign: 'THE TROLL lives past this gate. It swings its club, throws boulders, and its roar brings down stalactites. Touching it kills you!' },
+  40: { id: 'clock', name: 'THE GRANDFATHER CLOCK', sign: 'THE GRANDFATHER CLOCK ticks beyond the gate. Dodge its gears and slash its face!' },
+  50: { id: 'saint', name: 'THE HOLLOW SAINT', sign: 'THE HOLLOW SAINT burns past the gate. Jump the fire and strike when it lands!' },
+  60: { id: 'voidking', name: 'THE VOID KING', sign: 'THE VOID KING waits at the bottom of everything. This is it. Good luck.' },
   10: { id: 'warden', name: 'THE GRAVE WARDEN', sign: 'THE GRAVE WARDEN waits past the gate. Learn its attacks and slash it. Touching it kills you!' },
   20: { id: 'widow', name: 'THE FROZEN WIDOW', sign: 'THE FROZEN WIDOW waits past the gate. Dodge the icicles and slash it. Touching it kills you!' },
 };
@@ -37,8 +41,15 @@ function generateLevel(n) {
     for (let y = y1; y <= y2; y++) for (let x = x1; x <= x2; x++) if (x >= 0 && x < MAXW && y >= 0 && y < H) tiles[y * MAXW + x] = v;
   };
   const group = Math.floor((n - 1) / 10);           // 0 = levels 1–10, 1 = levels 11–20 ...
-  const enemyTypes = group === 0 ? ['crawler', 'skitter', 'bat'] : ['frostmite', 'snowskull', 'icewisp'];
-  const L = { shards: [], bigShards: [], enemies: [], platforms: [], pads: [], firebars: [], signs: [], decor: [], checkpoints: [], route: [] };
+  const enemyTypes = [
+    ['crawler', 'skitter', 'bat'], ['frostmite', 'snowskull', 'icewisp'], ['rockcrawler', 'pebbleimp', 'cavebat'],
+    ['gearspider', 'ticktock', 'chainghoul'], ['ashcrawler', 'cinderskull', 'emberbat'], ['voidcrawler', 'voidskull', 'voideye'],
+  ][Math.min(group, 5)];
+  const under = group >= 2;            // Levels 21+: underground, with a ceiling, falling droppers and a chase
+  const dropStyle = ['stalactite', 'gear', 'chandelier', 'shard'][Math.min(group, 5) - 2];
+  const L = { shards: [], bigShards: [], enemies: [], platforms: [], pads: [], firebars: [], signs: [], decor: [], checkpoints: [], route: [], droppers: [], chases: [] };
+  // falling hazards hang from the ceiling over open stretches (never right where you'd stand still)
+  const drops = (x1, x2) => { if (!under) return; for (let dx = x1; dx <= x2; dx += 3) if (r() < 0.32 + n * 0.006) L.droppers.push({ x: dx, y: 4, style: dropStyle, big: r() < 0.3 }); };
   // remember where each route step starts (used by the automated playtest)
   L.route.push = (o) => Array.prototype.push.call(L.route, Object.assign({ sx: x, sg: g }, o));
   const sh = (x, y) => L.shards.push([x, y]);
@@ -67,6 +78,7 @@ function generateLevel(n) {
       if (firstMonsterSign) { L.signs.push({ x: x + 3, y: g - 1, text: 'Monster ahead! Touching it kills you. Jump over it or slash it (X).' }); firstMonsterSign = false; }
     }
     if (opts.checkpoint) L.checkpoints.push({ x: x + len - 3, y: g - 1 });
+    if (!opts.noDrops) drops(x + 3, x + len - 6);
     for (let i = 2; i < len - 1; i += 3) sh(x + i, g - 2);
     L.route.push({ t: 'walk', to: x + len - 1 });
     x += len;
@@ -82,7 +94,8 @@ function generateLevel(n) {
       pit(x, sx - 1, 'spike'); L.route.push({ t: 'edges', xs: edges }); x = sx;
     },
     stones2() {
-      const p = [[4, -2], [10, -4], [16, -6], [23, -4]];
+      // near a cave ceiling the stones climb more gently so your head never bumps the rock mid-jump
+      const p = under && g < 18 ? [[4, -2], [10, -2], [16, -4], [23, -2]] : [[4, -2], [10, -4], [16, -6], [23, -4]];
       for (const [dx, dy] of p) { fill(x + dx, g + dy, x + dx + 1, g + dy); sh(x + dx, g + dy - 2); sh(x + dx + 1, g + dy - 2); }
       L.firebars.push({ x: x + 13, y: g - 9, n: 2, speed: 1.5 });
       big(x + 13, g - 11);
@@ -134,6 +147,18 @@ function generateLevel(n) {
       fill(x + 9, g - 9, x + 11, g - 9);
       sh(x + 5, g - 6); sh(x + 10, g - 11); sh(x + 13, g - 9);
       L.route.push({ t: 'pillarPad', x }); x += 15; g -= 6;
+    },
+    // CHASE (Levels 21+): something huge comes after you. Run and jump the spike holes without stopping!
+    chase() {
+      const len = 56, x1 = x;
+      ground(x, x + len - 1, g);
+      const strips = [[8, 2], [17, 3], [27, 2], [36, 3], [46, 2]];
+      for (const [dx, w] of strips) { fill(x + dx, g, x + dx + w - 1, g, T.SPIKE); sh(x + dx, g - 3); sh(x + dx + w - 1, g - 3); }
+      for (let i = 3; i < len; i += 5) sh(x + i, g - 2);
+      const speed = Math.min(228, 192 + n * 0.6);
+      L.chases.push({ x1, x2: x + len + 2, g, style: ['boulder', 'gears', 'fire', 'void'][Math.min(group, 5) - 2], speed });
+      L.route.push({ t: 'chase', x1, xs: strips.map(([dx]) => x + dx), end: x + len });
+      x += len;
     },
     fireRun() {
       const k = 1 + (n >= 6 ? 1 : 0) + (r() < 0.4 ? 1 : 0), len = 6 + 7 * k;
@@ -193,7 +218,8 @@ function generateLevel(n) {
     if (s === 'plankClimb') return g >= 28;
     if (s === 'stairs') return g >= 22 && n >= 4;
     if (s === 'pillarPad') return g >= 18 && n >= 4;
-    if (s === 'elevator' || s === 'stones2' || s === 'crumble2') return n >= 3;
+    if (s === 'elevator') return n >= 3 && (!under || g >= 18);
+    if (s === 'stones2' || s === 'crumble2') return n >= 3;
     return true;
   };
   const pool = ['stones3', 'stones2', 'rafts', 'crumble3', 'crumble2', 'elevator', 'padCliff', 'pillarPad', 'fireRun', 'dashGap', 'stairs', 'plankClimb', 'spikeStrips', 'bridge', 'pillars'];
@@ -203,7 +229,14 @@ function generateLevel(n) {
   const cpEvery = n >= 15 ? 3 : 2;
 
   // start
-  rest(12, { sign: n === 11 ? 'Levels 11–20: the cold has come. New creatures lurk in the ice...' : `Level ${n}! Reach the portal at the end.` });
+  const STORY = {
+    11: 'Levels 11–20: the cold has come. New creatures lurk in the ice...',
+    21: 'You fell through the ice into a deep cave... Watch for stalactites! And something huge down here is awake. When it comes, RUN.',
+    31: 'Deeper still: a crypt full of ticking clockwork. Falling gears, and a grinding wall of gears that hunts you.',
+    41: 'A burning cathedral, deep underground. Chandeliers fall, and a wall of fire will chase you.',
+    51: 'The Void. Nothing down here is real... except the darkness that chases you.',
+  };
+  rest(12, { sign: STORY[n] || `Level ${n}! Reach the portal at the end.`, noDrops: true });
 
   let last = null;
   for (let i = 0; i < segCount; i++) {
@@ -215,16 +248,21 @@ function generateLevel(n) {
     else L.signs.push({ x: x - 3, y: g - 1, text: SIGN_TEXT[s] });
     SEG[s]();
     last = s;
-    if (g <= 16 && r() < 0.7) SEG.drop();
+    if ((g <= 16 || (under && g <= 20)) && r() < 0.7) SEG.drop();
+    // the chase: once per underground level, in the middle, after a checkpoint
+    if (under && i === Math.floor(segCount / 2)) {
+      rest(12, { checkpoint: true, sign: 'Something is coming... When it starts, RUN and do not stop! Jump the spike holes.', noDrops: true });
+      SEG.chase();
+    }
     const isLast = i === segCount - 1;
-    rest(isLast ? 14 : 11, { enemy: !isLast && r() < 0.35 + n * 0.025, checkpoint: !isLast && (i + 1) % cpEvery === 0 });
+    rest(isLast ? 14 : 11, { enemy: !isLast && r() < Math.min(0.6, 0.35 + n * 0.025), checkpoint: !isLast && (i + 1) % cpEvery === 0 });
   }
 
   let arena = null;
   if (boss) {
     // come down to the floor, checkpoint right before the arena
     if (g !== 30) { g = 30; L.route.push({ t: 'walk', to: x + 2 }); }
-    rest(10, { checkpoint: true, sign: boss.sign });
+    rest(10, { checkpoint: true, sign: boss.sign, noDrops: true });
     const A = x; // gate column
     ground(A, A + 40, 30);
     fill(A, 0, A + 29, 14);                     // ceiling
@@ -254,6 +292,8 @@ function generateLevel(n) {
   // copy into a level-sized tile map
   const out = new Array(W * H);
   for (let yy = 0; yy < H; yy++) for (let xx = 0; xx < W; xx++) out[yy * W + xx] = tiles[yy * MAXW + xx];
+  if (under) for (let yy = 0; yy <= 3; yy++) for (let xx = 0; xx < W; xx++) out[yy * W + xx] = T.SOLID; // cave ceiling
+  L.droppers = L.droppers.filter((d) => d.x < W - 2);
 
   // drop any shard that ended up inside stone or a hazard
   const okSpot = ([sx, sy]) => sy >= 0 && sy < H && sx < W && out[sy * W + sx] === T.EMPTY;
@@ -272,4 +312,4 @@ function generateLevel(n) {
   };
 }
 
-for (let n = 3; n <= 20; n++) LEVELS[n] = () => generateLevel(n);
+for (let n = 3; n <= 60; n++) LEVELS[n] = () => generateLevel(n);

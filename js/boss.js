@@ -121,7 +121,7 @@ class GraveWarden {
         if (this.timer <= 0 && this.spitLeft > 0) {
           const dist = Math.abs(pc - bc);
           const vx = this.facing * clamp(dist * rand(0.55, 1.15), 140, 620);
-          g.projectiles.push(new Projectile(this.shotType, bc + this.facing * 30 - 7, this.y + 52, vx, rand(-620, -420)));
+          const pr = new Projectile(this.shotType, bc + this.facing * 30 - 7, this.y + 52, vx, rand(-620, -420)); pr.skin = this.shotSkin; g.projectiles.push(pr);
           Sfx.play('spit');
           this.spitLeft--; this.timer = 0.15;
         }
@@ -284,6 +284,179 @@ class FrozenWidow extends GraveWarden {
     // icicle crown
     ctx.fillStyle = f ? '#fff' : lin(ctx, 0, -70, 0, -55, ['#ffffff', '#9fe8ff']);
     for (let i = 0; i < 5; i++) Draw.poly(ctx, [4 + i * 6, -55 + bob, 8 + i * 6, -55 + bob, 6 + i * 6, -68 - (i === 2 ? 6 : 0) + bob]);
+    ctx.restore();
+  }
+}
+
+// ---------------- Bosses of Levels 30, 40, 50, 60 ----------------
+// They use the same attack rhythm as the Warden (charge / leap slam / throw, enrage at half health),
+// each with its own body, projectiles and shockwaves.
+class Troll extends GraveWarden {
+  constructor(x, y, arena) {
+    super(x, y, arena);
+    this.name = 'THE TROLL'; this.maxHp = this.hp = 56; this.w = 110; this.h = 124;
+    this.shotSkin = 'rock'; this.waveSkin = 'rock'; this.debrisSkin = 'stalactite';
+  }
+  hurt(dmg, g) { const p1 = this.phase === 1, r = super.hurt(dmg, g); if (p1 && this.phase === 2) { g.toasts = g.toasts.filter((m) => !m.text.includes('Warden')); g.toast('The Troll is ENRAGED! Watch the ceiling!', 2.4); g.spawnDebris(6); } return r; }
+  draw(ctx, t) {
+    const f = this.flash > 0, c = (col) => (f ? '#ffffff' : col), p2 = this.phase === 2;
+    const bc = this.x + this.w / 2, sq = this.squash, breathe = Math.sin(this.anim * 2.5) * 2;
+    const shakeX = (this.state.startsWith('tele') || this.state === 'roar' || this.dying) ? Math.sin(t * 60) * 2.5 : 0;
+    ctx.save(); ctx.translate(bc + shakeX, this.y + this.h); ctx.scale(this.facing * (1 + sq * 0.12), 1 - sq * 0.1);
+    if (this.dying) ctx.globalAlpha = Math.max(0.2, this.timer / 2.6);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; Draw.ell(ctx, 0, 0, 60, 9);
+    const skin = (cx, cy, r) => (f ? '#fff' : shade(ctx, cx, cy, r, p2 ? '#a8b088' : '#9aa88a', p2 ? '#5e6a40' : '#56664a', '#1a2014'));
+    const walk = this.state === 'charge' ? Math.sin(this.anim * 22) * 7 : 0;
+    // legs
+    ctx.fillStyle = skin(-18, -20, 22); Draw.rr(ctx, -34 + walk, -36, 24, 36, 10); ctx.fill();
+    ctx.fillStyle = skin(18, -20, 22); Draw.rr(ctx, 10 - walk, -36, 24, 36, 10); ctx.fill();
+    ctx.fillStyle = c('#3a2a1a'); ctx.fillRect(-36, -46, 72, 14); // loincloth
+    // back arm
+    ctx.fillStyle = skin(-40, -80, 16); Draw.rr(ctx, -54, -96 + breathe, 18, 52, 9); ctx.fill();
+    // big belly body
+    ctx.fillStyle = skin(-6, -84, 50); Draw.ell(ctx, 0, -78 + breathe, 46, 42);
+    ctx.fillStyle = c('rgba(255,255,255,0.08)'); Draw.ell(ctx, -16, -96 + breathe, 16, 10, -0.4);
+    ctx.strokeStyle = c('rgba(30,40,20,0.6)'); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -66 + breathe, 18, 0.3, Math.PI - 0.3); ctx.stroke();
+    // head (small, low, with tusks)
+    const hy = -118 + breathe;
+    ctx.fillStyle = skin(10, hy, 24); Draw.ell(ctx, 10, hy, 24, 20);
+    ctx.fillStyle = skin(26, hy + 2, 10); Draw.ell(ctx, 26, hy + 2, 9, 7); // nose
+    ctx.fillStyle = c('#1a1408'); Draw.ell(ctx, 2, hy - 4, 5, 3); Draw.ell(ctx, 18, hy - 6, 5, 3);
+    ctx.fillStyle = c(p2 ? '#ff3a2a' : '#ffd040'); if (!f) setGlow(ctx, p2 ? '#ff0000' : '#ffa000', 14);
+    Draw.circ(ctx, 3, hy - 4, 2.2); Draw.circ(ctx, 19, hy - 6, 2.2); clearGlow(ctx);
+    ctx.strokeStyle = c('#1a1408'); ctx.lineWidth = 3; Draw.line(ctx, -4, hy - 12, 8, hy - 9); Draw.line(ctx, 14, hy - 11, 26, hy - 14);
+    const open = (this.state === 'tele_spit' || this.state === 'spit' || this.state === 'roar') ? 6 : 0;
+    ctx.fillStyle = c('#2a1008'); Draw.rr(ctx, 2, hy + 8, 24, 4 + open, 2); ctx.fill();
+    ctx.fillStyle = c('#f0e8c8'); Draw.poly(ctx, [4, hy + 10, 8, hy + 10, 5, hy - 2]); Draw.poly(ctx, [20, hy + 10, 24, hy + 10, 23, hy - 2]);
+    // front arm + spiked club
+    const up = (this.state === 'tele_leap' || this.state === 'tele_charge' || this.state === 'roar') ? -1.6 : this.state === 'leap' ? -2.2 : 0.2;
+    ctx.save(); ctx.translate(38, -100 + breathe); ctx.rotate(up);
+    ctx.fillStyle = skin(0, 20, 16); Draw.rr(ctx, -9, -4, 18, 46, 9); ctx.fill();
+    ctx.translate(0, 40); ctx.rotate(-0.4);
+    ctx.fillStyle = f ? '#fff' : lin(ctx, -8, 0, 8, 0, ['#8a5a30', '#5a3a1a', '#2a1a08']);
+    ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(5, 0); ctx.lineTo(12, 60); ctx.lineTo(-12, 60); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c('#c8c0b0'); for (const [sx, sy] of [[-12, 40], [12, 44], [-11, 54], [13, 56], [0, 62]]) Draw.poly(ctx, [sx - 3, sy, sx + 3, sy, sx + Math.sign(sx || 1) * 7, sy - 3]);
+    ctx.restore();
+    ctx.restore();
+  }
+}
+
+class ClockBoss extends GraveWarden {
+  constructor(x, y, arena) {
+    super(x, y, arena);
+    this.name = 'THE GRANDFATHER CLOCK'; this.maxHp = this.hp = 60; this.w = 86; this.h = 132;
+    this.shotSkin = 'gear'; this.waveSkin = 'gear'; this.debrisSkin = 'gear';
+  }
+  hurt(dmg, g) { const p1 = this.phase === 1, r = super.hurt(dmg, g); if (p1 && this.phase === 2) { g.toasts = g.toasts.filter((m) => !m.text.includes('Warden')); g.toast('The Clock strikes MIDNIGHT!', 2.4); } return r; }
+  draw(ctx, t) {
+    const f = this.flash > 0, c = (col) => (f ? '#ffffff' : col), p2 = this.phase === 2;
+    const bc = this.x + this.w / 2, sq = this.squash;
+    const shakeX = (this.state.startsWith('tele') || this.state === 'roar' || this.dying) ? Math.sin(t * 60) * 2.5 : 0;
+    ctx.save(); ctx.translate(bc + shakeX, this.y + this.h); ctx.scale(this.facing * (1 + sq * 0.12), 1 - sq * 0.1);
+    if (this.dying) ctx.globalAlpha = Math.max(0.2, this.timer / 2.6);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; Draw.ell(ctx, 0, 0, 50, 8);
+    const walk = this.state === 'charge' ? Math.sin(this.anim * 22) * 5 : 0;
+    ctx.fillStyle = c('#2a1a0e'); ctx.fillRect(-26 + walk, -12, 12, 12); ctx.fillRect(14 - walk, -12, 12, 12);
+    // wooden case
+    ctx.fillStyle = f ? '#fff' : lin(ctx, -36, 0, 36, 0, ['#7a4a26', '#4a2a14', '#1e1008']); Draw.rr(ctx, -34, -128, 68, 118, 6); ctx.fill();
+    ctx.fillStyle = c('#3a2210'); Draw.poly(ctx, [-40, -126, 40, -126, 0, -146]);
+    // glass with swinging pendulum
+    ctx.fillStyle = c('rgba(40,60,40,0.8)'); Draw.rr(ctx, -20, -72, 40, 56, 4); ctx.fill();
+    const sw = Math.sin(this.anim * (p2 ? 7 : 4)) * 0.45;
+    ctx.save(); ctx.translate(0, -70); ctx.rotate(sw); ctx.strokeStyle = c('#c8a040'); ctx.lineWidth = 2; Draw.line(ctx, 0, 0, 0, 38);
+    ctx.fillStyle = c('#e8c860'); if (!f) setGlow(ctx, '#ffd040', 10); Draw.circ(ctx, 0, 42, 8); clearGlow(ctx); ctx.restore();
+    // clock face with a face
+    const fy = -100;
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 0, fy, 24, '#fffaf0', '#d8cfa8', '#7a6a40'); Draw.circ(ctx, 0, fy, 22);
+    ctx.strokeStyle = c('#3a2a10'); ctx.lineWidth = 1.5;
+    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; Draw.line(ctx, Math.cos(a) * 17, fy + Math.sin(a) * 17, Math.cos(a) * 20, fy + Math.sin(a) * 20); }
+    const spd = p2 ? 6 : 1.2;
+    ctx.lineWidth = 2.5; Draw.line(ctx, 0, fy, Math.cos(t * spd) * 15, fy + Math.sin(t * spd) * 15);
+    ctx.lineWidth = 1.5; Draw.line(ctx, 0, fy, Math.cos(t * spd * 12) * 19, fy + Math.sin(t * spd * 12) * 19);
+    ctx.fillStyle = c(p2 ? '#ff3a2a' : '#7aff9a'); if (!f) setGlow(ctx, p2 ? '#ff0000' : '#3aff7a', 14);
+    Draw.ell(ctx, -8, fy - 4, 3.5, 2.2); Draw.ell(ctx, 8, fy - 4, 3.5, 2.2); clearGlow(ctx);
+    const open = (this.state === 'tele_spit' || this.state === 'spit' || this.state === 'roar') ? 5 : 1;
+    ctx.fillStyle = c('#1a0e04'); Draw.rr(ctx, -9, fy + 7, 18, open + 2, 1); ctx.fill();
+    ctx.restore();
+  }
+}
+
+class SaintBoss extends GraveWarden {
+  constructor(x, y, arena) {
+    super(x, y, arena);
+    this.name = 'THE HOLLOW SAINT'; this.maxHp = this.hp = 64; this.w = 80; this.h = 132;
+    this.shotSkin = 'ember'; this.waveSkin = 'fire'; this.debrisSkin = 'chandelier';
+  }
+  hurt(dmg, g) { const p1 = this.phase === 1, r = super.hurt(dmg, g); if (p1 && this.phase === 2) { g.toasts = g.toasts.filter((m) => !m.text.includes('Warden')); g.toast('The Hollow Saint burns brighter!', 2.4); } return r; }
+  draw(ctx, t) {
+    const f = this.flash > 0, c = (col) => (f ? '#ffffff' : col), p2 = this.phase === 2;
+    const bc = this.x + this.w / 2, sq = this.squash, hover = Math.sin(this.anim * 2) * 3;
+    const shakeX = (this.state.startsWith('tele') || this.state === 'roar' || this.dying) ? Math.sin(t * 60) * 2.5 : 0;
+    ctx.save(); ctx.translate(bc + shakeX, this.y + this.h); ctx.scale(this.facing * (1 + sq * 0.12), 1 - sq * 0.1);
+    if (this.dying) ctx.globalAlpha = Math.max(0.2, this.timer / 2.6);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; Draw.ell(ctx, 0, 0, 44, 7);
+    // robe, tattered and smouldering
+    ctx.fillStyle = f ? '#fff' : lin(ctx, 0, -110, 0, 0, ['#3a1a14', '#1e0a08', '#0a0302']);
+    ctx.beginPath(); ctx.moveTo(-16, -104 + hover); ctx.lineTo(16, -104 + hover); ctx.lineTo(38, -4);
+    for (let i = 0; i <= 8; i++) ctx.lineTo(38 - i * 9.5, -4 + (i % 2 ? 6 : 0) + Math.sin(t * 5 + i) * 2);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c('#ff8a2a'); for (let i = 0; i < 6; i++) Draw.circ(ctx, -30 + i * 12, -6 + Math.sin(t * 7 + i) * 2, 1.4);
+    // arms spread
+    const up = (this.state === 'tele_leap' || this.state === 'roar' || this.state === 'tele_spit') ? -0.9 : 0;
+    ctx.strokeStyle = c('#2a1008'); ctx.lineWidth = 8; ctx.lineCap = 'round';
+    Draw.line(ctx, -14, -92 + hover, -40, -64 + up * 30 + hover); Draw.line(ctx, 14, -92 + hover, 42, -64 + up * 30 + hover);
+    ctx.fillStyle = c('#d8c8b0'); Draw.circ(ctx, -42, -62 + up * 30 + hover, 4); Draw.circ(ctx, 44, -62 + up * 30 + hover, 4);
+    // hood with an empty face
+    const hy = -114 + hover;
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 0, hy, 20, '#4a2a20', '#2a120c', '#0a0302'); Draw.ell(ctx, 0, hy, 17, 21);
+    ctx.fillStyle = c('#000'); Draw.ell(ctx, 3, hy + 3, 10, 13);
+    ctx.fillStyle = c(p2 ? '#ffffff' : '#ffd060'); if (!f) setGlow(ctx, '#ff6a00', 16);
+    Draw.circ(ctx, -1, hy, 2.3); Draw.circ(ctx, 8, hy, 2.3); clearGlow(ctx);
+    // burning halo
+    if (!f) setGlow(ctx, '#ff6a00', 20);
+    ctx.strokeStyle = c(p2 ? '#ffffff' : '#ffb040'); ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(0, hy - 26, 20, 6, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = c('#ff8a2a');
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + t; const hx = Math.cos(a) * 20, hz = Math.sin(a) * 6; ctx.beginPath(); ctx.moveTo(hx - 3, hy - 26 + hz); ctx.quadraticCurveTo(hx, hy - 38 + hz - Math.sin(t * 15 + i) * 3, hx + 3, hy - 26 + hz); ctx.fill(); }
+    clearGlow(ctx);
+    ctx.restore();
+  }
+}
+
+class VoidKing extends GraveWarden {
+  constructor(x, y, arena) {
+    super(x, y, arena);
+    this.name = 'THE VOID KING'; this.maxHp = this.hp = 70; this.w = 116; this.h = 112;
+    this.shotSkin = 'void'; this.waveSkin = 'void'; this.debrisSkin = 'shard';
+  }
+  hurt(dmg, g) { const p1 = this.phase === 1, r = super.hurt(dmg, g); if (p1 && this.phase === 2) { g.toasts = g.toasts.filter((m) => !m.text.includes('Warden')); g.toast('The Void King opens its eye...', 2.4); } return r; }
+  draw(ctx, t) {
+    const f = this.flash > 0, c = (col) => (f ? '#ffffff' : col), p2 = this.phase === 2;
+    const bc = this.x + this.w / 2, sq = this.squash;
+    const shakeX = (this.state.startsWith('tele') || this.state === 'roar' || this.dying) ? Math.sin(t * 60) * 2.5 : 0;
+    ctx.save(); ctx.translate(bc + shakeX, this.y + this.h); ctx.scale(this.facing * (1 + sq * 0.12), 1 - sq * 0.1);
+    if (this.dying) ctx.globalAlpha = Math.max(0.2, this.timer / 2.6);
+    ctx.fillStyle = 'rgba(80,20,160,0.35)'; Draw.ell(ctx, 0, 0, 60, 9);
+    // tentacles
+    ctx.strokeStyle = c('#12041e'); ctx.lineCap = 'round';
+    for (let i = 0; i < 7; i++) {
+      const bx = -42 + i * 14; ctx.lineWidth = 7 - Math.abs(i - 3);
+      ctx.beginPath(); ctx.moveTo(bx, -40);
+      ctx.quadraticCurveTo(bx + Math.sin(t * 3 + i) * 14, -18, bx + Math.sin(t * 2 + i * 1.7) * 10, 0); ctx.stroke();
+    }
+    // dark body
+    ctx.fillStyle = f ? '#fff' : shade(ctx, -10, -70, 60, '#3a1a5a', '#14061e', '#000000'); Draw.ell(ctx, 0, -66, 56, 46);
+    ctx.fillStyle = c('rgba(200,140,255,0.25)'); for (let i = 0; i < 10; i++) Draw.circ(ctx, Math.cos(i * 2.3 + t) * 40, -66 + Math.sin(i * 1.7 + t * 0.7) * 30, 1.6);
+    // the eye
+    const open = (this.state === 'tele_spit' || this.state === 'spit' || this.state === 'roar' || p2) ? 1 : 0.6;
+    ctx.fillStyle = c('#f4e8ff'); Draw.ell(ctx, 6, -70, 26, 16 * open);
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 10, -70, 12, '#ffffff', p2 ? '#ff3a6a' : '#b050ff', '#2a0060'); if (!f) setGlow(ctx, p2 ? '#ff2060' : '#b050ff', 18);
+    Draw.circ(ctx, 10, -70, 11 * open); clearGlow(ctx);
+    ctx.fillStyle = c('#000'); Draw.ell(ctx, 12, -70, 3, 8 * open);
+    // crystal crown
+    ctx.fillStyle = f ? '#fff' : lin(ctx, 0, -140, 0, -108, ['#ffffff', '#c890ff', '#5a1aa8']); if (!f) setGlow(ctx, '#b050ff', 12);
+    for (let i = 0; i < 5; i++) Draw.poly(ctx, [-26 + i * 13, -108, -18 + i * 13, -108, -22 + i * 13, -128 - (i === 2 ? 12 : 0) - Math.sin(t * 2 + i) * 2]);
+    clearGlow(ctx);
     ctx.restore();
   }
 }

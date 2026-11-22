@@ -9,6 +9,7 @@ const Input = (() => {
     attack: ['KeyJ', 'KeyX'],
     dash: ['ShiftLeft', 'ShiftRight', 'KeyK', 'KeyC'],
     spell: ['KeyL', 'KeyV'],
+    spin: ['KeyB', 'KeyN'],
   };
   const held = new Set();
   const pressed = new Set();
