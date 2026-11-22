@@ -103,6 +103,21 @@ const WORLDS = [
       leaves: ['#6a7a2a', '#4a3a1a', '#8a6a2a', '#3a2a10'], dark: [10, 3, 3], ambient: 0.56,
     },
   },
+  // ---- Levels 71–80: an abandoned carnival under the blood moon. Swinging blades; a ghost train chases you. ----
+  {
+    id: 8, levels: [71, 80],
+    look: 'A creepy clown carnival: striped tents, a broken ferris wheel, flickering lights, and clowns everywhere.',
+    enemies: ['Creepy Clown', 'Clown Balloon', 'Jack-in-the-Box Clown'],
+    boss: 'Mr. Giggles (Level 80)',
+    pal: {
+      sky: ['#06020a', '#1a0a20', '#3a0e24', '#2a0a14'], star: '#ffe8f0', moon: [255, 110, 90],
+      far: ['#2a0e22', '#180818'], mid: ['#1a0a18', '#100610'], near: ['#0a0408', '#060206'],
+      castle: '#1a0a18', windows: '#ffd060', tree: '#0a0408', bgTree: '#14081a',
+      fog: [200, 120, 160], haze: [150, 70, 110],
+      stone: [52, 40, 50], grass: ['#5a4a3a', '#3e2e22', '#7a6a4a', '#2e2218', '#6a5a3a'], grassTop: ['#6a5040', '#2e2218'], moss: [140, 90, 110],
+      leaves: ['#ff4a6a', '#ffd040', '#4ac8ff', '#ffffff'], dark: [6, 2, 6], ambient: 0.58,
+    },
+  },
 ];
 
 function worldForLevel(n) { return WORLDS.find((w) => n >= w.levels[0] && n <= w.levels[1]) || WORLDS[WORLDS.length - 1]; }
@@ -124,6 +139,8 @@ const HAZARD_LOOK = {
        spike: ['#e0c8a0', '#a07a50', '#3a2414', 'rgba(255,120,40,0.35)'], under: 'cathedral', drop: 'chandelier', chase: 'fire', crystal: '#ffb040' },
   7: { liquid: ['#d0ff70', '#7ad02a', '#2a6a10', '#0a2004'], bubble: [200, 255, 120], fire: ['#fff0e0', '#ff5a3a', '#8a0a0a'], fireGlow: '#ff2a1a',
        spike: ['#8a7a5a', '#5a4a30', '#1e160c', 'rgba(90,140,40,0.4)'], chase: 'serpent', geysers: true, crystal: '#9aff4a' },
+  8: { liquid: ['#ffe080', '#ff6a2a', '#a01020', '#2a0408'], bubble: [255, 220, 140], fire: ['#fff8d0', '#ff8a2a', '#c01020'], fireGlow: '#ff4a2a',
+       spike: ['#f0e8e0', '#c8102e', '#3a0810', 'rgba(255,255,255,0.4)'], chase: 'clowncar', pendulums: true, carnival: true, crystal: '#ffd060' },
   6: { liquid: ['#f0d0ff', '#a050ff', '#40108a', '#10022a'], bubble: [230, 190, 255], fire: ['#ffffff', '#d080ff', '#6a1ad0'], fireGlow: '#b050ff',
        spike: ['#e8d8ff', '#9a7ad8', '#2e1a5a', 'rgba(180,120,255,0.4)'], under: 'void', drop: 'shard', chase: 'void', crystal: '#d080ff' },
 };

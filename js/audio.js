@@ -75,6 +75,8 @@ const Sfx = (() => {
     jump() { tone(220, 0.14, 'triangle', 0.18, 380); noise(0.05, 0.08, 2500); },
     djump() { tone(330, 0.16, 'triangle', 0.16, 500); noise(0.12, 0.1, 4000); },
     scream() { goat(); },
+    honk() { tone(330, 0.18, 'square', 0.18, -40); tone(415, 0.18, 'square', 0.12, -40, 0.02); },
+    giggle() { [620, 700, 560, 680, 520].forEach((f, i) => tone(f, 0.08, 'triangle', 0.12, 80, i * 0.07)); },
     geyser() { noise(0.6, 0.25, 500); tone(120, 0.4, 'sawtooth', 0.08, 200); },
     rumble() { noise(0.4, 0.18, 180); },
     crash() { noise(0.35, 0.35, 260); tone(70, 0.3, 'square', 0.2, -30); },

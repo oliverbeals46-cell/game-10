@@ -638,7 +638,42 @@ function drawOlive(ctx, x, y, rx, ry, t, opts = {}) {
   Draw.circ(ctx, x + rx * 0.08, y - ry * 0.33, pd + 0.6); Draw.circ(ctx, x + rx * 0.58, y - ry * 0.38, pd + 0.6);
 }
 
+// A creepy clown face: white face paint, red nose, crazy hair, painted grin, empty eyes. Used by every clown.
+function drawClownFace(ctx, x, y, r, t, opts = {}) {
+  const f = opts.flash;
+  // wild rainbow hair tufts
+  if (!f) { const hc = ['#ff3a5a', '#ffb020', '#3ac8ff', '#9a5aff']; for (let i = 0; i < 6; i++) { ctx.fillStyle = hc[i % 4]; Draw.circ(ctx, x - r * 1.05 + (i % 3) * r * 0.25, y - r * 0.2 + (i < 3 ? -r * 0.35 : r * 0.2), r * 0.38); Draw.circ(ctx, x + r * 1.05 - (i % 3) * r * 0.25, y - r * 0.2 + (i < 3 ? -r * 0.35 : r * 0.2), r * 0.38); } }
+  ctx.fillStyle = f ? '#fff' : shade(ctx, x, y, r * 1.1, '#ffffff', '#ece6e0', '#8a8080'); Draw.circ(ctx, x, y, r);
+  // diamond eye paint + hollow eyes
+  ctx.fillStyle = f ? '#fff' : '#3a2a6a';
+  for (const s of [-1, 1]) Draw.poly(ctx, [x + s * r * 0.38, y - r * 0.62, x + s * r * 0.55, y - r * 0.3, x + s * r * 0.38, y + r * 0.02, x + s * r * 0.21, y - r * 0.3]);
+  ctx.fillStyle = f ? '#fff' : '#000'; Draw.circ(ctx, x - r * 0.38, y - r * 0.3, r * 0.12); Draw.circ(ctx, x + r * 0.38, y - r * 0.3, r * 0.12);
+  if (!f) { ctx.fillStyle = opts.angry ? '#ff2a2a' : '#ffffff'; setGlow(ctx, opts.angry ? '#ff0000' : '#ffffff', 6); Draw.circ(ctx, x - r * 0.38, y - r * 0.3, r * 0.04 + 0.4); Draw.circ(ctx, x + r * 0.38, y - r * 0.3, r * 0.04 + 0.4); clearGlow(ctx); }
+  // big painted grin
+  const open = opts.laugh ? 0.35 + Math.abs(Math.sin(t * 18)) * 0.2 : 0.18;
+  ctx.fillStyle = f ? '#fff' : '#c8102e';
+  ctx.beginPath(); ctx.moveTo(x - r * 0.75, y + r * 0.15); ctx.quadraticCurveTo(x, y + r * (0.55 + open * 1.6), x + r * 0.75, y + r * 0.15); ctx.quadraticCurveTo(x, y + r * 0.45, x - r * 0.75, y + r * 0.15); ctx.fill();
+  if (!f) { ctx.fillStyle = '#2a0006'; ctx.beginPath(); ctx.ellipse(x, y + r * 0.42, r * 0.4, r * open, 0, 0, Math.PI); ctx.fill(); ctx.fillStyle = '#fffaf0'; for (let i = -2; i <= 2; i++) ctx.fillRect(x + i * r * 0.15 - r * 0.05, y + r * 0.4, r * 0.1, r * 0.12); }
+  // red nose
+  ctx.fillStyle = f ? '#fff' : shade(ctx, x, y, r * 0.26, '#ff8a8a', '#e0102a', '#6a0010'); Draw.circ(ctx, x, y + r * 0.02, r * 0.24);
+}
+
 const ENEMY_SKINS = {
+  // Levels 71–80: creepy clown carnival
+  jackclown: { base: 'skitter', name: 'Jack-in-the-Box Clown', replaceFace: true, skull: ['#ff5a6a', '#c8102e', '#3a0008'], eye: '#ffffff', glow: '#ffffff', hop: 680,
+    extra: (ctx, e, t) => {
+      const up = e.onGround ? 0 : 10;
+      ctx.fillStyle = lin(ctx, -9, 0, 9, 0, ['#ff4a5a', '#c8102e', '#5a0010']); Draw.rr(ctx, -9, -10, 18, 11, 2); ctx.fill();
+      ctx.fillStyle = '#ffd040'; ctx.fillRect(-9, -10, 18, 2); ctx.fillRect(-9, -2, 18, 1.5);
+      ctx.strokeStyle = '#c8c8d0'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let k = 0; k <= 6; k++) ctx.lineTo((k % 2 ? 4 : -4), -10 - k * (2 + up / 6)); ctx.stroke();
+      drawClownFace(ctx, 0, -18 - up * 1.6, 7, t, { laugh: !e.onGround, angry: true });
+    } },
+  clownballoon: { base: 'bat', name: 'Clown Balloon', replaceFace: true, wing: ['rgba(0,0,0,0)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0)'], body: ['#ff8a9a', '#e0102a', '#5a0010'], eye: '#fff', glow: '#fff',
+    extra: (ctx, e, t) => {
+      ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, 10); ctx.quadraticCurveTo(4 * Math.sin(t * 3), 18, 0, 26); ctx.stroke();
+      ctx.fillStyle = shade(ctx, -3, -3, 13, '#ffb0bc', '#e0102a', '#5a0010'); Draw.ell(ctx, 0, 0, 11, 12); Draw.poly(ctx, [-2, 11, 2, 11, 0, 14]);
+      drawClownFace(ctx, 0, 0, 6.5, t, { laugh: e.state === 'chase', angry: e.state === 'chase' });
+    } },
   // Levels 65–69: olive grove
   oliveskitter: { base: 'skitter', name: 'Hopping Olive', replaceFace: true, skull: ['#c8e070', '#6a8a2a', '#1a2a06'], eye: '#ffffff', glow: '#c8e070', hop: 620,
     extra: (ctx, e, t) => drawOlive(ctx, 0, -10, 10, 10, t, { scream: !e.onGround }) },
@@ -726,6 +761,90 @@ class ScreamingOlive {
     if (fleeing) { ctx.lineWidth = 2; Draw.line(ctx, -9, -16, -15, -22 + Math.sin(t * 30) * 4); Draw.line(ctx, 9, -16, 15, -22 + Math.cos(t * 30) * 4); }
     drawOlive(ctx, 0, -15, 11, 13, t, { flash: f, scream: this.screamT > 0 || cower });
     if (fleeing && !f) { ctx.fillStyle = 'rgba(160,220,255,0.8)'; Draw.ell(ctx, -10, -24, 1.6, 2.6); Draw.ell(ctx, 11, -26, 1.4, 2.2); } // sweat drops
+    ctx.restore();
+  }
+}
+
+// Creepy Clown (Levels 71–80): shuffles back and forth in big shoes. When it spots you it giggles,
+// honks its nose, and comes after you. Touching it kills you. Jump over it or slash it!
+class CreepyClown {
+  constructor(x, y) {
+    this.w = 22; this.h = 34; this.x = x; this.y = y - this.h;
+    this.vx = 0; this.vy = 0; this.hp = 4; this.flash = 0; this.dead = false;
+    this.dir = Math.random() < 0.5 ? -1 : 1; this.anim = Math.random() * 10; this.shards = 4; this.contact = 1;
+    this.state = 'wander'; this.laughT = 0; this.turnT = 1.5 + Math.random() * 2;
+  }
+  update(dt, g) {
+    this.anim += dt; this.flash -= dt; this.laughT -= dt; this.turnT -= dt;
+    const p = g.player, dx = (p.x + p.w / 2) - (this.x + this.w / 2), sees = !p.dead && Math.abs(dx) < 230 && Math.abs(p.y - this.y) < 100;
+    if (sees && this.state === 'wander') { this.state = 'hunt'; this.laughT = 1; Sfx.play('giggle'); g.popups.push({ x: this.x + this.w / 2, y: this.y - 12, t: 1, text: 'HEE HEE!' }); }
+    if (!sees && this.state === 'hunt' && Math.abs(dx) > 330) this.state = 'wander';
+    if (this.state === 'hunt') { this.dir = Math.sign(dx) || 1; if (this.laughT <= -1.4) { this.laughT = 1; Sfx.play('honk'); } }
+    else if (this.turnT <= 0) { this.dir *= -1; this.turnT = 2 + Math.random() * 2; }
+    let speed = (this.state === 'hunt' ? 95 : 38) * (this.speedMul || 1);
+    if (this.onGround) {
+      const aheadX = this.dir > 0 ? this.x + this.w + 3 : this.x - 3, tx = Math.floor(aheadX / TILE), fy = Math.floor((this.y + this.h + 2) / TILE), my = Math.floor((this.y + this.h / 2) / TILE);
+      if (!g.world.standable(tx, fy) || g.world.solid(tx, my) || g.world.isHazard(tx, fy - 1) || g.world.isHazard(tx, fy)) { if (this.state === 'wander') this.dir *= -1; else speed = 0; }
+    }
+    this.vx = approach(this.vx, this.dir * speed, 700 * dt);
+    this.vy = Math.min(this.vy + PHYS.GRAV * dt, PHYS.MAXFALL);
+    moveEntity(g.world, this, dt);
+  }
+  hurt(dmg, dir, g) {
+    this.hp -= dmg; this.flash = 0.12; Sfx.play('honk');
+    if (dir) { this.vx = dir * 240; this.vy = -200; }
+    g.burst(this.x + this.w / 2, this.y + this.h / 2, 10, ['#ff3a5a', '#ffd040', '#3ac8ff'][Math.floor(Math.random() * 3)], 200);
+    if (this.hp <= 0) g.killEnemy(this);
+  }
+  draw(ctx, t) {
+    const f = this.flash > 0, cx = this.x + this.w / 2, by = this.y + this.h, hunt = this.state === 'hunt';
+    if (this.onGround) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; Draw.ell(ctx, cx, by, 14, 3); }
+    ctx.save(); ctx.translate(cx, by); ctx.scale(this.dir, 1);
+    const step = this.anim * (hunt ? 14 : 7), lean = hunt ? 0.12 : 0;
+    // giant shoes
+    ctx.fillStyle = f ? '#fff' : '#c8102e';
+    Draw.ell(ctx, -3 + Math.sin(step) * 4, -2, 8, 3.5); Draw.ell(ctx, 4 - Math.sin(step) * 4, -2, 8, 3.5);
+    ctx.rotate(lean);
+    // baggy striped suit
+    ctx.save(); ctx.beginPath(); ctx.moveTo(-9, -4); ctx.lineTo(9, -4); ctx.lineTo(7, -22); ctx.lineTo(-7, -22); ctx.closePath(); ctx.clip();
+    for (let i = -10; i < 10; i += 5) { ctx.fillStyle = f ? '#fff' : ((i / 5) % 2 ? '#f0e8e0' : '#7a2aa0'); ctx.fillRect(i, -24, 5, 22); }
+    ctx.restore();
+    ctx.fillStyle = f ? '#fff' : '#ffd040'; for (const yy of [-18, -12]) Draw.circ(ctx, 0, yy, 1.6); // pom-pom buttons
+    // ruffled collar
+    ctx.fillStyle = f ? '#fff' : '#ffffff'; for (let i = -3; i <= 3; i++) Draw.circ(ctx, i * 2.6, -23, 2.2);
+    // arms reaching when hunting
+    ctx.strokeStyle = f ? '#fff' : '#7a2aa0'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    if (hunt) { Draw.line(ctx, 5, -19, 15, -21 + Math.sin(t * 14) * 2); Draw.line(ctx, -4, -19, 10, -16 + Math.cos(t * 14) * 2); ctx.fillStyle = '#fff'; Draw.circ(ctx, 15, -21, 2.4); Draw.circ(ctx, 10, -16, 2.4); }
+    else { Draw.line(ctx, 6, -19, 9, -10 + Math.sin(step) * 2); Draw.line(ctx, -6, -19, -9, -10 - Math.sin(step) * 2); }
+    drawClownFace(ctx, 1, -31, 8, t, { flash: f, laugh: this.laughT > 0, angry: hunt });
+    // tiny hat
+    if (!f) { ctx.fillStyle = '#1a1a1a'; ctx.fillRect(-2, -45, 7, 5); ctx.fillRect(-4, -41, 11, 1.6); ctx.fillStyle = '#c8102e'; ctx.fillRect(-2, -42, 7, 1); }
+    ctx.restore();
+  }
+}
+
+// Swinging blade (Levels 71–80): a pendulum hanging from a carnival post. Run through when it's on the far side!
+class Pendulum {
+  constructor(o) { this.ax = o.x * TILE + 16; this.ay = (o.g - 6) * TILE; this.base = o.g * TILE; this.L = 5 * TILE - 6; this.phase = o.phase || 0; this.amp = 1.05; this.period = 2.4; }
+  angle(time) { return Math.sin(((time + this.phase) / this.period) * Math.PI * 2) * this.amp; }
+  bladePos(time) { const a = this.angle(time); return { x: this.ax + Math.sin(a) * this.L, y: this.ay + Math.cos(a) * this.L, a }; }
+  update(dt, g) {
+    const p = g.player; if (p.dead) return;
+    const b = this.bladePos(g.time), hb = { x: p.x + 3, y: p.y + 4, w: p.w - 6, h: p.h - 4 };
+    const nx = clamp(b.x, hb.x, hb.x + hb.w), ny = clamp(b.y, hb.y, hb.y + hb.h);
+    if ((nx - b.x) ** 2 + (ny - b.y) ** 2 < 15 * 15) g.playerDied();
+  }
+  draw(ctx, t, time) {
+    // striped carnival post + arm
+    ctx.fillStyle = lin(ctx, this.ax - 4, 0, this.ax + 4, 0, ['#f0e8e0', '#c8c0b8']); ctx.fillRect(this.ax - 3, this.ay - 6, 6, 6);
+    for (const sx of [-58, 58]) { ctx.fillStyle = lin(ctx, this.ax + sx - 4, 0, this.ax + sx + 4, 0, ['#ff4a5a', '#8a0a1a']); ctx.fillRect(this.ax + sx - 4, this.ay - 6, 8, this.base - this.ay + 6); ctx.fillStyle = '#ffffff'; for (let yy = this.ay; yy < this.base; yy += 24) ctx.fillRect(this.ax + sx - 4, yy, 8, 8); }
+    ctx.fillStyle = '#3a2a2a'; ctx.fillRect(this.ax - 62, this.ay - 10, 124, 6);
+    const b = this.bladePos(time);
+    ctx.strokeStyle = '#8a8a98'; ctx.lineWidth = 2; Draw.line(ctx, this.ax, this.ay, b.x, b.y);
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(-b.a);
+    ctx.fillStyle = lin(ctx, -16, 0, 16, 0, ['#ffffff', '#a8b0c8', '#4a5068']);
+    ctx.beginPath(); ctx.moveTo(-17, -4); ctx.quadraticCurveTo(0, 18, 17, -4); ctx.lineTo(0, -8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(200,16,46,0.6)'; Draw.ell(ctx, -6, 4, 3, 1.5);
     ctx.restore();
   }
 }
@@ -1094,6 +1213,18 @@ class Chaser {
         ctx.beginPath(); ctx.moveTo(fx - 40, y); ctx.quadraticCurveTo(fx - 10, y - 12, fx - 40 + h * 0.6, y - 18); ctx.quadraticCurveTo(fx - 30, y - 8, fx - 40, y - 24); ctx.fill();
       }
       clearGlow(ctx);
+    } else if (this.style === 'clowncar') {
+      // a tiny clown car, impossibly packed, honking after you
+      const cx = fx - 120, cy = fy - 60, bump = Math.abs(Math.sin(t * 14)) * 4;
+      ctx.save(); ctx.translate(cx, cy - bump);
+      ctx.fillStyle = shade(ctx, -20, -20, 120, '#ff8a9a', '#e0102a', '#4a0008'); Draw.rr(ctx, -110, -40, 220, 70, 26); ctx.fill();
+      ctx.fillStyle = '#ffd040'; ctx.fillRect(-100, -6, 200, 6);
+      ctx.fillStyle = 'rgba(180,230,255,0.5)'; Draw.rr(ctx, -40, -84, 110, 48, 14); ctx.fill();
+      for (let i = 0; i < 4; i++) { ctx.save(); ctx.translate(-20 + i * 26, -66 + Math.sin(t * 10 + i) * 3); drawClownFace(ctx, 0, 0, 11, t + i, { laugh: true, angry: true }); ctx.restore(); }
+      ctx.fillStyle = '#e8e8e8'; Draw.circ(ctx, 112, -10, 10); ctx.fillStyle = '#c8102e'; Draw.circ(ctx, 112, -10, 5); // horn
+      for (const wx of [-70, 70]) { ctx.save(); ctx.translate(wx, 34 + bump); ctx.rotate(this.rot); ctx.fillStyle = '#1a1a1a'; Draw.circ(ctx, 0, 0, 26); ctx.fillStyle = '#ffd040'; Draw.circ(ctx, 0, 0, 10); ctx.fillStyle = '#1a1a1a'; ctx.fillRect(-2, -10, 4, 20); ctx.restore(); }
+      ctx.restore();
+      if (Math.sin(t * 3) > 0.95) { ctx.fillStyle = '#fff'; ctx.font = '900 22px Nunito, sans-serif'; ctx.fillText('HONK!', fx - 10, fy - 140); }
     } else if (this.style === 'olive') {
       // a GIANT rolling olive, screaming its head off
       const R = 86, cx = fx - R, cy = fy - R;
@@ -1190,6 +1321,7 @@ class Projectile {
       ctx.translate(cx, cy); ctx.rotate(this.t * 8);
       if (this.skin === 'rock') { ctx.fillStyle = shade(ctx, -2, -2, 10, '#c8b8a0', '#7a6a58', '#2a221c'); Draw.poly(ctx, [-9, -4, -3, -9, 6, -7, 9, 2, 3, 9, -7, 6]); }
       else if (this.skin === 'gear') { ctx.fillStyle = shade(ctx, 0, 0, 9, '#fff0b0', '#c8a040', '#4a3a10'); for (let k = 0; k < 8; k++) { ctx.rotate(Math.PI / 4); ctx.fillRect(5, -2, 4, 4); } Draw.circ(ctx, 0, 0, 6); ctx.fillStyle = '#2a2008'; Draw.circ(ctx, 0, 0, 2); }
+      else if (this.skin === 'pin') { ctx.fillStyle = shade(ctx, 0, -2, 10, '#ffffff', '#e8e0d8', '#8a8078'); Draw.ell(ctx, 0, 2, 5, 7); Draw.ell(ctx, 0, -6, 2.5, 4); ctx.fillStyle = '#c8102e'; ctx.fillRect(-3, -3, 6, 2); ctx.fillRect(-3.2, 0, 6.4, 1.5); }
       else if (this.skin === 'bubble') { setGlow(ctx, '#9aff4a', 12); ctx.fillStyle = shade(ctx, -2, -2, 9, '#f0ffd0', '#8ad83a', '#1a4008'); Draw.circ(ctx, 0, 0, 7); clearGlow(ctx); ctx.fillStyle = 'rgba(255,255,255,0.7)'; Draw.circ(ctx, -2, -2, 1.8); }
       else if (this.skin === 'ember') { setGlow(ctx, '#ff6a00', 14); ctx.fillStyle = shade(ctx, 0, 0, 8, '#fff8c0', '#ffa020', '#c02800'); Draw.circ(ctx, 0, 0, 7); clearGlow(ctx); }
       else { setGlow(ctx, '#b050ff', 14); ctx.fillStyle = shade(ctx, 0, 0, 8, '#ffffff', '#b070ff', '#2a0060'); Draw.circ(ctx, 0, 0, 7); clearGlow(ctx); ctx.fillStyle = '#000'; Draw.circ(ctx, 1, 0, 2); }

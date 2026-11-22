@@ -28,6 +28,7 @@ const BOSSES = {
   30: { id: 'troll', name: 'THE TROLL', sign: 'THE TROLL lives past this gate. It swings its club, throws boulders, and its roar brings down stalactites. Touching it kills you!' },
   40: { id: 'clock', name: 'THE GRANDFATHER CLOCK', sign: 'THE GRANDFATHER CLOCK ticks beyond the gate. Dodge its gears and slash its face!' },
   50: { id: 'saint', name: 'THE HOLLOW SAINT', sign: 'THE HOLLOW SAINT burns past the gate. Jump the fire and strike when it lands!' },
+  80: { id: 'giggles', name: 'MR. GIGGLES', sign: 'MR. GIGGLES waits in the big top. Dodge his juggling clubs, jump his fire breath, and do not laugh!' },
   70: { id: 'hag', name: 'THE MIRE HAG', sign: 'THE MIRE HAG brews poison past the gate. Dodge her bubbles, jump her mud waves, and strike!' },
   60: { id: 'voidking', name: 'THE VOID KING', sign: 'THE VOID KING waits at the bottom of everything. This is it. Good luck.' },
   10: { id: 'warden', name: 'THE GRAVE WARDEN', sign: 'THE GRAVE WARDEN waits past the gate. Learn its attacks and slash it. Touching it kills you!' },
@@ -48,18 +49,20 @@ function generateLevel(n) {
   const enemyTypes = [
     ['crawler', 'skitter', 'bat'], ['frostmite', 'snowskull', 'icewisp'], ['rockcrawler', 'pebbleimp', 'cavebat'],
     ['gearspider', 'ticktock', 'chainghoul'], ['ashcrawler', 'cinderskull', 'emberbat'], ['voidcrawler', 'voidskull', 'voideye'],
-    ['bogleech', 'croakskull', 'swamplantern'],
-  ][Math.min(group, 6)];
+    ['bogleech', 'croakskull', 'swamplantern'], ['clown', 'jackclown', 'clownballoon'],
+  ][Math.min(group, 7)];
   if (olive) enemyTypes.splice(0, 3, 'screamolive', 'screamolive', 'oliveskitter', 'olivebat');
   const under = group >= 2 && group <= 5;  // Levels 21–60: underground, with a ceiling and falling droppers
   const hunted = group >= 2;               // Levels 21+: something chases you once per level
   const geysers = group === 6;             // Levels 61–70: toxic bog geysers
+  const blades = group === 7;              // Levels 71–80: swinging pendulum blades
   const dropStyle = ['stalactite', 'gear', 'chandelier', 'shard'][Math.min(group, 5) - 2];
-  const chaseStyle = ['boulder', 'gears', 'fire', 'void', 'serpent'][Math.min(group, 6) - 2];
-  const L = { shards: [], bigShards: [], enemies: [], platforms: [], pads: [], firebars: [], signs: [], decor: [], checkpoints: [], route: [], droppers: [], chases: [], geysers: [] };
+  const chaseStyle = ['boulder', 'gears', 'fire', 'void', 'serpent', 'clowncar'][Math.min(group, 7) - 2];
+  const L = { shards: [], bigShards: [], enemies: [], platforms: [], pads: [], firebars: [], signs: [], decor: [], checkpoints: [], route: [], droppers: [], chases: [], geysers: [], pendulums: [] };
   // falling hazards hang from the ceiling over open stretches (never right where you'd stand still)
   const vents = (x1, x2) => { if (!geysers) return; for (let dx = x1; dx <= x2; dx += 4) if (r() < 0.4) L.geysers.push({ x: dx, g, phase: r() * 3 }); };
-  const drops = (x1, x2) => { vents(x1, x2); if (!under && !olive) return; for (let dx = x1; dx <= x2; dx += 3) if (r() < 0.32 + n * 0.006) L.droppers.push({ x: dx, y: olive ? 6 : 4, style: olive ? 'olive' : dropStyle, big: r() < 0.3 }); };
+  const swings = (x1, x2) => { if (!blades) return; for (let dx = x1; dx <= x2; dx += 5) if (r() < 0.45) L.pendulums.push({ x: dx, g, phase: r() * 3 }); };
+  const drops = (x1, x2) => { vents(x1, x2); swings(x1, x2); if (!under && !olive) return; for (let dx = x1; dx <= x2; dx += 3) if (r() < 0.32 + n * 0.006) L.droppers.push({ x: dx, y: olive ? 6 : 4, style: olive ? 'olive' : dropStyle, big: r() < 0.3 }); };
   // remember where each route step starts (used by the automated playtest)
   L.route.push = (o) => Array.prototype.push.call(L.route, Object.assign({ sx: x, sg: g }, o));
   const sh = (x, y) => L.shards.push([x, y]);
@@ -253,6 +256,7 @@ function generateLevel(n) {
     41: 'A burning cathedral, deep underground. Chandeliers fall, and a wall of fire will chase you.',
     51: 'The Void. Nothing down here is real... except the darkness that chases you.',
     65: 'The Olive Grove... the olives here are ALIVE. They waddle, they scream like GOATS, and they run from you. Watch out for falling olives!',
+    71: 'Past the swamp, tinny music plays... a clown carnival. The rides move by themselves, and the clowns are still here. Watch the swinging blades!',
     61: 'You climb out of the Void into open air... but the moon has turned blood red, and the swamp is alive. Watch the bubbling geysers!',
   };
   rest(12, { sign: STORY[n] || `Level ${n}! Reach the portal at the end.`, noDrops: true, noOlives: true });
@@ -298,7 +302,7 @@ function generateLevel(n) {
     };
     L.route.push({ t: 'boss' });
     x = A + 30;
-    rest(12, {});
+    rest(12, { noDrops: true, noOlives: true }); // a calm walk to the portal after the boss
   }
 
   // finish
@@ -332,4 +336,4 @@ function generateLevel(n) {
   };
 }
 
-for (let n = 3; n <= 70; n++) LEVELS[n] = () => generateLevel(n);
+for (let n = 3; n <= 80; n++) LEVELS[n] = () => generateLevel(n);

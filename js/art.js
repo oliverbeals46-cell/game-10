@@ -175,9 +175,12 @@ function drawBackground(ctx, camX, camY, t) {
   // far ridge with a ruined castle
   ridge(ctx, camX * 0.08, camY * 0.05, 330, 38, 0.003, TH.far, 0.9);
   const cx = ((TH.castleX - camX * 0.08) % 2600 + 2600) % 2600 - 500;
-  ctx.globalAlpha = 0.9;
-  ctx.drawImage(Art.castle.cv, cx, 320 - camY * 0.05 - 260 + 20, 420, 260);
-  ctx.globalAlpha = 1;
+  if (TH.carnival) drawCarnivalBack(ctx, cx, 340 - camY * 0.05, t, TH);
+  else {
+    ctx.globalAlpha = 0.9;
+    ctx.drawImage(Art.castle.cv, cx, 320 - camY * 0.05 - 260 + 20, 420, 260);
+    ctx.globalAlpha = 1;
+  }
   // haze
   fogBand(ctx, 300 - camY * 0.05, 120, hexA(TH.haze, 0.18 * TH.fogMul));
 
@@ -578,4 +581,30 @@ function drawUnderground(ctx, camX, camY, t, TH) {
     const mx = ((i * 97 + t * (6 + i % 5) - camX * 0.3) % VIEW_W + VIEW_W) % VIEW_W, my = ((i * 61 - t * (4 + i % 3) * (style === 'cathedral' ? 4 : 1)) % VIEW_H + VIEW_H) % VIEW_H;
     ctx.fillRect(mx, my, 2, 2);
   }
+}
+
+// Carnival skyline (Levels 71–80): a broken ferris wheel that still turns, striped tents and string lights.
+function drawCarnivalBack(ctx, x, base, t, TH) {
+  const wx = x + 120, wy = base - 150, R = 120;
+  ctx.strokeStyle = 'rgba(60,20,50,0.95)'; ctx.lineWidth = 6;
+  Draw.line(ctx, wx, wy, wx - 70, base); Draw.line(ctx, wx, wy, wx + 70, base);
+  ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(wx, wy, R, 0, Math.PI * 2); ctx.stroke();
+  for (let i = 0; i < 10; i++) {
+    const a = t * 0.12 + i * Math.PI / 5;
+    ctx.lineWidth = 2; Draw.line(ctx, wx, wy, wx + Math.cos(a) * R, wy + Math.sin(a) * R);
+    ctx.fillStyle = 'rgba(50,16,40,0.95)'; Draw.rr(ctx, wx + Math.cos(a) * R - 9, wy + Math.sin(a) * R, 18, 14, 3); ctx.fill();
+    const on = (Math.floor(t * 3) + i) % 3 !== 0;
+    ctx.fillStyle = on ? (i % 2 ? '#ffd060' : '#ff5a7a') : '#3a1a2a'; if (on) setGlow(ctx, ctx.fillStyle, 8); Draw.circ(ctx, wx + Math.cos(a) * R, wy + Math.sin(a) * R, 3); clearGlow(ctx);
+  }
+  // striped tents
+  for (const [tx, tw, th] of [[x - 60, 140, 110], [x + 270, 180, 140]]) {
+    ctx.save(); ctx.beginPath(); ctx.moveTo(tx, base); ctx.lineTo(tx, base - th * 0.5); ctx.lineTo(tx + tw / 2, base - th); ctx.lineTo(tx + tw, base - th * 0.5); ctx.lineTo(tx + tw, base); ctx.closePath(); ctx.clip();
+    for (let i = 0; i < tw; i += 18) { ctx.fillStyle = (i / 18) % 2 ? 'rgba(90,10,30,0.95)' : 'rgba(40,10,30,0.95)'; ctx.fillRect(tx + i, base - th, 18, th); }
+    ctx.restore();
+    ctx.fillStyle = '#ffd060'; Draw.poly(ctx, [tx + tw / 2 - 2, base - th, tx + tw / 2 + 2, base - th, tx + tw / 2 + 12, base - th - 8, tx + tw / 2 - 2, base - th - 14]);
+  }
+  // string lights
+  ctx.strokeStyle = 'rgba(40,20,30,0.9)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x - 60, base - 60); ctx.quadraticCurveTo(x + 105, base - 20, x + 270, base - 70); ctx.stroke();
+  for (let i = 0; i <= 12; i++) { const k = i / 12, lx = x - 60 + k * 330, ly = base - 60 + Math.sin(k * Math.PI) * 30 - k * 10; const on = (Math.floor(t * 4) + i) % 4 !== 0; ctx.fillStyle = on ? ['#ff5a7a', '#ffd060', '#5ac8ff'][i % 3] : '#2a1a20'; Draw.circ(ctx, lx, ly, 2.4); }
 }

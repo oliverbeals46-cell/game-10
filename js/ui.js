@@ -221,7 +221,8 @@ const UI = {
       40: 'The Grandfather Clock stops. The floor gives way to a burning cathedral below.',
       50: 'The Hollow Saint burns out. Beyond it, there is only the Void.',
       60: 'The Void King is gone. Far above, a crack of light... you start to climb.',
-      70: 'The Mire Hag sinks into the bog. The blood moon is still watching...',
+      70: 'The Mire Hag sinks into the bog. Somewhere ahead, carnival music starts to play...',
+      80: 'Mr. Giggles stops laughing. The tents fold into darkness... but the blood moon is still watching.',
     };
     document.querySelector('#screen-victory .sub').textContent = STORY_END[Game.levelNum] || 'You made it to the portal!';
     this.show('victory');

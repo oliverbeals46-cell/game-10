@@ -507,3 +507,49 @@ class MireHag extends GraveWarden {
     ctx.restore();
   }
 }
+
+// BOSS OF LEVEL 80 — Mr. Giggles: a huge creepy clown who juggles clubs and breathes fire.
+class MrGiggles extends GraveWarden {
+  constructor(x, y, arena) {
+    super(x, y, arena);
+    this.name = 'MR. GIGGLES'; this.maxHp = this.hp = 80; this.w = 96; this.h = 128;
+    this.shotSkin = 'pin'; this.waveSkin = 'fire'; this.debrisSkin = 'chandelier';
+  }
+  hurt(dmg, g) {
+    const p1 = this.phase === 1, r = super.hurt(dmg, g);
+    if (r) Sfx.play('honk');
+    if (p1 && this.phase === 2) { g.toasts = g.toasts.filter((m) => !m.text.includes('Warden')); g.toast('Mr. Giggles is NOT laughing anymore!', 2.4); Sfx.play('giggle'); }
+    return r;
+  }
+  draw(ctx, t) {
+    const f = this.flash > 0, c = (col) => (f ? '#ffffff' : col), p2 = this.phase === 2;
+    const bc = this.x + this.w / 2, sq = this.squash, bob = Math.sin(this.anim * 3) * 2;
+    const shakeX = (this.state.startsWith('tele') || this.state === 'roar' || this.dying) ? Math.sin(t * 60) * 2.5 : 0;
+    ctx.save(); ctx.translate(bc + shakeX, this.y + this.h); ctx.scale(this.facing * (1 + sq * 0.12), 1 - sq * 0.1);
+    if (this.dying) ctx.globalAlpha = Math.max(0.2, this.timer / 2.6);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; Draw.ell(ctx, 0, 0, 56, 9);
+    const walk = this.state === 'charge' ? Math.sin(this.anim * 20) * 8 : 0;
+    // huge shoes
+    ctx.fillStyle = c('#c8102e'); Draw.ell(ctx, -18 + walk, -6, 26, 9); Draw.ell(ctx, 20 - walk, -6, 26, 9);
+    // baggy polka-dot suit
+    ctx.save(); ctx.beginPath(); ctx.moveTo(-38, -12); ctx.quadraticCurveTo(-48, -60 + bob, -26, -88 + bob); ctx.lineTo(26, -88 + bob); ctx.quadraticCurveTo(48, -60 + bob, 38, -12); ctx.closePath();
+    ctx.fillStyle = f ? '#fff' : lin(ctx, -40, 0, 40, 0, ['#9a5aff', '#6a2ad0', '#2a0a6a']); ctx.fill(); ctx.clip();
+    if (!f) { ctx.fillStyle = '#ffd040'; for (let i = 0; i < 14; i++) Draw.circ(ctx, -36 + (i * 23) % 72, -20 - ((i * 37) % 64) + bob, 4); }
+    ctx.restore();
+    // ruffled collar
+    ctx.fillStyle = c('#ffffff'); for (let i = -4; i <= 4; i++) Draw.circ(ctx, i * 7, -88 + bob, 6);
+    // juggling arms + clubs
+    const up = (this.state === 'tele_spit' || this.state === 'spit') ? Math.sin(t * 16) * 12 : 0;
+    ctx.strokeStyle = c('#6a2ad0'); ctx.lineWidth = 9; ctx.lineCap = 'round';
+    Draw.line(ctx, -26, -76 + bob, -46, -96 + up); Draw.line(ctx, 26, -76 + bob, 46, -96 - up);
+    ctx.fillStyle = c('#ffffff'); Draw.circ(ctx, -46, -98 + up, 6); Draw.circ(ctx, 46, -98 - up, 6);
+    if (!f) for (let i = 0; i < 3; i++) { const a = t * 6 + i * 2.1; ctx.save(); ctx.translate(Math.cos(a) * 40, -130 + Math.sin(a) * 14); ctx.rotate(a * 2); ctx.fillStyle = '#fff'; Draw.ell(ctx, 0, 2, 4, 6); ctx.fillStyle = '#c8102e'; ctx.fillRect(-3, -1, 6, 2); ctx.restore(); }
+    // head
+    ctx.save(); ctx.translate(2, -112 + bob); drawClownFace(ctx, 0, 0, 24, t, { flash: f, laugh: !p2 || this.state === 'roar' || this.state === 'spit', angry: p2 }); ctx.restore();
+    // fire breath glow while spitting
+    if ((this.state === 'tele_spit' || this.state === 'spit') && !f) { setGlow(ctx, '#ff6a00', 20); ctx.fillStyle = 'rgba(255,140,40,0.8)'; Draw.ell(ctx, 30, -98 + bob, 10, 6); clearGlow(ctx); }
+    // tiny top hat
+    ctx.fillStyle = c('#1a1a1a'); ctx.fillRect(-10, -160 + bob, 22, 18); ctx.fillRect(-16, -143 + bob, 34, 4); ctx.fillStyle = c('#c8102e'); ctx.fillRect(-10, -147 + bob, 22, 3);
+    ctx.restore();
+  }
+}

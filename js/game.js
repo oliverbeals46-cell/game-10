@@ -68,6 +68,7 @@ const Game = {
     const D = difficultyForLevel(def.number);
     this.difficulty = D;
     this.enemies = def.enemies.map((e) => {
+      if (e.type === 'clown') return new CreepyClown(e.x * TILE + 4, (e.y + 1) * TILE);
       if (e.type === 'screamolive') return new ScreamingOlive(e.x * TILE + 4, (e.y + 1) * TILE);
       if (ENEMY_SKINS[e.type]) return makeSkinnedEnemy(e.type, e.x, e.y);
       if (e.type === 'bat') return new Bat(e.x * TILE, e.y * TILE);
@@ -83,6 +84,7 @@ const Game = {
     this.droppers = (def.droppers || []).map((d) => new Dropper(d));
     this.chasers = (def.chases || []).map((c) => new Chaser(c));
     this.geysers = (def.geysers || []).map((q) => new Geyser(q));
+    this.pendulums = (def.pendulums || []).map((q) => new Pendulum(q));
     this.firebars = def.firebars.map((f) => new FireBar(Object.assign({}, f, { speed: (f.speed || 1.6) * D.speed })));
     this.checkpoints = def.checkpoints.map((c, i) => ({ x: c.x * TILE + 16, y: (c.y + 1) * TILE, lit: false, n: i + 1 }));
     this.finish = { x: def.finish.x * TILE + 16, y: (def.finish.y + 1) * TILE };
@@ -194,12 +196,13 @@ const Game = {
     for (const d of this.droppers) if (Math.abs(d.x - p.x) < 1100) d.update(dt, this);
     for (const c of this.chasers) c.update(dt, this);
     for (const q of this.geysers) if (Math.abs(q.cx - p.x) < 1100) q.update(dt, this);
+    for (const q of this.pendulums) if (Math.abs(q.ax - p.x) < 1100) q.update(dt, this);
     for (const f of this.firebars) f.update(dt, this);
 
     const A = this.def.arena;
     if (A && !this.bossStarted && !this.bossDefeated && p.x > A.triggerX) {
       this.bossStarted = true;
-      const Cls = { hag: MireHag, widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing }[A.boss] || GraveWarden;
+      const Cls = { giggles: MrGiggles, hag: MireHag, widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing }[A.boss] || GraveWarden;
       this.startBoss(new Cls(A.bossSpawn.x, A.bossSpawn.y, A));
       this.bossTitleT = 3.4;
     }
@@ -362,7 +365,7 @@ const Game = {
     e.dead = true;
     Sfx.play('kill');
     // the monster shatters into pieces, with a puff of ash and a shock ring
-    const col = e.skin ? (e.skin.shell || e.skin.body || e.skin.skull)[1] : (ENEMY_COLORS[e.constructor.name] || (e instanceof ScreamingOlive ? '#6a8a2a' : '#a99cc8'));
+    const col = e.skin ? (e.skin.shell || e.skin.body || e.skin.skull)[1] : (ENEMY_COLORS[e.constructor.name] || (e instanceof ScreamingOlive ? '#6a8a2a' : e instanceof CreepyClown ? '#9a5aff' : '#a99cc8'));
     this.shatter(e.x + e.w / 2, e.y + e.h / 2, col, 9, e.y + e.h);
     this.smoke(e.x + e.w / 2, e.y + e.h / 2, 7, 'rgba(60,50,80,0.5)');
     this.ring(e.x + e.w / 2, e.y + e.h / 2, '#ffffff', 34);
@@ -536,6 +539,7 @@ const Game = {
     for (const a of this.afterimages) drawPlayer(ctx, Object.assign({}, p, a, { ghost: a.life * 1.2, attackT: 0, invuln: 0, flipT: 0 }), t);
     for (const d of this.droppers) if (onScreen(d.x)) d.draw(ctx, t);
     for (const q of this.geysers) if (onScreen(q.cx)) q.draw(ctx, t, this.time);
+    for (const q of this.pendulums) if (onScreen(q.ax)) q.draw(ctx, t, this.time);
     drawPlayer(ctx, p, t);
     for (const c of this.chasers) c.draw(ctx, t);
     for (const f of this.firebars) if (onScreen(f.cx)) f.draw(ctx, t);
