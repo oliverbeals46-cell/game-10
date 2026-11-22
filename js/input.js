@@ -10,6 +10,7 @@ const Input = (() => {
     dash: ['ShiftLeft', 'ShiftRight', 'KeyK', 'KeyC'],
     spell: ['KeyL', 'KeyV'],
     spin: ['KeyB', 'KeyN'],
+    slam: ['KeyG', 'KeyH'],
   };
   const held = new Set();
   const pressed = new Set();

@@ -43,9 +43,39 @@ const Sfx = (() => {
     src.start(t); src.stop(t + dur + 0.05);
   }
 
+  // A goat scream: a buzzy voice with fast wobble (vibrato) and shaky volume (tremolo), filtered to sound
+  // like a throat, that cracks and drops at the end. "MEEEEH-eh-eh!"
+  let lastGoat = 0;
+  function goat() {
+    if (!ctx || muted) return;
+    const now = ctx.currentTime;
+    if (now - lastGoat < 0.25) return; // don't stack a dozen goats at once
+    lastGoat = now;
+    const dur = 0.75 + Math.random() * 0.25, base = 430 + Math.random() * 120;
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(base, now);
+    o.frequency.linearRampToValueAtTime(base * 1.35, now + 0.12);        // rises into the scream
+    o.frequency.setValueAtTime(base * 1.3, now + dur * 0.7);
+    o.frequency.exponentialRampToValueAtTime(base * 0.75, now + dur);    // cracks down at the end
+    const vib = ctx.createOscillator(); vib.frequency.value = 17; const vibAmt = ctx.createGain(); vibAmt.gain.value = base * 0.09;
+    vib.connect(vibAmt); vibAmt.connect(o.frequency);                    // the wobbly "eh-eh-eh"
+    const trem = ctx.createOscillator(); trem.frequency.value = 11; const tremAmt = ctx.createGain(); tremAmt.gain.value = 0.35;
+    const amp = ctx.createGain(); amp.gain.value = 0.6;
+    trem.connect(tremAmt); tremAmt.connect(amp.gain);
+    const f1 = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = 1100; f1.Q.value = 1.6;   // throat
+    const f2 = ctx.createBiquadFilter(); f2.type = 'peaking'; f2.frequency.value = 2600; f2.gain.value = 8; // nasal buzz
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, now); env.gain.exponentialRampToValueAtTime(0.5, now + 0.04);
+    env.gain.setValueAtTime(0.5, now + dur * 0.75); env.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    o.connect(f1); f1.connect(f2); f2.connect(amp); amp.connect(env); env.connect(master);
+    for (const n of [o, vib, trem]) { n.start(now); n.stop(now + dur + 0.05); }
+  }
+
   const lib = {
     jump() { tone(220, 0.14, 'triangle', 0.18, 380); noise(0.05, 0.08, 2500); },
     djump() { tone(330, 0.16, 'triangle', 0.16, 500); noise(0.12, 0.1, 4000); },
+    scream() { goat(); },
+    geyser() { noise(0.6, 0.25, 500); tone(120, 0.4, 'sawtooth', 0.08, 200); },
     rumble() { noise(0.4, 0.18, 180); },
     crash() { noise(0.35, 0.35, 260); tone(70, 0.3, 'square', 0.2, -30); },
     spin() { noise(0.25, 0.3, 2800); tone(500, 0.25, 'sine', 0.08, 600); },

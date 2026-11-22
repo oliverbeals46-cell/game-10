@@ -22,7 +22,7 @@ class Player {
     this.dashT = 0; this.dashCd = 0; this.canDash = true; this.dashDir = 1;
     this.attackT = 0; this.attackCd = 0; this.attackDir = 'side'; this.hitSet = new Set(); this.pogoDone = false;
     this.invuln = 0; this.ctrlLock = 0; this.wallSlide = 0; this.boltCd = 0;
-    this.dropT = 0; this.hazardT = 0; this.anim = 0; this.landT = 0; this.spinT = 0; this.spinCd = 0;
+    this.dropT = 0; this.hazardT = 0; this.anim = 0; this.landT = 0; this.spinT = 0; this.spinCd = 0; this.slamCd = 0;
     this.platform = null; this.airJumps = 1 + this.st.airJumps; this.airDashLeft = 1 + this.st.airDashes; this.shield = this.st.shield;
     this.lastSafe = { x, y };
     this.dead = false;
@@ -158,6 +158,17 @@ class Player {
     if (I.pressed('spin')) {
       if (!Save.data.unlocks.spin) g.toast('Spin Slash unlocks after Level 40!', 1.8);
       else if (this.spinCd <= 0 && this.dashT <= 0) { this.spinT = 0.32; this.spinCd = 1.4 * this.st.spinCd; this.spinHits = new Set(); Sfx.play('spin'); }
+    }
+
+    // Ground Slam (unlocks after Level 60): shockwaves roll both ways along the ground
+    this.slamCd -= dt;
+    if (I.pressed('slam')) {
+      if (!Save.data.unlocks.slam) g.toast('Ground Slam unlocks after Level 60!', 1.8);
+      else if (this.slamCd <= 0 && this.onGround) {
+        this.slamCd = 1.5; this.landT = 0.12;
+        for (const v of [-1, 1]) { const pw = new Projectile('pwave', this.x + this.w / 2 - 13 + v * 14, this.y + this.h - 26, v * 520, 0); pw.dmg = 4; g.projectiles.push(pw); }
+        g.shake = Math.max(g.shake, 8); g.ring(this.x + this.w / 2, this.y + this.h, '#ffffff', 50); g.dust(this.x + this.w / 2, this.y + this.h, 10); Sfx.play('slam');
+      }
     }
 
     // Wisp Bolt (unlocks after Level 20) — runs on a cooldown, no meter
@@ -528,6 +539,7 @@ class Bat {
     ctx.fillStyle = f ? '#fff' : shade(ctx, 0, 0, 8, bd[0], bd[1], bd[2]); Draw.ell(ctx, 0, 0, 7, 8);
     Draw.poly(ctx, [-5, -6, -3, -12, -1, -7]); Draw.poly(ctx, [5, -6, 3, -12, 1, -7]);
     if (KB.extra && !f) KB.extra(ctx, this, t);
+    if (KB.replaceFace && !f) { ctx.restore(); return; }
     ctx.fillStyle = c(KB.eye || '#ff3355'); if (!f) setGlow(ctx, KB.glow || '#ff0033', 8);
     Draw.circ(ctx, -1, -2, 1.5); Draw.circ(ctx, 3.5, -2, 1.5);
     clearGlow(ctx);
@@ -595,6 +607,7 @@ class Skitter {
     ctx.fillStyle = f ? '#fff' : shade(ctx, 0, -11, 9, sk[0], sk[1], sk[2]); Draw.circ(ctx, 0, -11, 8);
     ctx.fillStyle = f ? '#fff' : shade(ctx, 1, -5, 5, sk[0], sk[1], sk[2]); Draw.rr(ctx, -4, -7, 9, 5, 2); ctx.fill();
     if (KS.extra && !f) KS.extra(ctx, this, t);
+    if (KS.replaceFace && !f) { ctx.restore(); return; }
     ctx.fillStyle = c('#0a0608'); Draw.ell(ctx, -1.5, -11.5, 2.2, 2.6); Draw.ell(ctx, 4, -11.5, 2.2, 2.6);
     ctx.fillStyle = c(KS.eye || '#ff3a3a'); if (!f) setGlow(ctx, KS.glow || '#ff0000', 8);
     Draw.circ(ctx, -1.2, -11.2, 0.8); Draw.circ(ctx, 4.3, -11.2, 0.8);
@@ -609,7 +622,28 @@ class Skitter {
 const spikes = (col) => (ctx, e) => { ctx.fillStyle = col; for (let i = -9; i <= 6; i += 5) Draw.poly(ctx, [i - 2.5, -16 + Math.abs(i) * 0.3, i + 2.5, -16 + Math.abs(i) * 0.3, i, -24 + Math.abs(i) * 0.3]); };
 const cog = (col) => (ctx, e, t) => { ctx.save(); ctx.translate(-2, -12); ctx.rotate(t * 3); ctx.fillStyle = col; for (let k = 0; k < 8; k++) { ctx.rotate(Math.PI / 4); ctx.fillRect(4, -1.5, 3, 3); } Draw.circ(ctx, 0, 0, 4.5); ctx.fillStyle = 'rgba(0,0,0,0.5)'; Draw.circ(ctx, 0, 0, 1.6); ctx.restore(); };
 const flames = (col) => (ctx, e, t) => { ctx.fillStyle = col; setGlow(ctx, col, 10); for (let i = -6; i <= 6; i += 6) { const h = 6 + Math.sin(t * 20 + i) * 2.5; ctx.beginPath(); ctx.moveTo(i - 3, -17); ctx.quadraticCurveTo(i, -17 - h * 2, i + 3, -17); ctx.fill(); } clearGlow(ctx); };
+// A green olive with a red pimento: used by every olive creature.
+function drawOlive(ctx, x, y, rx, ry, t, opts = {}) {
+  const f = opts.flash;
+  ctx.fillStyle = f ? '#fff' : shade(ctx, x, y, Math.max(rx, ry), '#c8e070', '#6a8a2a', '#1a2a06');
+  Draw.ell(ctx, x, y, rx, ry);
+  if (!f) { ctx.fillStyle = 'rgba(255,255,230,0.45)'; Draw.ell(ctx, x - rx * 0.35, y - ry * 0.45, rx * 0.3, ry * 0.18, -0.4); }
+  // pimento: a red mouth that opens wide when screaming
+  const open = opts.scream ? 0.75 + Math.sin(t * 40) * 0.15 : 0.35;
+  ctx.fillStyle = f ? '#fff' : '#c8102e'; Draw.ell(ctx, x + rx * 0.45, y + ry * 0.15, rx * 0.32, ry * open * 0.6);
+  if (!f) { ctx.fillStyle = '#3a0006'; Draw.ell(ctx, x + rx * 0.45, y + ry * 0.18, rx * 0.18, ry * open * 0.35); }
+  // wild little eyes
+  ctx.fillStyle = f ? '#fff' : '#ffffff'; Draw.circ(ctx, x + rx * 0.05, y - ry * 0.35, rx * 0.2); Draw.circ(ctx, x + rx * 0.55, y - ry * 0.4, rx * 0.2);
+  ctx.fillStyle = '#000'; const pd = opts.scream ? rx * 0.07 : rx * 0.1;
+  Draw.circ(ctx, x + rx * 0.08, y - ry * 0.33, pd + 0.6); Draw.circ(ctx, x + rx * 0.58, y - ry * 0.38, pd + 0.6);
+}
+
 const ENEMY_SKINS = {
+  // Levels 65–69: olive grove
+  oliveskitter: { base: 'skitter', name: 'Hopping Olive', replaceFace: true, skull: ['#c8e070', '#6a8a2a', '#1a2a06'], eye: '#ffffff', glow: '#c8e070', hop: 620,
+    extra: (ctx, e, t) => drawOlive(ctx, 0, -10, 10, 10, t, { scream: !e.onGround }) },
+  olivebat: { base: 'bat', name: 'Flying Olive', replaceFace: true, wing: ['#9ab87a', '#5a7a3a', '#1a2a0a'], body: ['#c8e070', '#6a8a2a', '#1a2a06'], eye: '#ffffff', glow: '#c8e070',
+    extra: (ctx, e, t) => drawOlive(ctx, 0, 0, 8, 9, t, { scream: e.state === 'chase' }) },
   // Levels 21–30: cave
   rockcrawler: { base: 'crawler', name: 'Rock Crawler', shell: ['#b0a08a', '#5e5246', '#1a1410'], face: ['#d8c8b0', '#8a7a68', '#3a3028'], eye: '#ffb040', glow: '#ff8a00', speed: 62, extra: spikes('#cfc0a8') },
   cavebat: { base: 'bat', name: 'Cave Bat', wing: ['#6a5440', '#3a2c20', '#140e08'], body: ['#9a8068', '#4a3828', '#1a120a'], eye: '#ffd040', glow: '#ffa000' },
@@ -625,6 +659,10 @@ const ENEMY_SKINS = {
   // Levels 51–60: the void
   voidcrawler: { base: 'crawler', name: 'Void Crawler', shell: ['#b08aff', '#4a1a9a', '#0a0220'], face: ['#e0d0ff', '#8a6ad8', '#2a1060'], eye: '#ffffff', glow: '#d080ff', speed: 95, extra: spikes('#e0c8ff') },
   voideye: { base: 'bat', name: 'Void Eye', wing: ['#7a3ad8', '#2a0a6a', '#08021a'], body: ['#f0e0ff', '#a080e0', '#2a1060'], eye: '#1a0030', glow: '#d080ff' },
+  // Levels 61–70: blood moon swamp
+  bogleech: { base: 'crawler', name: 'Bog Leech', shell: ['#7a8a3a', '#3a4a1a', '#0e1404'], face: ['#a8b070', '#5a6a2a', '#1a2208'], eye: '#ff3a2a', glow: '#ff0000', speed: 100 },
+  swamplantern: { base: 'bat', name: 'Swamp Lantern', wing: ['#3a4a2a', '#1a2210', '#060a02'], body: ['#d8ff8a', '#6aa02a', '#1a3008'], eye: '#ff5a2a', glow: '#9aff4a' },
+  croakskull: { base: 'skitter', name: 'Croaking Skull', skull: ['#c8e090', '#6a8a3a', '#1a2a08'], eye: '#ff2a2a', glow: '#ff0000', hop: 700 },
   voidskull: { base: 'skitter', name: 'Void Skull', skull: ['#f0e0ff', '#9a7ad8', '#20084a'], eye: '#d080ff', glow: '#a040ff', hop: 660 },
 };
 function makeSkinnedEnemy(type, x, y) {
@@ -635,6 +673,61 @@ function makeSkinnedEnemy(type, x, y) {
   else { e = new Crawler(x * TILE + 1, (y + 1) * TILE); if (k.speed) e.baseSpeed = k.speed; }
   e.skin = k; e.skinName = type;
   return e;
+}
+
+// Screaming Olive (Levels 65–69): waddles around... and when you get close, it SCREAMS LIKE A GOAT and runs away.
+// If it reaches a ledge it can't escape from, it cowers and shakes. Touching it still kills you!
+class ScreamingOlive {
+  constructor(x, y) {
+    this.w = 22; this.h = 26; this.x = x; this.y = y - this.h;
+    this.vx = 0; this.vy = 0; this.hp = 2; this.flash = 0; this.dead = false;
+    this.dir = Math.random() < 0.5 ? -1 : 1; this.anim = Math.random() * 10; this.shards = 4; this.contact = 1;
+    this.state = 'waddle'; this.screamT = 0; this.turnT = 1 + Math.random() * 2;
+  }
+  update(dt, g) {
+    this.anim += dt; this.flash -= dt; this.screamT -= dt; this.turnT -= dt;
+    const p = g.player, dx = (p.x + p.w / 2) - (this.x + this.w / 2), near = !p.dead && Math.abs(dx) < 170 && Math.abs(p.y - this.y) < 110;
+    if (near && this.state === 'waddle') { this.state = 'flee'; this.screamT = 0.9; Sfx.play('scream'); g.popups.push({ x: this.x + this.w / 2, y: this.y - 14, t: 0.9, text: 'MEEEEH!' }); }
+    if (!near && this.state !== 'waddle' && Math.abs(dx) > 260) this.state = 'waddle';
+    if (this.state === 'flee' || this.state === 'cower') this.dir = dx > 0 ? -1 : 1;   // always away from you
+    let speed = this.state === 'flee' ? 170 : 34;
+    if (this.state === 'waddle' && this.turnT <= 0) { this.dir *= -1; this.turnT = 1.5 + Math.random() * 2; }
+    if (this.onGround) {
+      const aheadX = this.dir > 0 ? this.x + this.w + 3 : this.x - 3, tx = Math.floor(aheadX / TILE), fy = Math.floor((this.y + this.h + 2) / TILE), my = Math.floor((this.y + this.h / 2) / TILE);
+      const blocked = !g.world.standable(tx, fy) || g.world.solid(tx, my) || g.world.isHazard(tx, fy - 1) || g.world.isHazard(tx, fy);
+      if (blocked) { if (this.state === 'waddle') this.dir *= -1; else { this.state = 'cower'; speed = 0; } }
+      else if (this.state === 'cower') this.state = 'flee';
+    }
+    this.vx = approach(this.vx, this.dir * speed, 900 * dt);
+    if (this.state === 'cower') this.vx = 0;
+    this.vy = Math.min(this.vy + PHYS.GRAV * dt, PHYS.MAXFALL);
+    moveEntity(g.world, this, dt);
+    if (this.state === 'cower' && this.screamT <= 0) { this.screamT = 1.2; Sfx.play('scream'); g.popups.push({ x: this.x + this.w / 2, y: this.y - 14, t: 0.8, text: 'BAAAAH!' }); }
+  }
+  hurt(dmg, dir, g) {
+    this.hp -= dmg; this.flash = 0.12; Sfx.play('scream');
+    if (dir) { this.vx = dir * 260; this.vy = -220; }
+    g.burst(this.x + this.w / 2, this.y + this.h / 2, 8, '#a8c83a', 180);
+    if (this.hp <= 0) g.killEnemy(this);
+  }
+  draw(ctx, t) {
+    const f = this.flash > 0, cx = this.x + this.w / 2, by = this.y + this.h;
+    const fleeing = this.state !== 'waddle', cower = this.state === 'cower';
+    if (this.onGround) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; Draw.ell(ctx, cx, by, 11, 3); }
+    ctx.save(); ctx.translate(cx + (cower ? Math.sin(t * 60) * 1.5 : 0), by);
+    ctx.scale(-this.dir, 1); // face away = look back over its shoulder while it runs
+    const step = this.anim * (fleeing ? 26 : 9);
+    const waddle = Math.sin(step) * (fleeing ? 0.12 : 0.22);
+    ctx.rotate(waddle);
+    // little stubby legs
+    ctx.strokeStyle = f ? '#fff' : '#2a3a10'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+    Draw.line(ctx, -4, -5, -5 + Math.sin(step) * 3, 0); Draw.line(ctx, 4, -5, 5 - Math.sin(step) * 3, 0);
+    // arms flailing when scared
+    if (fleeing) { ctx.lineWidth = 2; Draw.line(ctx, -9, -16, -15, -22 + Math.sin(t * 30) * 4); Draw.line(ctx, 9, -16, 15, -22 + Math.cos(t * 30) * 4); }
+    drawOlive(ctx, 0, -15, 11, 13, t, { flash: f, scream: this.screamT > 0 || cower });
+    if (fleeing && !f) { ctx.fillStyle = 'rgba(160,220,255,0.8)'; Draw.ell(ctx, -10, -24, 1.6, 2.6); Draw.ell(ctx, 11, -26, 1.4, 2.2); } // sweat drops
+    ctx.restore();
+  }
 }
 
 /* ---------- Levels 11–20 mini enemies (frozen) ---------- */
@@ -852,7 +945,7 @@ class Dropper {
       const bx = this.x + this.w / 2, byy = this.y + this.h;
       if (g.world.solidAt(bx, byy) || g.world.isHazard(Math.floor(bx / TILE), Math.floor(byy / TILE)) || this.y > g.world.h * TILE) {
         this.state = 'gone'; this.timer = 2.8;
-        const col = { stalactite: '#9a8a78', gear: '#c8a040', chandelier: '#ffb040', shard: '#c890ff' }[this.style] || '#9a8a78';
+        const col = { stalactite: '#9a8a78', gear: '#c8a040', chandelier: '#ffb040', shard: '#c890ff', olive: '#6a8a2a' }[this.style] || '#9a8a78';
         g.shatter(bx, byy - 6, col, 8, byy); g.smoke(bx, byy - 4, 4); Sfx.play('crash'); g.shake = Math.max(g.shake, 4);
       }
     } else if (this.state === 'gone' && this.timer <= 0) this.reset();
@@ -879,6 +972,13 @@ class Dropper {
       setGlow(ctx, '#ffa000', 12); ctx.fillStyle = '#ffd060';
       for (const dx of [-7, 0, 7]) { ctx.beginPath(); ctx.moveTo(cx + dx - 2, y + h - 14); ctx.quadraticCurveTo(cx + dx, y + h - 24 - Math.sin(t * 12 + dx) * 2, cx + dx + 2, y + h - 14); ctx.fill(); }
       clearGlow(ctx);
+    } else if (this.style === 'olive') {
+      if (this.state !== 'fall') { // olive branch above
+        ctx.strokeStyle = '#2a2010'; ctx.lineWidth = 4; Draw.line(ctx, cx - 40, this.y0 - 30, cx + 40, this.y0 - 22);
+        ctx.fillStyle = '#7a9a5a'; for (const lx of [-30, -14, 14, 30]) Draw.ell(ctx, cx + lx, this.y0 - 22, 7, 2.5, 0.4);
+        ctx.strokeStyle = '#3a2a10'; ctx.lineWidth = 1.5; Draw.line(ctx, cx, this.y0 - 26, cx, y + 4);
+      }
+      drawOlive(ctx, cx, y + h / 2 + 4, w / 2 + 2, h / 2, t, { scream: this.state !== 'hang' });
     } else if (this.style === 'shard') {
       setGlow(ctx, '#b050ff', 14);
       ctx.fillStyle = lin(ctx, x, 0, x + w, 0, ['#f8e8ff', '#b070ff', '#3a0a8a']);
@@ -893,6 +993,48 @@ class Dropper {
       ctx.fillStyle = 'rgba(160,220,255,0.8)'; Draw.circ(ctx, cx, y + h + 2 + ((t * 2 + this.tx) % 1) * 6, 1.2); // drip
     }
     if (this.state === 'shake') { ctx.fillStyle = 'rgba(255,80,60,0.18)'; ctx.fillRect(cx - 18, this.y0, 36, 260); }
+  }
+}
+
+// Bog geyser (Levels 61–70): bubbles as a warning, then blasts a column of toxic sludge. Time your run!
+class Geyser {
+  constructor(o) { this.cx = o.x * TILE + 16; this.base = o.g * TILE; this.phase = o.phase || 0; this.period = 2.8; this.h = 150; }
+  stateAt(time) {
+    const k = ((time + this.phase) % this.period) / this.period; // 0..1
+    if (k < 0.5) return { s: 'idle', k };
+    if (k < 0.72) return { s: 'warn', k: (k - 0.5) / 0.22 };
+    return { s: 'erupt', k: (k - 0.72) / 0.28 };
+  }
+  update(dt, g) {
+    const st = this.stateAt(g.time);
+    if (st.s === 'erupt') {
+      const p = g.player, top = this.base - this.h * Math.min(1, st.k * 4);
+      if (!p.dead && rectsOverlap({ x: p.x + 3, y: p.y + 4, w: p.w - 6, h: p.h - 4 }, { x: this.cx - 11, y: top, w: 22, h: this.base - top })) g.playerDied();
+      if (Math.random() < 0.6) g.particles.push(makeParticle(this.cx + rand(-8, 8), top, rand(-60, 60), rand(-140, -40), 0.6, '#9aff4a', rand(2, 4), 600));
+      if (!this.wasErupt) Sfx.play('geyser');
+    }
+    this.wasErupt = st.s === 'erupt';
+  }
+  draw(ctx, t, time) {
+    const st = this.stateAt(time), x = this.cx, b = this.base;
+    // vent mouth
+    ctx.fillStyle = lin(ctx, x - 14, 0, x + 14, 0, ['#5a4a30', '#2a2010', '#0a0804']); Draw.rr(ctx, x - 14, b - 6, 28, 6, 3); ctx.fill();
+    ctx.fillStyle = st.s === 'idle' ? '#2a3a10' : '#9aff4a'; Draw.ell(ctx, x, b - 5, 9, 2.5);
+    if (st.s === 'warn') {
+      ctx.fillStyle = `rgba(154,255,74,${0.4 + st.k * 0.5})`; setGlow(ctx, '#9aff4a', 12);
+      for (let i = 0; i < 4; i++) Draw.circ(ctx, x - 8 + i * 5, b - 8 - ((t * 3 + i * 0.3) % 1) * 18 * st.k, 1.8 + st.k * 1.5);
+      clearGlow(ctx);
+    } else if (st.s === 'erupt') {
+      const top = b - this.h * Math.min(1, st.k * 4);
+      const gg = ctx.createLinearGradient(0, top, 0, b);
+      gg.addColorStop(0, 'rgba(220,255,160,0.9)'); gg.addColorStop(0.3, '#8ad83a'); gg.addColorStop(1, '#2a6a10');
+      setGlow(ctx, '#9aff4a', 18); ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.moveTo(x - 8, b);
+      for (let yy = b; yy > top; yy -= 10) ctx.lineTo(x - 9 + Math.sin(t * 20 + yy * 0.1) * 3, yy);
+      ctx.quadraticCurveTo(x, top - 12, x + 9, top);
+      for (let yy = top; yy < b; yy += 10) ctx.lineTo(x + 9 + Math.sin(t * 22 + yy * 0.1) * 3, yy);
+      ctx.closePath(); ctx.fill(); clearGlow(ctx);
+    }
   }
 }
 
@@ -952,6 +1094,39 @@ class Chaser {
         ctx.beginPath(); ctx.moveTo(fx - 40, y); ctx.quadraticCurveTo(fx - 10, y - 12, fx - 40 + h * 0.6, y - 18); ctx.quadraticCurveTo(fx - 30, y - 8, fx - 40, y - 24); ctx.fill();
       }
       clearGlow(ctx);
+    } else if (this.style === 'olive') {
+      // a GIANT rolling olive, screaming its head off
+      const R = 86, cx = fx - R, cy = fy - R;
+      ctx.fillStyle = 'rgba(0,0,0,0.45)'; Draw.ell(ctx, cx, fy, R * 0.9, 10);
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(this.rot * 0.15);
+      drawOlive(ctx, 0, 0, R, R * 0.92, t, { scream: true });
+      ctx.restore();
+    } else if (this.style === 'serpent') {
+      // a giant bog serpent bursting out of the swamp
+      const hx = fx - 60, hy = fy - 110 + Math.sin(t * 6) * 8;
+      ctx.fillStyle = lin(ctx, 0, fy - 200, 0, fy, ['#4a6a2a', '#2a3a14', '#0a1004']);
+      ctx.beginPath(); ctx.moveTo(fx - 2000, fy); ctx.lineTo(fx - 2000, fy - 160);
+      for (let i = 0; i <= 10; i++) { const sx = fx - 2000 + i * 194; ctx.lineTo(sx, fy - 150 + Math.sin(t * 3 + i) * 20); }
+      ctx.lineTo(hx - 30, hy + 10); ctx.lineTo(hx - 20, fy); ctx.closePath(); ctx.fill();
+      ctx.save(); ctx.translate(hx, hy);
+      ctx.fillStyle = shade(ctx, -10, -20, 70, '#8aa04a', '#3a5a1a', '#0e1a04');
+      ctx.beginPath(); ctx.moveTo(-60, -50); ctx.quadraticCurveTo(10, -80, 70, -30); ctx.lineTo(80, -6); ctx.lineTo(-50, 20); ctx.closePath(); ctx.fill();
+      const jaw = 22 + Math.sin(t * 8) * 10;
+      ctx.beginPath(); ctx.moveTo(-50, 24); ctx.lineTo(76, 0 + jaw); ctx.lineTo(60, 34 + jaw); ctx.quadraticCurveTo(0, 60, -40, 50); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#1a0606'; Draw.poly(ctx, [-40, 20, 78, -4, 74, 4 + jaw, -36, 30]);
+      // teeth sit exactly on the edges of the mouth: top row hangs from the upper jaw, bottom row grows from the lower jaw
+      ctx.fillStyle = '#f0f0d0';
+      const upY = (x) => 20 + (x + 40) * (-24 / 118);
+      const loY = (x) => 30 + (x + 36) * ((4 + jaw - 30) / 110);
+      for (let i = 0; i < 6; i++) {
+        const tx = -26 + i * 18;
+        Draw.poly(ctx, [tx - 4, upY(tx - 4), tx + 4, upY(tx + 4), tx, upY(tx) + 10]);
+        const bx = tx + 8;
+        if (bx < 70) Draw.poly(ctx, [bx - 4, loY(bx - 4), bx + 4, loY(bx + 4), bx, loY(bx) - 9]);
+      }
+      ctx.fillStyle = '#ffd040'; setGlow(ctx, '#ff3a00', 16); Draw.ell(ctx, 20, -40, 8, 5); clearGlow(ctx);
+      ctx.fillStyle = '#000'; Draw.ell(ctx, 21, -40, 1.6, 4.5);
+      ctx.restore();
     } else {
       // the void: a wall of darkness full of eyes
       const g2 = ctx.createLinearGradient(fx - 300, 0, fx, 0);
@@ -980,6 +1155,7 @@ class Projectile {
     if (type === 'wave') { this.w = 26; this.h = 26; this.grav = 0; this.life = 3.5; }
     if (type === 'debris') { this.w = 18; this.h = 18; this.grav = 0; this.warn = 0.7; }
     if (type === 'wisp') { this.w = 30; this.h = 18; this.grav = 0; this.life = 1.3; this.dmg = 6; }
+    if (type === 'pwave') { this.w = 26; this.h = 26; this.grav = 0; this.life = 0.75; this.dmg = 4; this.hostile = false; }
   }
   update(dt, g) {
     this.t += dt; this.life -= dt;
@@ -989,7 +1165,10 @@ class Projectile {
     this.vy += (this.grav || 0) * dt;
     this.x += this.vx * dt; this.y += this.vy * dt;
     const cx = this.x + this.w / 2, cy = this.y + this.h / 2;
-    if (this.type === 'wave' || this.type === 'frostwave') {
+    if (this.type === 'pwave') {
+      if (g.world.solidAt(this.vx > 0 ? this.x + this.w : this.x, cy)) this.dead = true;
+      if (Math.random() < 0.6) g.particles.push(makeParticle(cx, this.y + this.h, rand(-30, 30), rand(-120, -40), 0.35, '#e8f6ff', 2.5, 0));
+    } else if (this.type === 'wave' || this.type === 'frostwave') {
       const fw = this.type === 'frostwave';
       if (g.world.solidAt(this.vx > 0 ? this.x + this.w : this.x, cy)) this.dead = true;
       if (Math.random() < 0.7) g.particles.push(makeParticle(cx + rand(-8, 8), this.y + this.h, rand(-30, 30), rand(-160, -60), 0.4, fw ? (Math.random() < 0.5 ? '#bff4ff' : '#ffffff') : (Math.random() < 0.5 ? '#ff8a1a' : '#ffd84d'), 3, 0));
@@ -1011,6 +1190,7 @@ class Projectile {
       ctx.translate(cx, cy); ctx.rotate(this.t * 8);
       if (this.skin === 'rock') { ctx.fillStyle = shade(ctx, -2, -2, 10, '#c8b8a0', '#7a6a58', '#2a221c'); Draw.poly(ctx, [-9, -4, -3, -9, 6, -7, 9, 2, 3, 9, -7, 6]); }
       else if (this.skin === 'gear') { ctx.fillStyle = shade(ctx, 0, 0, 9, '#fff0b0', '#c8a040', '#4a3a10'); for (let k = 0; k < 8; k++) { ctx.rotate(Math.PI / 4); ctx.fillRect(5, -2, 4, 4); } Draw.circ(ctx, 0, 0, 6); ctx.fillStyle = '#2a2008'; Draw.circ(ctx, 0, 0, 2); }
+      else if (this.skin === 'bubble') { setGlow(ctx, '#9aff4a', 12); ctx.fillStyle = shade(ctx, -2, -2, 9, '#f0ffd0', '#8ad83a', '#1a4008'); Draw.circ(ctx, 0, 0, 7); clearGlow(ctx); ctx.fillStyle = 'rgba(255,255,255,0.7)'; Draw.circ(ctx, -2, -2, 1.8); }
       else if (this.skin === 'ember') { setGlow(ctx, '#ff6a00', 14); ctx.fillStyle = shade(ctx, 0, 0, 8, '#fff8c0', '#ffa020', '#c02800'); Draw.circ(ctx, 0, 0, 7); clearGlow(ctx); }
       else { setGlow(ctx, '#b050ff', 14); ctx.fillStyle = shade(ctx, 0, 0, 8, '#ffffff', '#b070ff', '#2a0060'); Draw.circ(ctx, 0, 0, 7); clearGlow(ctx); ctx.fillStyle = '#000'; Draw.circ(ctx, 1, 0, 2); }
     } else if (this.type === 'seed') { // bone shard
@@ -1021,6 +1201,13 @@ class Projectile {
       setGlow(ctx, '#7ae0ff', 10);
       ctx.fillStyle = lin(ctx, -4, 0, 4, 0, ['#ffffff', '#9fe8ff', '#3a8ac0']);
       Draw.poly(ctx, [-4, -8, 4, -8, 0, 10]);
+    } else if (this.type === 'pwave') {
+      const base = this.y + this.h; const k = this.life / 0.75;
+      ctx.globalAlpha = Math.min(1, k * 1.5);
+      setGlow(ctx, '#bff4ff', 16);
+      ctx.fillStyle = lin(ctx, 0, base - 26, 0, base, ['rgba(255,255,255,0)', '#e8fbff', '#7ad8ff']);
+      ctx.beginPath(); ctx.moveTo(this.x - 4, base); ctx.quadraticCurveTo(cx, base - 34, this.x + this.w + 4, base); ctx.fill();
+      clearGlow(ctx);
     } else if (this.type === 'frostwave') {
       // jagged ice bursting out of the ground
       const base = this.y + this.h;
@@ -1034,7 +1221,10 @@ class Projectile {
       ctx.fillStyle = 'rgba(220,245,255,0.5)'; ctx.fillRect(this.x - 4, base - 2, this.w + 8, 2);
     } else if (this.type === 'wave' && this.skin && this.skin !== 'fire') {
       const base = this.y + this.h;
-      if (this.skin === 'rock') {
+      if (this.skin === 'mud') {
+        for (let i = 0; i < 6; i++) { const sx = this.x + i * 5, hg = 10 + Math.abs(Math.sin(this.t * 14 + i * 1.3)) * 18; ctx.fillStyle = i % 2 ? '#5a6a22' : '#3a4a14'; ctx.beginPath(); ctx.moveTo(sx - 4, base); ctx.quadraticCurveTo(sx, base - hg * 1.3, sx + 5, base); ctx.fill(); }
+        ctx.fillStyle = '#9aff4a'; for (let i = 0; i < 3; i++) Draw.circ(ctx, this.x + 4 + i * 9, base - 8 - Math.abs(Math.sin(this.t * 9 + i)) * 14, 1.6);
+      } else if (this.skin === 'rock') {
         for (let i = 0; i < 5; i++) { const sx = this.x + 2 + i * 5.5, hg = 10 + Math.abs(Math.sin(i * 2.1 + this.t * 8)) * 16; ctx.fillStyle = lin(ctx, sx - 3, 0, sx + 3, 0, ['#c8b8a0', '#7a6a58', '#2e2620']); Draw.poly(ctx, [sx - 4, base, sx + 4, base, sx + Math.sin(i) * 2, base - hg]); }
       } else if (this.skin === 'gear') {
         ctx.save(); ctx.translate(this.x + this.w / 2, base - 13); ctx.rotate(this.t * 14 * Math.sign(this.vx)); ctx.fillStyle = shade(ctx, 0, 0, 14, '#fff0b0', '#c8a040', '#4a3a10');

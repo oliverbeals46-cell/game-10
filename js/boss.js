@@ -460,3 +460,50 @@ class VoidKing extends GraveWarden {
     ctx.restore();
   }
 }
+
+// BOSS OF LEVEL 70 — The Mire Hag: a swamp witch with a skull-lantern staff.
+class MireHag extends GraveWarden {
+  constructor(x, y, arena) {
+    super(x, y, arena);
+    this.name = 'THE MIRE HAG'; this.maxHp = this.hp = 76; this.w = 84; this.h = 120;
+    this.shotSkin = 'bubble'; this.waveSkin = 'mud'; this.debrisSkin = 'bubble';
+  }
+  hurt(dmg, g) { const p1 = this.phase === 1, r = super.hurt(dmg, g); if (p1 && this.phase === 2) { g.toasts = g.toasts.filter((m) => !m.text.includes('Warden')); g.toast('The Mire Hag boils over!', 2.4); g.spawnDebris(5); } return r; }
+  draw(ctx, t) {
+    const f = this.flash > 0, c = (col) => (f ? '#ffffff' : col), p2 = this.phase === 2;
+    const bc = this.x + this.w / 2, sq = this.squash, sway = Math.sin(this.anim * 2.4) * 2;
+    const shakeX = (this.state.startsWith('tele') || this.state === 'roar' || this.dying) ? Math.sin(t * 60) * 2.5 : 0;
+    ctx.save(); ctx.translate(bc + shakeX, this.y + this.h); ctx.scale(this.facing * (1 + sq * 0.12), 1 - sq * 0.1);
+    if (this.dying) ctx.globalAlpha = Math.max(0.2, this.timer / 2.6);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; Draw.ell(ctx, 0, 0, 46, 8);
+    // mossy cloak, hunched
+    ctx.fillStyle = f ? '#fff' : lin(ctx, 0, -100, 0, 0, ['#3a4a22', '#1e2a10', '#0a0e04']);
+    ctx.beginPath(); ctx.moveTo(-10, -96 + sway); ctx.quadraticCurveTo(20, -104 + sway, 30, -70);
+    ctx.lineTo(40, -4); for (let i = 0; i <= 8; i++) ctx.lineTo(40 - i * 10, -4 + (i % 2 ? 7 : 0) + Math.sin(t * 4 + i) * 2);
+    ctx.lineTo(-30, -60); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = c('rgba(120,160,60,0.6)'); ctx.lineWidth = 1.5;
+    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(-24 + i * 12, -70 + i * 4); ctx.quadraticCurveTo(-20 + i * 12, -50, -26 + i * 12, -30 + Math.sin(t * 3 + i) * 3); ctx.stroke(); }
+    // staff with a skull lantern
+    const up = (this.state === 'tele_spit' || this.state === 'roar' || this.state === 'tele_leap') ? -24 : 0;
+    ctx.strokeStyle = c('#4a3018'); ctx.lineWidth = 4; Draw.line(ctx, 34, -2, 44, -112 + up);
+    ctx.fillStyle = f ? '#fff' : shade(ctx, 44, -118 + up, 10, '#fffaf0', '#cfc6ae', '#4a4232'); Draw.circ(ctx, 44, -118 + up, 8);
+    ctx.fillStyle = c('#9aff4a'); if (!f) setGlow(ctx, '#9aff4a', 18); Draw.circ(ctx, 41, -119 + up, 2); Draw.circ(ctx, 47, -119 + up, 2); clearGlow(ctx);
+    ctx.strokeStyle = c('#c8d8a0'); ctx.lineWidth = 2.5; Draw.line(ctx, 22, -76 + sway, 42, -84 + up * 0.5);
+    // face: long nose, wild hair, glowing eyes
+    const hx = 12, hy = -96 + sway;
+    ctx.strokeStyle = c('#c8c8b0'); ctx.lineWidth = 1.4;
+    for (let i = 0; i < 8; i++) Draw.line(ctx, hx - 10 + i * 3, hy - 10, hx - 18 + i * 2 + Math.sin(t * 3 + i) * 3, hy + 20);
+    ctx.fillStyle = f ? '#fff' : shade(ctx, hx, hy, 14, '#b8c890', '#6a7a4a', '#1e2410'); Draw.ell(ctx, hx, hy, 12, 13);
+    ctx.fillStyle = c('#7a8a5a'); Draw.poly(ctx, [hx + 6, hy - 2, hx + 24, hy + 8, hx + 6, hy + 5]);
+    ctx.fillStyle = c('#4a5a2a'); Draw.circ(ctx, hx + 18, hy + 4, 2);
+    ctx.fillStyle = c(p2 ? '#ff3a2a' : '#c8ff4a'); if (!f) setGlow(ctx, p2 ? '#ff0000' : '#9aff00', 14);
+    Draw.circ(ctx, hx + 1, hy - 3, 2.2); Draw.circ(ctx, hx + 9, hy - 4, 2.2); clearGlow(ctx);
+    const open = (this.state === 'tele_spit' || this.state === 'spit' || this.state === 'roar') ? 6 : 1;
+    ctx.fillStyle = c('#1a0a04'); Draw.ell(ctx, hx + 6, hy + 8, 5, open);
+    ctx.fillStyle = c('#e8e0b0'); ctx.fillRect(hx + 3, hy + 7, 2, 3);
+    // pointy hat
+    ctx.fillStyle = f ? '#fff' : lin(ctx, 0, hy - 40, 0, hy - 8, ['#2a3a1a', '#0e1608']);
+    ctx.beginPath(); ctx.moveTo(hx - 18, hy - 8); ctx.lineTo(hx + 18, hy - 8); ctx.lineTo(hx - 10 + Math.sin(t * 2) * 3, hy - 46); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}

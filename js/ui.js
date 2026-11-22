@@ -46,11 +46,11 @@ const UI = {
     this.show('levels');
     const d = Save.data;
     // pages of 20 levels; open on the page with the newest level you've reached
-    if (page === undefined) { let top = 1; for (let n = 1; n <= PLANNED_LEVELS; n++) if (d.levels['l' + n]) top = n + 1; page = Math.min(Math.floor((Math.min(top, 60) - 1) / 20), 2); }
+    if (page === undefined) { let top = 1; for (let n = 1; n <= PLANNED_LEVELS; n++) if (d.levels['l' + n]) top = n + 1; page = Math.min(Math.floor((Math.min(top, PLANNED_LEVELS) - 1) / 20), Math.ceil(PLANNED_LEVELS / 20) - 1); }
     this.levelPage = page;
     const tabs = document.getElementById('level-tabs');
     tabs.innerHTML = '';
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < Math.ceil(PLANNED_LEVELS / 20); i++) {
       const tb = document.createElement('button'); tb.textContent = `${i * 20 + 1}–${i * 20 + 20}`; tb.className = i === page ? 'on' : '';
       tb.addEventListener('click', () => { Sfx.play('click'); this.openLevels(i); }); tabs.appendChild(tb);
     }
@@ -220,7 +220,8 @@ const UI = {
       30: 'The Troll crashes to the ground. Far below, you hear ticking...',
       40: 'The Grandfather Clock stops. The floor gives way to a burning cathedral below.',
       50: 'The Hollow Saint burns out. Beyond it, there is only the Void.',
-      60: 'The Void King is gone. You made it to the very bottom. For now...',
+      60: 'The Void King is gone. Far above, a crack of light... you start to climb.',
+      70: 'The Mire Hag sinks into the bog. The blood moon is still watching...',
     };
     document.querySelector('#screen-victory .sub').textContent = STORY_END[Game.levelNum] || 'You made it to the portal!';
     this.show('victory');

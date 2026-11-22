@@ -68,6 +68,7 @@ const Game = {
     const D = difficultyForLevel(def.number);
     this.difficulty = D;
     this.enemies = def.enemies.map((e) => {
+      if (e.type === 'screamolive') return new ScreamingOlive(e.x * TILE + 4, (e.y + 1) * TILE);
       if (ENEMY_SKINS[e.type]) return makeSkinnedEnemy(e.type, e.x, e.y);
       if (e.type === 'bat') return new Bat(e.x * TILE, e.y * TILE);
       if (e.type === 'skitter') return new Skitter(e.x * TILE + 4, (e.y + 1) * TILE);
@@ -81,6 +82,7 @@ const Game = {
     this.pads = def.pads.map((p) => new JumpPad(p));
     this.droppers = (def.droppers || []).map((d) => new Dropper(d));
     this.chasers = (def.chases || []).map((c) => new Chaser(c));
+    this.geysers = (def.geysers || []).map((q) => new Geyser(q));
     this.firebars = def.firebars.map((f) => new FireBar(Object.assign({}, f, { speed: (f.speed || 1.6) * D.speed })));
     this.checkpoints = def.checkpoints.map((c, i) => ({ x: c.x * TILE + 16, y: (c.y + 1) * TILE, lit: false, n: i + 1 }));
     this.finish = { x: def.finish.x * TILE + 16, y: (def.finish.y + 1) * TILE };
@@ -191,12 +193,13 @@ const Game = {
     for (const pad of this.pads) pad.update(dt, this);
     for (const d of this.droppers) if (Math.abs(d.x - p.x) < 1100) d.update(dt, this);
     for (const c of this.chasers) c.update(dt, this);
+    for (const q of this.geysers) if (Math.abs(q.cx - p.x) < 1100) q.update(dt, this);
     for (const f of this.firebars) f.update(dt, this);
 
     const A = this.def.arena;
     if (A && !this.bossStarted && !this.bossDefeated && p.x > A.triggerX) {
       this.bossStarted = true;
-      const Cls = { widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing }[A.boss] || GraveWarden;
+      const Cls = { hag: MireHag, widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing }[A.boss] || GraveWarden;
       this.startBoss(new Cls(A.bossSpawn.x, A.bossSpawn.y, A));
       this.bossTitleT = 3.4;
     }
@@ -359,7 +362,7 @@ const Game = {
     e.dead = true;
     Sfx.play('kill');
     // the monster shatters into pieces, with a puff of ash and a shock ring
-    const col = e.skin ? (e.skin.shell || e.skin.body || e.skin.skull)[1] : (ENEMY_COLORS[e.constructor.name] || '#a99cc8');
+    const col = e.skin ? (e.skin.shell || e.skin.body || e.skin.skull)[1] : (ENEMY_COLORS[e.constructor.name] || (e instanceof ScreamingOlive ? '#6a8a2a' : '#a99cc8'));
     this.shatter(e.x + e.w / 2, e.y + e.h / 2, col, 9, e.y + e.h);
     this.smoke(e.x + e.w / 2, e.y + e.h / 2, 7, 'rgba(60,50,80,0.5)');
     this.ring(e.x + e.w / 2, e.y + e.h / 2, '#ffffff', 34);
@@ -532,6 +535,7 @@ const Game = {
     if (this.boss) this.boss.draw(ctx, t);
     for (const a of this.afterimages) drawPlayer(ctx, Object.assign({}, p, a, { ghost: a.life * 1.2, attackT: 0, invuln: 0, flipT: 0 }), t);
     for (const d of this.droppers) if (onScreen(d.x)) d.draw(ctx, t);
+    for (const q of this.geysers) if (onScreen(q.cx)) q.draw(ctx, t, this.time);
     drawPlayer(ctx, p, t);
     for (const c of this.chasers) c.draw(ctx, t);
     for (const f of this.firebars) if (onScreen(f.cx)) f.draw(ctx, t);
@@ -574,6 +578,7 @@ const Game = {
     if (inView(this.finish.x, this.finish.y, 300)) L.push({ x: this.finish.x, y: this.finish.y - 60, r: 320, i: 1, c: 'rgba(190,90,255,0.35)' });
     for (const d of this.def.decor) if (d.type === 'shroom') { const x = d.x * TILE + 16, y = (d.y + 1) * TILE - 8; if (inView(x, y, 120)) L.push({ x, y, r: 110, i: 0.7, c: 'rgba(80,255,200,0.16)' }); }
     for (const f of this.firebars) if (inView(f.cx, f.cy, 200)) L.push({ x: f.cx, y: f.cy, r: 190, i: 0.9, c: THEME.snow ? 'rgba(60,170,255,0.3)' : 'rgba(255,110,20,0.3)' });
+    for (const q of this.geysers) { const st = q.stateAt(this.time); if (st.s !== 'idle' && inView(q.cx, q.base, 200)) L.push({ x: q.cx, y: q.base - (st.s === 'erupt' ? 70 : 10), r: st.s === 'erupt' ? 200 : 80, i: 0.8, c: 'rgba(140,255,60,0.22)' }); }
     for (const d of this.droppers) if (d.style === 'chandelier' && d.state !== 'gone' && inView(d.x, d.y, 160)) L.push({ x: d.x + 10, y: d.y + d.h - 16, r: 150, i: 0.8, c: 'rgba(255,170,60,0.2)' });
     for (const c of this.chasers) if (c.state === 'chase' && (c.style === 'fire' || c.style === 'void')) L.push({ x: c.front - 40, y: c.floor - 120, r: 360, i: 0.9, c: c.style === 'fire' ? 'rgba(255,100,20,0.3)' : 'rgba(160,60,255,0.2)' });
     for (const pad of this.pads) if (inView(pad.x, pad.y, 120)) L.push({ x: pad.x + 14, y: pad.y - 10, r: 100, i: 0.7, c: 'rgba(255,150,40,0.2)' });

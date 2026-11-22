@@ -28,6 +28,7 @@ const BOSSES = {
   30: { id: 'troll', name: 'THE TROLL', sign: 'THE TROLL lives past this gate. It swings its club, throws boulders, and its roar brings down stalactites. Touching it kills you!' },
   40: { id: 'clock', name: 'THE GRANDFATHER CLOCK', sign: 'THE GRANDFATHER CLOCK ticks beyond the gate. Dodge its gears and slash its face!' },
   50: { id: 'saint', name: 'THE HOLLOW SAINT', sign: 'THE HOLLOW SAINT burns past the gate. Jump the fire and strike when it lands!' },
+  70: { id: 'hag', name: 'THE MIRE HAG', sign: 'THE MIRE HAG brews poison past the gate. Dodge her bubbles, jump her mud waves, and strike!' },
   60: { id: 'voidking', name: 'THE VOID KING', sign: 'THE VOID KING waits at the bottom of everything. This is it. Good luck.' },
   10: { id: 'warden', name: 'THE GRAVE WARDEN', sign: 'THE GRAVE WARDEN waits past the gate. Learn its attacks and slash it. Touching it kills you!' },
   20: { id: 'widow', name: 'THE FROZEN WIDOW', sign: 'THE FROZEN WIDOW waits past the gate. Dodge the icicles and slash it. Touching it kills you!' },
@@ -41,15 +42,24 @@ function generateLevel(n) {
     for (let y = y1; y <= y2; y++) for (let x = x1; x <= x2; x++) if (x >= 0 && x < MAXW && y >= 0 && y < H) tiles[y * MAXW + x] = v;
   };
   const group = Math.floor((n - 1) / 10);           // 0 = levels 1–10, 1 = levels 11–20 ...
+  const olive = n >= 65 && n <= 69;         // Levels 65–69: the screaming Olive Grove
+  const oliveCrowd = n >= 64 && n <= 69;    // Levels 64–69: a TON of screaming olives
+  const ro = mulberry32(n * 4049 + 77);     // separate dice for olives, so adding them never changes a level's layout
   const enemyTypes = [
     ['crawler', 'skitter', 'bat'], ['frostmite', 'snowskull', 'icewisp'], ['rockcrawler', 'pebbleimp', 'cavebat'],
     ['gearspider', 'ticktock', 'chainghoul'], ['ashcrawler', 'cinderskull', 'emberbat'], ['voidcrawler', 'voidskull', 'voideye'],
-  ][Math.min(group, 5)];
-  const under = group >= 2;            // Levels 21+: underground, with a ceiling, falling droppers and a chase
+    ['bogleech', 'croakskull', 'swamplantern'],
+  ][Math.min(group, 6)];
+  if (olive) enemyTypes.splice(0, 3, 'screamolive', 'screamolive', 'oliveskitter', 'olivebat');
+  const under = group >= 2 && group <= 5;  // Levels 21–60: underground, with a ceiling and falling droppers
+  const hunted = group >= 2;               // Levels 21+: something chases you once per level
+  const geysers = group === 6;             // Levels 61–70: toxic bog geysers
   const dropStyle = ['stalactite', 'gear', 'chandelier', 'shard'][Math.min(group, 5) - 2];
-  const L = { shards: [], bigShards: [], enemies: [], platforms: [], pads: [], firebars: [], signs: [], decor: [], checkpoints: [], route: [], droppers: [], chases: [] };
+  const chaseStyle = ['boulder', 'gears', 'fire', 'void', 'serpent'][Math.min(group, 6) - 2];
+  const L = { shards: [], bigShards: [], enemies: [], platforms: [], pads: [], firebars: [], signs: [], decor: [], checkpoints: [], route: [], droppers: [], chases: [], geysers: [] };
   // falling hazards hang from the ceiling over open stretches (never right where you'd stand still)
-  const drops = (x1, x2) => { if (!under) return; for (let dx = x1; dx <= x2; dx += 3) if (r() < 0.32 + n * 0.006) L.droppers.push({ x: dx, y: 4, style: dropStyle, big: r() < 0.3 }); };
+  const vents = (x1, x2) => { if (!geysers) return; for (let dx = x1; dx <= x2; dx += 4) if (r() < 0.4) L.geysers.push({ x: dx, g, phase: r() * 3 }); };
+  const drops = (x1, x2) => { vents(x1, x2); if (!under && !olive) return; for (let dx = x1; dx <= x2; dx += 3) if (r() < 0.32 + n * 0.006) L.droppers.push({ x: dx, y: olive ? 6 : 4, style: olive ? 'olive' : dropStyle, big: r() < 0.3 }); };
   // remember where each route step starts (used by the automated playtest)
   L.route.push = (o) => Array.prototype.push.call(L.route, Object.assign({ sx: x, sg: g }, o));
   const sh = (x, y) => L.shards.push([x, y]);
@@ -75,7 +85,14 @@ function generateLevel(n) {
       const ex = x + Math.floor(len / 2);
       const flying = type === 'bat' || type === 'icewisp';
       L.enemies.push({ type, x: ex, y: flying ? g - 5 : g - 1 });
-      if (firstMonsterSign) { L.signs.push({ x: x + 3, y: g - 1, text: 'Monster ahead! Touching it kills you. Jump over it or slash it (X).' }); firstMonsterSign = false; }
+      if (firstMonsterSign) { L.signs.push({ x: x + 3, y: g - 1, text: olive ? 'A living olive! It screams like a goat and runs when you get close. Chase it down and slash it (X) for shards, but do not touch it!' : 'Monster ahead! Touching it kills you. Jump over it or slash it (X).' }); firstMonsterSign = false; }
+    }
+    // Olive Grove: a TON of screaming olives on every flat stretch (never right on a checkpoint)
+    if (oliveCrowd && !opts.noOlives) {
+      // Level 64 only gets a few olives; Levels 65–69 get a TON
+      const count = n === 64 ? (ro() < 0.3 ? 1 : 0) : 2 + Math.floor(ro() * 3);
+      if (count && !L.oliveSign) { L.oliveSign = true; L.signs.push({ x: x + 1, y: g - 1, text: 'Living OLIVES! They scream like goats and run from you. Slash them (X) for shards, but do not touch them!' }); }
+      for (let k = 0; k < count; k++) L.enemies.push({ type: 'screamolive', x: x + 2 + Math.floor(((k + 0.5) / count) * Math.max(1, len - 7)), y: g - 1 });
     }
     if (opts.checkpoint) L.checkpoints.push({ x: x + len - 3, y: g - 1 });
     if (!opts.noDrops) drops(x + 3, x + len - 6);
@@ -156,7 +173,7 @@ function generateLevel(n) {
       for (const [dx, w] of strips) { fill(x + dx, g, x + dx + w - 1, g, T.SPIKE); sh(x + dx, g - 3); sh(x + dx + w - 1, g - 3); }
       for (let i = 3; i < len; i += 5) sh(x + i, g - 2);
       const speed = Math.min(228, 192 + n * 0.6);
-      L.chases.push({ x1, x2: x + len + 2, g, style: ['boulder', 'gears', 'fire', 'void'][Math.min(group, 5) - 2], speed });
+      L.chases.push({ x1, x2: x + len + 2, g, style: olive ? 'olive' : chaseStyle, speed });
       L.route.push({ t: 'chase', x1, xs: strips.map(([dx]) => x + dx), end: x + len });
       x += len;
     },
@@ -235,8 +252,10 @@ function generateLevel(n) {
     31: 'Deeper still: a crypt full of ticking clockwork. Falling gears, and a grinding wall of gears that hunts you.',
     41: 'A burning cathedral, deep underground. Chandeliers fall, and a wall of fire will chase you.',
     51: 'The Void. Nothing down here is real... except the darkness that chases you.',
+    65: 'The Olive Grove... the olives here are ALIVE. They waddle, they scream like GOATS, and they run from you. Watch out for falling olives!',
+    61: 'You climb out of the Void into open air... but the moon has turned blood red, and the swamp is alive. Watch the bubbling geysers!',
   };
-  rest(12, { sign: STORY[n] || `Level ${n}! Reach the portal at the end.`, noDrops: true });
+  rest(12, { sign: STORY[n] || `Level ${n}! Reach the portal at the end.`, noDrops: true, noOlives: true });
 
   let last = null;
   for (let i = 0; i < segCount; i++) {
@@ -250,12 +269,12 @@ function generateLevel(n) {
     last = s;
     if ((g <= 16 || (under && g <= 20)) && r() < 0.7) SEG.drop();
     // the chase: once per underground level, in the middle, after a checkpoint
-    if (under && i === Math.floor(segCount / 2)) {
-      rest(12, { checkpoint: true, sign: 'Something is coming... When it starts, RUN and do not stop! Jump the spike holes.', noDrops: true });
+    if (hunted && i === Math.floor(segCount / 2)) {
+      rest(12, { checkpoint: true, sign: 'Something is coming... When it starts, RUN and do not stop! Jump the spike holes.', noDrops: true, noOlives: true });
       SEG.chase();
     }
     const isLast = i === segCount - 1;
-    rest(isLast ? 14 : 11, { enemy: !isLast && r() < Math.min(0.6, 0.35 + n * 0.025), checkpoint: !isLast && (i + 1) % cpEvery === 0 });
+    rest(isLast ? 14 : 11, { enemy: !isLast && r() < (olive ? 0.9 : Math.min(0.6, 0.35 + n * 0.025)), checkpoint: !isLast && (i + 1) % cpEvery === 0 });
   }
 
   let arena = null;
@@ -300,6 +319,7 @@ function generateLevel(n) {
   L.shards = L.shards.filter(okSpot);
   L.bigShards = L.bigShards.filter(okSpot).slice(0, 4);
 
+  delete L.oliveSign;
   const route = Array.from(L.route);
   return {
     number: n,
@@ -312,4 +332,4 @@ function generateLevel(n) {
   };
 }
 
-for (let n = 3; n <= 60; n++) LEVELS[n] = () => generateLevel(n);
+for (let n = 3; n <= 70; n++) LEVELS[n] = () => generateLevel(n);

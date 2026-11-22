@@ -22,6 +22,7 @@ No build step is needed. It's plain HTML, CSS and JavaScript.
 | Dash | C (or Shift / K) |
 | Wisp Bolt (unlocks after Level 20) | V (or L) |
 | Spin Slash (unlocks after Level 40) | B (or N) |
+| Ground Slam (unlocks after Level 60) | G (or H) |
 | Pause / Mute | Esc or P / M |
 
 ## Rules
@@ -48,7 +49,7 @@ Saves live in each browser, so a different computer or a private/incognito windo
 
 Beating the Frozen Widow cracks the ice and you fall underground. From then on every level has a ceiling with **falling hazards** (they shake, then drop when you run under them) and a **chase**: something huge comes after you and you must keep running and jumping until it smashes into the wall. Getting caught = death (back to the checkpoint right before the chase).
 
-New attack after Level 40: **Spin Slash** (B), the sword spins all the way around you.
+New attack after Level 40: **Spin Slash** (B), the sword spins all the way around you. After Level 60: **Ground Slam** (G), shockwaves roll both ways along the ground.
 
 ## Level plan
 
@@ -67,6 +68,7 @@ New attack after Level 40: **Spin Slash** (B), the sword spins all the way aroun
 | 31–40 | Clockwork crypt: falling gears, a grinding **gear-wall chase** | Gear Spider, Chain Ghoul, Tick-Tock Skull | The Grandfather Clock (L40) |
 | 41–50 | Burning cathedral: falling chandeliers, a **wall-of-fire chase** | Ash Crawler, Ember Bat, Cinder Skull | The Hollow Saint (L50) |
 | 51–60 | The Void: falling void shards, the **darkness chases you** | Void Crawler, Void Eye, Void Skull | The Void King (L60) |
+| 61–70 | **Blood Moon Swamp**: toxic bog geysers, a **bog serpent chase**. **Levels 65–69 are the Olive Grove**: tons of living green olives that waddle, scream like goats and run away from you, falling olives, and a giant rolling olive chase (Level 64 has a few olives too) | Bog Leech, Swamp Lantern, Croaking Skull, Screaming Olives | **The Mire Hag** (L70) |
 
 ### Levels 3–20
 Built by `js/levelgen.js` from the obstacle pieces that were tested in Levels 1–2 (floating stones, small stones under fire, moving rafts, crumbling stones, elevator rafts, bounce-mushroom cliffs and pillars, fire runs, dash gaps, lava staircases, plank climbs, spike strips, crumbling bridges, dash pillars). Each level number gives its own layout, gets longer and faster as numbers go up, and has signs before every obstacle, checkpoints, shards, and the mini enemies of its group. Levels 10 and 20 end in a boss arena: the gate shuts behind you, boss music plays, and the exit opens when the boss falls.
@@ -116,9 +118,9 @@ js/art.js         sky, moon, clouds, castle, forest, fog, lighting, checkpoints,
 js/world.js       tile map, collision and textured tile art (cached in chunks)
 js/level1.js      Level 1 layout (+ the LEVELS list)
 js/level2.js      Level 2 layout
-js/levelgen.js    Levels 3–60 (built from tested obstacle pieces) + chases, falling hazards, boss arenas
+js/levelgen.js    Levels 3–70 (built from tested obstacle pieces) + chases, falling hazards, boss arenas
 js/entities.js    player, mini enemies, obby obstacles (rafts, crumbling stones, bounce pads, fire bars)
-js/boss.js        Bosses: Grave Warden (10), Frozen Widow (20), Troll (30), Grandfather Clock (40), Hollow Saint (50), Void King (60)
+js/boss.js        Bosses: Grave Warden (10), Frozen Widow (20), Troll (30), Grandfather Clock (40), Hollow Saint (50), Void King (60), Mire Hag (70)
 js/game.js        game loop, camera, checkpoints, deaths/timer, HUD
 js/heads.js       head art and perks
 js/audio.js       synthesized sound effects + boss-only music

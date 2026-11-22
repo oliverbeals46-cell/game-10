@@ -88,6 +88,21 @@ const WORLDS = [
       leaves: ['#c890ff', '#8a5ad8', '#f0d0ff', '#5a2aa8'], dark: [4, 1, 10], ambient: 0.6,
     },
   },
+  // ---- Levels 61–70: back on the surface, under a blood moon. Bog geysers, and a serpent chases you. ----
+  {
+    id: 7, levels: [61, 70],
+    look: 'A swamp under a blood-red moon: dead mangroves, toxic bog, and geysers of poison sludge.',
+    enemies: ['Bog Leech', 'Swamp Lantern', 'Croaking Skull'],
+    boss: 'The Mire Hag (Level 70)',
+    pal: {
+      sky: ['#0a0204', '#2a0a10', '#4a1416', '#3a1a10'], star: '#ffe0d8', moon: [255, 90, 70],
+      far: ['#3a1418', '#22080c'], mid: ['#1e1410', '#140c08'], near: ['#0c0a06', '#080604'],
+      castle: '#2a0c10', windows: '#7aff5a', tree: '#0c0806', bgTree: '#1a0e0a',
+      fog: [120, 170, 80], haze: [150, 70, 60],
+      stone: [50, 46, 36], grass: ['#4a5a22', '#33421a', '#6a7a32', '#2a3412', '#5a5a2a'], grassTop: ['#4a5a22', '#2a3412'], moss: [110, 150, 50],
+      leaves: ['#6a7a2a', '#4a3a1a', '#8a6a2a', '#3a2a10'], dark: [10, 3, 3], ambient: 0.56,
+    },
+  },
 ];
 
 function worldForLevel(n) { return WORLDS.find((w) => n >= w.levels[0] && n <= w.levels[1]) || WORLDS[WORLDS.length - 1]; }
@@ -107,8 +122,18 @@ const HAZARD_LOOK = {
        spike: ['#e0d8a8', '#a8984a', '#4a3e1a', 'rgba(120,100,40,0.4)'], under: 'crypt', drop: 'gear', chase: 'gears', crystal: '#7aff9a' },
   5: { liquid: ['#ffe880', '#ff8a10', '#c02a08', '#3a0602'], bubble: [255, 220, 120], fire: ['#fff8c0', '#ffa020', '#c02800'], fireGlow: '#ff5a00',
        spike: ['#e0c8a0', '#a07a50', '#3a2414', 'rgba(255,120,40,0.35)'], under: 'cathedral', drop: 'chandelier', chase: 'fire', crystal: '#ffb040' },
+  7: { liquid: ['#d0ff70', '#7ad02a', '#2a6a10', '#0a2004'], bubble: [200, 255, 120], fire: ['#fff0e0', '#ff5a3a', '#8a0a0a'], fireGlow: '#ff2a1a',
+       spike: ['#8a7a5a', '#5a4a30', '#1e160c', 'rgba(90,140,40,0.4)'], chase: 'serpent', geysers: true, crystal: '#9aff4a' },
   6: { liquid: ['#f0d0ff', '#a050ff', '#40108a', '#10022a'], bubble: [230, 190, 255], fire: ['#ffffff', '#d080ff', '#6a1ad0'], fireGlow: '#b050ff',
        spike: ['#e8d8ff', '#9a7ad8', '#2e1a5a', 'rgba(180,120,255,0.4)'], under: 'void', drop: 'shard', chase: 'void', crystal: '#d080ff' },
+};
+
+// Levels 65–69: the Olive Grove. Living green olives that waddle, scream, and run away from you.
+const OLIVE_LOOK = {
+  olive: true, chase: 'olive',
+  leaves: ['#9ab87a', '#7a9a5a', '#c8d8b0', '#5a7a3a'], tree: '#141a0a', bgTree: '#1a2410',
+  grass: ['#6a8a3a', '#4a6a2a', '#8aaa4a', '#3a5020', '#7a9a3a'], grassTop: ['#6a8a3a', '#3a5020'], moss: [120, 160, 60],
+  liquid: ['#f0ff90', '#a8c83a', '#4a6a10', '#142004'], bubble: [230, 255, 150], crystal: '#a8c83a', windows: '#c8e070',
 };
 
 function themeForLevel(n) {
@@ -121,7 +146,7 @@ function themeForLevel(n) {
     fogMul: 0.8 + r() * 0.6,
     tint: `rgba(${Math.floor(r() * 60)},${Math.floor(r() * 30)},${Math.floor(r() * 60)},${0.04 + v * 0.008})`,
     castleX: 900 + r() * 1400,
-  });
+  }, n >= 65 && n <= 69 ? OLIVE_LOOK : {});
 }
 
 const hexA = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
@@ -130,6 +155,7 @@ let THEME = null;
 // One new attack every 20 levels. Each one helps against the boss that comes after it.
 const ATTACKS = [
   { level: 20, id: 'wisp', name: 'Wisp Bolt', key: 'V', desc: 'Fire a ghostly bolt that zips through monsters. Great for hitting bosses from far away.' },
+  { level: 60, id: 'slam', name: 'Ground Slam', key: 'G', desc: 'Slam the ground to send shockwaves rolling both ways. Hits everything on the floor, even bosses.' },
   { level: 40, id: 'spin', name: 'Spin Slash', key: 'B', desc: 'Spin your sword all the way around you, hitting everything close by. Perfect when bosses get close.' },
   // { level: 40, ... }, { level: 60, ... } — added as those levels are built.
 ];
