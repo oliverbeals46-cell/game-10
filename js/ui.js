@@ -93,11 +93,12 @@ const UI = {
     if (hash !== this.CODE_HASH) { Sfx.play('deny'); msg.textContent = 'Wrong code.'; inp.value = ''; return; }
     const d = Save.data;
     d.devUnlock = true;                                   // every level can be picked
+    for (const a of ATTACKS) d.unlocks[a.id] = true;      // every attack
     for (const h of HEADS) if (!d.owned.includes(h.id)) d.owned.push(h.id); // every head
     d.shards += 9999;
     Save.write();
     Sfx.play('buy');
-    msg.textContent = 'Code accepted! All levels and heads unlocked, +9,999 shards.';
+    msg.textContent = 'Code accepted! All levels, heads and attacks unlocked, +9,999 shards.';
     inp.value = '';
     this.refreshMenu();
   },
