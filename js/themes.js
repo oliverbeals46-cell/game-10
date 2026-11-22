@@ -191,3 +191,16 @@ function difficultyForLevel(n) {
     checkpoints: Math.max(3, 6 - Math.floor(d / 10)), // fewer checkpoints in later groups of levels
   };
 }
+
+// Level names (shown on the level select so levels are easy to find). Index = level number.
+const LEVEL_NAMES = [null,
+  'Graveyard Gate', 'Restless Stones', 'Moonlit Crypts', 'Hollow Hill', 'Bone Orchard', 'Whispering Graves', 'Lantern Row', 'Ashen Path', 'The Last Mausoleum', 'The Grave Warden',
+  'Frostbite Woods', 'Icicle Hollow', 'Frozen Lake', 'Snowblind Pass', 'Bone-Cold Bridge', 'Glacier Tombs', 'Howling Pines', 'Shiver Peak', "The Widow's Web", 'The Frozen Widow',
+  'The Fall', 'Dripping Dark', 'Stalactite Hall', 'Crystal Grotto', 'Boulder Run', 'Echo Chasm', 'Troll Tracks', 'Deep Mines', "The Troll's Den", 'The Troll',
+  'Ticking Tombs', 'Gear Grinder', 'Chain Crypt', 'Brass Catacombs', 'Clockwork Stair', 'Rusted Halls', 'Pendulum Vault', 'Midnight Gears', 'The Clock Tower', 'The Grandfather Clock',
+  'Burning Nave', 'Ember Aisle', 'Chandelier Hall', 'Ash Choir', 'Cinder Bells', 'Molten Altar', 'Smoke Spire', 'Fire Cloister', "The Saint's Path", 'The Hollow Saint',
+  'Into the Void', 'Floating Ruins', 'Purple Nothing', 'Void Shards', 'The Watching Eye', 'Broken Stars', 'Darkness Run', 'Edge of Nowhere', 'The Void Throne', 'The Void King',
+  'Blood Moon Rising', 'Toxic Bog', 'Geyser Fields', 'Serpent Swamp', 'The Olive Grove', 'Screaming Olives', 'Olive Stampede', 'Goat Scream Valley', 'The Last Olive', 'The Mire Hag',
+  'Carnival Gates', 'Big Top Blues', 'Clown Alley', 'Ferris Wheel Fright', 'Balloon Panic', 'Funhouse Frenzy', 'Jack-in-the-Box Junction', 'Clown Car Chaos', 'The Big Top', 'Mr. Giggles',
+];
+function levelName(n) { return LEVEL_NAMES[n] || ''; }

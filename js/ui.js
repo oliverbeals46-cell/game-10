@@ -63,7 +63,7 @@ const UI = {
       const best = d.best['l' + n];
       const b = document.createElement('button');
       b.className = 'lvl' + (unlocked ? '' : ' locked') + (cleared ? ' cleared' : '') + (isBossLevel(n) ? ' boss' : '');
-      b.innerHTML = `<span class="num">${n}</span>` +
+      b.innerHTML = `<span class="num">${n}</span>` + (levelName(n) ? `<span class="lname">${levelName(n)}</span>` : '') +
         (isBossLevel(n) ? '<span class="tag">BOSS</span>' : '') +
         `<span class="info">${!built ? 'Coming soon' : !unlocked ? 'Locked' : best ? 'Best ' + fmtTime(best, true) : 'Not cleared'}</span>` +
         (built && unlocked && d.shardBest && d.shardBest['l' + n] !== undefined ? `<span class="info shards">Shards ${d.shardBest['l' + n]}</span>` : '') +
