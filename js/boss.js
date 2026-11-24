@@ -678,3 +678,49 @@ class IronBeast extends GraveWarden {
     if (!this.dying && Math.random() < 0.15) { /* exhaust puffs are drawn as particles by the game */ }
   }
 }
+
+// BOSS OF LEVEL 110 — The Light Eater: a tall thing made of darkness that swallowed every light in the Blackout.
+// It carries the stolen lights inside its body. Uses the classic charge / leap / spit attacks with dark orbs.
+class LightEater extends GraveWarden {
+  constructor(x, y, arena) {
+    super(x, y, arena);
+    this.name = 'THE LIGHT EATER'; this.maxHp = this.hp = 80; this.w = 90; this.h = 150;
+    this.shotSkin = 'bubble';
+  }
+  hurt(dmg, g) {
+    const p1 = this.phase === 1, r = super.hurt(dmg, g);
+    if (p1 && this.phase === 2) { g.toasts = g.toasts.filter((m) => !m.text.includes('Warden')); g.toast('The stolen lights inside it start to escape!', 2.4); }
+    return r;
+  }
+  draw(ctx, t) {
+    const f = this.flash > 0, cx = this.x + this.w / 2, by = this.y + this.h, sq = this.squash;
+    const shakeX = (this.state.startsWith('tele') || this.state === 'roar' || this.dying) ? Math.sin(t * 60) * 2.5 : 0;
+    ctx.save(); ctx.translate(cx + shakeX, by); ctx.scale(this.facing * (1 + sq * 0.1), 1 - sq * 0.1);
+    if (this.dying) ctx.globalAlpha = Math.max(0.2, this.timer / 2.6);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; Draw.ell(ctx, 0, 0, 50, 8);
+    // a tall wispy body that fades into smoke at the bottom
+    const sway = Math.sin(this.anim * 2) * 6;
+    ctx.fillStyle = f ? '#ffffff' : lin(ctx, 0, -150, 0, 0, ['#14141e', '#08080e', 'rgba(8,8,14,0.2)']);
+    ctx.beginPath(); ctx.moveTo(-40, 0);
+    for (let i = 0; i <= 8; i++) ctx.lineTo(-40 + i * 10, -Math.abs(Math.sin(t * 6 + i)) * 10);
+    ctx.quadraticCurveTo(46, -80, 22 + sway, -140); ctx.quadraticCurveTo(0, -165, -22 + sway, -140); ctx.quadraticCurveTo(-46, -80, -40, 0); ctx.fill();
+    // long thin arms
+    ctx.strokeStyle = f ? '#fff' : '#0c0c14'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    const reach = this.state === 'charge' ? 20 : 0;
+    ctx.beginPath(); ctx.moveTo(24, -110); ctx.quadraticCurveTo(60 + reach, -90, 54 + reach, -40); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-24, -110); ctx.quadraticCurveTo(-56, -90, -50, -50); ctx.stroke();
+    if (!f) {
+      // the stolen lights swirling inside it
+      for (let i = 0; i < 7; i++) {
+        const a = t * (1 + i * 0.2) + i, rx = Math.cos(a) * 18, ry = -60 + Math.sin(a * 1.3) * 40;
+        setGlow(ctx, '#9ab0ff', 10); ctx.fillStyle = i % 2 ? '#ffe8a0' : '#c8d4ff'; Draw.circ(ctx, rx, ry, this.phase === 2 ? 3.5 : 2.5); clearGlow(ctx);
+      }
+      // a huge pale grin and two hollow white eyes
+      setGlow(ctx, '#ffffff', 14); ctx.fillStyle = '#f0f0ff';
+      Draw.ell(ctx, -10 + sway * 0.6, -128, 5, 7); Draw.ell(ctx, 12 + sway * 0.6, -128, 5, 7); clearGlow(ctx);
+      ctx.strokeStyle = '#d8d8f0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sway * 0.6, -118, 14, 0.2, Math.PI - 0.2); ctx.stroke();
+      for (let i = -3; i <= 3; i++) Draw.line(ctx, sway * 0.6 + i * 4, -108 + Math.abs(i) * -1.2, sway * 0.6 + i * 4, -112);
+    }
+    ctx.restore();
+  }
+}

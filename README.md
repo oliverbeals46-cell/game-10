@@ -74,6 +74,7 @@ New attack after Level 40: **Spin Slash** (B), the sword spins all the way aroun
 | 71–80 | **Creepy clown carnival**: striped tents, a turning ferris wheel, string lights, **swinging pendulum blades**, a **clown car chase** | Creepy Clown (giggles, honks and hunts you), Clown Balloon, Jack-in-the-Box Clown | **Mr. Giggles** (L80) |
 | 81–90 | **Marble chess hall**: checkerboard floors, giant pieces, falling chess pieces, a **giant Rook chase** | Army Pawn, Army Knight, Army Bishop (they march back and forth; touching one kills you) | **The Living Board** (L90): a huge King challenges you to a REAL game of chess. Get checkmate to win! |
 | 91–100 | **Haunted WW2 battlefield**: muddy trenches, barbed wire, a ruined town, sweeping searchlights, **bombs falling from the sky** (a red target shows where), blinking **landmines**, and a **ghost tank chase** | Gas Mask Ghost, War Crow, Helmet Skull (none of them shoot) | **The Iron Beast** (L100): a haunted tank with nobody inside |
+| 101–110 | **The Blackout**: you see the whole level ONCE in a flyover, then the lights go out and you only have a tiny light around you. Easy jumps, but you have to remember them! Checkpoints and the portal glow faintly. | Shadow Crawler, Shadow Bat, Shadow Skull (you only see their glowing eyes) | **The Light Eater** (L110), and the lights come back on for the fight |
 
 ### Levels 3–20
 Built by `js/levelgen.js` from the obstacle pieces that were tested in Levels 1–2 (floating stones, small stones under fire, moving rafts, crumbling stones, elevator rafts, bounce-mushroom cliffs and pillars, fire runs, dash gaps, lava staircases, plank climbs, spike strips, crumbling bridges, dash pillars). Each level number gives its own layout, gets longer and faster as numbers go up, and has signs before every obstacle, checkpoints, shards, and the mini enemies of its group. Levels 10 and 20 end in a boss arena: the gate shuts behind you, boss music plays, and the exit opens when the boss falls.
@@ -126,7 +127,7 @@ js/level2.js      Level 2 layout
 js/levelgen.js    Levels 3–80 (built from tested obstacle pieces) + chases, falling hazards, boss arenas
 js/entities.js    player, mini enemies, obby obstacles (rafts, crumbling stones, bounce pads, fire bars)
 js/chess.js       Real chess for the Level 90 boss (all the rules, easy computer opponent)
-js/boss.js        Bosses: Grave Warden (10), Frozen Widow (20), Troll (30), Grandfather Clock (40), Hollow Saint (50), Void King (60), Mire Hag (70), Mr. Giggles (80), Chess King (90), The Iron Beast (100)
+js/boss.js        Bosses: Grave Warden (10), Frozen Widow (20), Troll (30), Grandfather Clock (40), Hollow Saint (50), Void King (60), Mire Hag (70), Mr. Giggles (80), Chess King (90), The Iron Beast (100), The Light Eater (110)
 js/game.js        game loop, camera, checkpoints, deaths/timer, HUD
 js/heads.js       head art and perks
 js/audio.js       synthesized sound effects + boss-only music

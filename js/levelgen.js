@@ -28,6 +28,7 @@ const BOSSES = {
   30: { id: 'troll', name: 'THE TROLL', sign: 'THE TROLL lives past this gate. It swings its club, throws boulders, and its roar brings down stalactites. Touching it kills you!' },
   40: { id: 'clock', name: 'THE GRANDFATHER CLOCK', sign: 'THE GRANDFATHER CLOCK ticks beyond the gate. Dodge its gears and slash its face!' },
   50: { id: 'saint', name: 'THE HOLLOW SAINT', sign: 'THE HOLLOW SAINT burns past the gate. Jump the fire and strike when it lands!' },
+  110: { id: 'lighteater', name: 'THE LIGHT EATER', sign: 'THE LIGHT EATER lives past this gate. In its lair the lights come back on, so you can see it coming. Dodge, jump its shockwaves, and slash it!' },
   100: { id: 'tank', name: 'THE IRON BEAST', sign: 'THE IRON BEAST is a haunted tank with nobody inside. It rams the walls, lobs shells, and calls down falling bombs. Jump its shockwaves and slash it!' },
   90: { id: 'chess', chess: true, name: 'THE LIVING BOARD', sign: 'THE LIVING BOARD waits past the gate. Beat it at a real game of chess: you must get CHECKMATE to move on. (It is a very easy opponent.)' },
   80: { id: 'giggles', name: 'MR. GIGGLES', sign: 'MR. GIGGLES waits in the big top. Dodge his juggling clubs, jump his fire breath, and do not laugh!' },
@@ -53,10 +54,12 @@ function generateLevel(n) {
     ['gearspider', 'ticktock', 'chainghoul'], ['ashcrawler', 'cinderskull', 'emberbat'], ['voidcrawler', 'voidskull', 'voideye'],
     ['bogleech', 'croakskull', 'swamplantern'], ['clown', 'jackclown', 'clownballoon'], ['milpawn', 'milknight', 'milbishop'],
     ['gasghost', 'warcrow', 'helmetskull'],
-  ][Math.min(group, 9)];
+    ['shadowcrawler', 'shadowbat', 'shadowskull'],
+  ][Math.min(group, 10)];
+  const dark = group === 10;               // Levels 101–110: memorize the map, then play with a tiny light
   if (olive) enemyTypes.splice(0, 3, 'screamolive', 'screamolive', 'oliveskitter', 'olivebat');
   const under = (group >= 2 && group <= 5) || group === 8;  // Levels 21–60 and 81–90: a ceiling and falling droppers
-  const hunted = group >= 2;               // Levels 21+: something chases you once per level
+  const hunted = group >= 2 && !dark;               // Levels 21+: something chases you once per level
   const geysers = group === 6 || group === 9;   // Levels 61–70: toxic bog geysers; 91–100: buried landmines
   const blades = group === 7;                   // Levels 71–80: swinging pendulum blades
   const bombs = group === 9;                    // Levels 91–100: bombs whistle down from the sky
@@ -249,11 +252,11 @@ function generateLevel(n) {
     if (s === 'stones2' || s === 'crumble2') return n >= 3;
     return true;
   };
-  const pool = ['stones3', 'stones2', 'rafts', 'crumble3', 'crumble2', 'elevator', 'padCliff', 'pillarPad', 'fireRun', 'dashGap', 'stairs', 'plankClimb', 'spikeStrips', 'bridge', 'pillars'];
+  const pool = dark ? ['stones3', 'crumble3', 'padCliff', 'stairs', 'plankClimb', 'spikeStrips', 'dashGap', 'bridge'] : ['stones3', 'stones2', 'rafts', 'crumble3', 'crumble2', 'elevator', 'padCliff', 'pillarPad', 'fireRun', 'dashGap', 'stairs', 'plankClimb', 'spikeStrips', 'bridge', 'pillars'];
 
   const boss = BOSSES[n];
-  const segCount = boss ? 4 : Math.min(14, 6 + Math.floor(n / 2));
-  const cpEvery = n >= 15 ? 3 : 2;
+  const segCount = boss ? 4 : dark ? 6 + Math.floor((n - 100) / 3) : Math.min(14, 6 + Math.floor(n / 2));
+  const cpEvery = dark ? 2 : n >= 15 ? 3 : 2;
 
   // start
   const STORY = {
@@ -263,6 +266,7 @@ function generateLevel(n) {
     41: 'A burning cathedral, deep underground. Chandeliers fall, and a wall of fire will chase you.',
     51: 'The Void. Nothing down here is real... except the darkness that chases you.',
     65: 'The Olive Grove... the olives here are ALIVE. They waddle, they scream like GOATS, and they run from you. Watch out for falling olives!',
+    101: 'The Iron Beast is gone... and so is the light. Watch closely: you will see the whole map ONCE, then the lights go out. Remember where the jumps are!',
     91: 'The chess board cracks open... and you land in the mud of an old WW2 battlefield. The war ended long ago, but the ghosts never left. Watch the sky for falling BOMBS, and do not step on a blinking LANDMINE!',
     81: 'Through the funhouse mirror... a giant marble chess hall. The pieces wear army gear and march back and forth. Touching one kills you! Jump over them or slash them.',
     71: 'Past the swamp, tinny music plays... a clown carnival. The rides move by themselves, and the clowns are still here. Watch the swinging blades!',
@@ -287,7 +291,7 @@ function generateLevel(n) {
       SEG.chase();
     }
     const isLast = i === segCount - 1;
-    rest(isLast ? 14 : 11, { enemy: !isLast && r() < (olive ? 0.9 : Math.min(0.6, 0.35 + n * 0.025)), checkpoint: !isLast && (i + 1) % cpEvery === 0 });
+    rest(isLast ? 14 : 11, { enemy: !isLast && r() < (olive ? 0.9 : dark ? 0.25 : Math.min(0.6, 0.35 + n * 0.025)), checkpoint: !isLast && (i + 1) % cpEvery === 0 });
   }
 
   let arena = null;
@@ -345,4 +349,4 @@ function generateLevel(n) {
   };
 }
 
-for (let n = 3; n <= 100; n++) LEVELS[n] = () => generateLevel(n);
+for (let n = 3; n <= 110; n++) LEVELS[n] = () => generateLevel(n);

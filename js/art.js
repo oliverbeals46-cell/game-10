@@ -643,9 +643,26 @@ function drawWarBack(ctx, camX, base, t, TH) {
     const gr = ctx.createLinearGradient(sx, base, sx + Math.cos(a) * L, base + Math.sin(a) * L); gr.addColorStop(0, 'rgba(255,240,200,0.22)'); gr.addColorStop(1, 'rgba(255,240,200,0)');
     ctx.fillStyle = gr; Draw.poly(ctx, [sx, base, sx + Math.cos(a - w) * L, base + Math.sin(a - w) * L, sx + Math.cos(a + w) * L, base + Math.sin(a + w) * L]);
   }
-  // far-off flashes on the horizon
-  const fl = Math.sin(t * 1.7) * Math.sin(t * 2.9);
-  if (fl > 0.8) { ctx.fillStyle = `rgba(255,170,80,${(fl - 0.8) * 1.5})`; ctx.fillRect(0, base - 60, VIEW_W, 60); }
+  // far-off explosions on the horizon: a flash, a fireball, then a rising smoke puff
+  for (let k = 0; k < 3; k++) {
+    const per = 3.1 + k * 1.3, cyc = Math.floor((t + k * 1.7) / per), ph = ((t + k * 1.7) % per) / per;
+    if (ph > 0.35) continue;
+    const ex = ((hash2(cyc, k * 7) * 1400 - camX * 0.08) % 1400 + 1400) % 1400 - 200, ey = base - 10 - hash2(cyc, k) * 30, q = ph / 0.35;
+    if (q < 0.15) { ctx.fillStyle = `rgba(255,200,120,${0.25 * (1 - q / 0.15)})`; ctx.fillRect(0, 0, VIEW_W, base); }
+    const fg = ctx.createRadialGradient(ex, ey, 0, ex, ey, 10 + q * 40);
+    fg.addColorStop(0, `rgba(255,240,180,${1 - q})`); fg.addColorStop(0.5, `rgba(255,120,30,${0.8 * (1 - q)})`); fg.addColorStop(1, 'rgba(255,80,20,0)');
+    ctx.fillStyle = fg; Draw.circ(ctx, ex, ey, 10 + q * 40);
+    ctx.fillStyle = `rgba(50,45,40,${0.5 * (1 - q)})`; Draw.circ(ctx, ex, ey - 20 - q * 50, 12 + q * 26);
+  }
+  // tracer bullets streaking across the sky (just background, they can't hurt you)
+  for (let k = 0; k < 7; k++) {
+    const per = 1.6 + (k % 3) * 0.5, ph = ((t + k * 0.37) % per) / per, cyc = Math.floor((t + k * 0.37) / per);
+    if (ph > 0.45) continue;
+    const dir = hash2(cyc, k + 50) > 0.5 ? 1 : -1, y0 = 60 + hash2(cyc, k + 9) * (base - 120), q = ph / 0.45;
+    const x = dir > 0 ? -40 + q * (VIEW_W + 80) : VIEW_W + 40 - q * (VIEW_W + 80), y = y0 - q * 40 * hash2(k, cyc);
+    ctx.strokeStyle = k % 2 ? 'rgba(255,220,120,0.85)' : 'rgba(255,140,60,0.8)'; ctx.lineWidth = 1.6;
+    Draw.line(ctx, x, y, x - dir * 26, y + 1.5);
+  }
   // ruined buildings with broken walls and empty windows
   const step = 170, ox = camX * 0.1, start = Math.floor(ox / step) - 1;
   for (let i = start; i < start + VIEW_W / step + 3; i++) {
@@ -654,8 +671,11 @@ function drawWarBack(ctx, camX, base, t, TH) {
     ctx.beginPath(); ctx.moveTo(sx, base); ctx.lineTo(sx, base - bh);
     for (let k = 1; k <= 5; k++) ctx.lineTo(sx + bw * k / 5, base - bh + (hash2(i, k) - 0.3) * 50); // jagged broken top
     ctx.lineTo(sx + bw, base); ctx.fill();
+    // windows: a few stay steadily lit (fixed per building, so they never flicker as you move)
+    let wi = 0;
     for (let wy = base - bh + 40; wy < base - 20; wy += 30) for (let wx = sx + 12; wx < sx + bw - 16; wx += 26) {
-      const lit = hash2(wx, wy) > 0.93; ctx.fillStyle = lit ? `rgba(255,176,64,${0.5 + Math.sin(t * 3 + wx) * 0.2})` : 'rgba(0,0,0,0.6)'; ctx.fillRect(wx, wy, 9, 13);
+      const lit = hash2(i * 31 + wi, 77) > 0.9; wi++;
+      ctx.fillStyle = lit ? 'rgba(255,176,64,0.6)' : 'rgba(0,0,0,0.6)'; ctx.fillRect(wx, wy, 9, 13);
     }
   }
 }

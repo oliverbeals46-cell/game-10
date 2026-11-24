@@ -114,6 +114,10 @@ const Game = {
       this.titleT = 0;
       this.toast(cp ? `Welcome back! Continuing from checkpoint ${r.checkpoint}` : 'Welcome back!', 2.6);
     }
+    // Levels 101–110: fly over the whole level once so you can memorize it, then the lights go out
+    this.dark = !!THEME.blackout;
+    this.preview = this.dark && !(r && r.level === n) ? { t: 0, dur: Math.max(7, this.world.w * TILE / 900) } : null;
+    if (this.preview) this.titleT = 0;
     this.updateCamera(1, true);
     this.state = 'playing';
     this.acc = 0;
@@ -151,6 +155,7 @@ const Game = {
   },
 
   step(dt) {
+    if (this.preview) { this.stepPreview(dt); return; }
     this.time += dt;
     this.titleT -= dt; this.flashRed -= dt; this.bossTitleT -= dt;
     this.shake = Math.max(0, this.shake - dt * 40);
@@ -168,6 +173,11 @@ const Game = {
       return;
     }
     if (!this.completed) this.stats.time += dt;
+    // WW2 levels: a far-off battle keeps going in the background
+    if (THEME.war && !this.bossLock) {
+      this.warT = (this.warT || 0) - dt;
+      if (this.warT <= 0) { this.warT = 0.6 + Math.random() * 1.6; Sfx.play(Math.random() < 0.2 ? 'farboom' : 'farshot'); }
+    }
 
     // ride moving platforms
     const plat = p.platform;
@@ -208,7 +218,7 @@ const Game = {
       this.bossStarted = true;
       if (A.chess) { this.startBoss(new ChessKing(0, 0, A)); this.bossTitleT = 3.4; }
       else {
-      const Cls = { giggles: MrGiggles, hag: MireHag, widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing, tank: IronBeast }[A.boss] || GraveWarden;
+      const Cls = { giggles: MrGiggles, hag: MireHag, widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing, tank: IronBeast, lighteater: LightEater }[A.boss] || GraveWarden;
       this.startBoss(new Cls(A.bossSpawn.x, A.bossSpawn.y, A));
       this.bossTitleT = 3.4;
       }
@@ -310,6 +320,45 @@ const Game = {
     if (snap) { this.cam.x = tx; this.cam.y = ty; return; }
     this.cam.x += (tx - this.cam.x) * Math.min(1, dt * 6);
     this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 5);
+  },
+
+  // The map flyover (Levels 101–110). Press ↑ or Space to skip it.
+  stepPreview(dt) {
+    const P = this.preview;
+    P.t += dt;
+    const maxX = this.world.w * TILE - VIEW_W;
+    const k = Math.min(1, Math.max(0, (P.t - 0.8) / (P.dur - 1.6)));
+    const e = k * k * (3 - 2 * k);
+    const cx = e * maxX;
+    // follow the path's height so you see the jumps
+    let sg = 30;
+    for (const s of this.def.route || []) { if (s.sx * TILE <= cx + VIEW_W / 2) sg = s.sg; else break; }
+    const ty = clamp(sg * TILE - VIEW_H / 2 - 20, 0, this.world.h * TILE - VIEW_H);
+    this.cam.x = cx; this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 3);
+    if (P.t >= P.dur || Input.pressed('jump')) {
+      this.preview = null; this.titleT = 2.6;
+      Sfx.play('gate'); this.toast('Lights out! Remember the way...', 2.6);
+      this.updateCamera(1, true);
+    }
+  },
+  // The darkness: everything is black except a tiny light around you (and faint glows on checkpoints).
+  drawDarkness(ctx, cam) {
+    if (!this.dark || this.preview || this.bossLock || this.bossDefeated) return;
+    if (!this.darkCv) { this.darkCv = document.createElement('canvas'); this.darkCv.width = VIEW_W; this.darkCv.height = VIEW_H; }
+    const c = this.darkCv.getContext('2d'), p = this.player;
+    c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, VIEW_W, VIEW_H);
+    c.fillStyle = 'rgba(0,0,2,0.985)'; c.fillRect(0, 0, VIEW_W, VIEW_H);
+    c.globalCompositeOperation = 'destination-out';
+    const hole = (x, y, r1, r2, a = 1) => {
+      const g = c.createRadialGradient(x, y, r1, x, y, r2); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(x, y, r2, 0, Math.PI * 2); c.fill();
+    };
+    const flick = Math.sin(this.t * 9) * 3 + Math.sin(this.t * 23) * 2;
+    if (!p.dead) hole(p.x + p.w / 2 - cam.x, p.y + p.h / 2 - cam.y, 55, 115 + flick);
+    for (const cp of this.checkpoints) hole(cp.x - cam.x, cp.y - 20 - cam.y, 4, 34, 0.7);
+    for (const e of this.enemies) if (!e.dead && Math.abs(e.x - cam.x - VIEW_W / 2) < VIEW_W) hole(e.x + e.w / 2 - cam.x, e.y + e.h / 2 - cam.y, 3, 26, 0.75); // you can see monsters' glowing eyes
+    hole(this.finish.x - cam.x, this.finish.y - 50 - cam.y, 10, 80, 0.8);
+    ctx.drawImage(this.darkCv, 0, 0);
   },
 
   /* ---------------- combat ---------------- */
@@ -587,6 +636,7 @@ const Game = {
     ctx.restore();
 
     drawLighting(ctx, this.collectLights(cam), cam, THEME.ambient);
+    this.drawDarkness(ctx, cam);
 
     // sign bubbles stay readable above the darkness
     ctx.save();
@@ -609,6 +659,18 @@ const Game = {
 
     this.drawHUD(ctx);
     this.drawOverlays(ctx);
+    if (this.preview) {
+      const left = Math.max(0, Math.ceil(this.preview.dur - this.preview.t));
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(0,0,0,0.55)'; Draw.rr(ctx, VIEW_W / 2 - 230, 70, 460, 74, 14); ctx.fill();
+      setGlow(ctx, '#9ab0ff', 14); ctx.fillStyle = '#e8ecff'; ctx.font = '38px Creepster, Nunito, cursive';
+      ctx.fillText(`MEMORIZE THE MAP!  ${left}`, VIEW_W / 2, 100); clearGlow(ctx);
+      ctx.fillStyle = '#b8c0e8'; ctx.font = '700 14px Nunito, sans-serif';
+      ctx.fillText('The lights go out soon. Press ↑ or Space when you are ready.', VIEW_W / 2, 130);
+      // progress along the level
+      ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(VIEW_W / 2 - 200, VIEW_H - 40, 400, 6);
+      ctx.fillStyle = '#9ab0ff'; ctx.fillRect(VIEW_W / 2 - 200, VIEW_H - 40, 400 * Math.min(1, this.preview.t / this.preview.dur), 6);
+    }
   },
 
   collectLights(cam) {

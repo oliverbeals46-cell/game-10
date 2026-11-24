@@ -721,6 +721,10 @@ const ENEMY_SKINS = {
   bogleech: { base: 'crawler', name: 'Bog Leech', shell: ['#7a8a3a', '#3a4a1a', '#0e1404'], face: ['#a8b070', '#5a6a2a', '#1a2208'], eye: '#ff3a2a', glow: '#ff0000', speed: 100 },
   swamplantern: { base: 'bat', name: 'Swamp Lantern', wing: ['#3a4a2a', '#1a2210', '#060a02'], body: ['#d8ff8a', '#6aa02a', '#1a3008'], eye: '#ff5a2a', glow: '#9aff4a' },
   croakskull: { base: 'skitter', name: 'Croaking Skull', skull: ['#c8e090', '#6a8a3a', '#1a2a08'], eye: '#ff2a2a', glow: '#ff0000', hop: 700 },
+  // Levels 101–110: the Blackout (their glowing eyes are the only part of them you can see in the dark)
+  shadowcrawler: { base: 'crawler', name: 'Shadow Crawler', shell: ['#2a2a3a', '#12121c', '#020204'], face: ['#3a3a4e', '#1a1a26', '#06060a'], eye: '#ffffff', glow: '#9ab0ff', speed: 50 },
+  shadowbat: { base: 'bat', name: 'Shadow Bat', wing: ['#22222e', '#10101a', '#020204'], body: ['#2e2e3e', '#14141e', '#040406'], eye: '#ffffff', glow: '#9ab0ff' },
+  shadowskull: { base: 'skitter', name: 'Shadow Skull', skull: ['#4a4a5e', '#22222e', '#06060a'], eye: '#ffffff', glow: '#9ab0ff', hop: 540 },
   // Levels 91–100: haunted WW2 battlefield
   warcrow: { base: 'bat', name: 'War Crow', wing: ['#3a3a40', '#1a1a20', '#050508'], body: ['#4a4a52', '#1e1e24', '#08080a'], eye: '#ff3a2a', glow: '#ff0000' },
   helmetskull: { base: 'skitter', name: 'Helmet Skull', skull: ['#e8e0c8', '#a89a78', '#2e2818'], eye: '#ffb040', glow: '#ff7a00', hop: 640,

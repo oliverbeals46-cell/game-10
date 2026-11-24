@@ -82,6 +82,8 @@ const Sfx = (() => {
     checkmate_tick() { tone(880, 0.12, 'triangle', 0.15); tone(660, 0.18, 'triangle', 0.12, 0, 0.1); },
     whistle() { tone(1400, 0.75, 'sine', 0.08, -900); },
     boom() { noise(0.7, 0.45, 160); tone(60, 0.6, 'square', 0.25, -30); noise(0.3, 0.2, 900); },
+    farshot() { const n = 1 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) noise(0.05, 0.05, 1600, i * 0.11); },
+    farboom() { noise(0.9, 0.12, 120); tone(50, 0.7, 'sine', 0.08, -20); },
     beep() { tone(1600, 0.05, 'square', 0.05); },
     geyser() { noise(0.6, 0.25, 500); tone(120, 0.4, 'sawtooth', 0.08, 200); },
     rumble() { noise(0.4, 0.18, 180); },

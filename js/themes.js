@@ -148,6 +148,21 @@ const WORLDS = [
       leaves: ['#5a4a30', '#3a2e1e', '#6a5a3a', '#2a2014'], dark: [4, 4, 3], ambient: 0.54,
     },
   },
+  // ---- Levels 101–110: The Blackout. Memorize the map, then find your way with a tiny light. ----
+  {
+    id: 11, levels: [101, 110],
+    look: 'Pitch black. You see the whole map once at the start, then the lights go out and you only have a tiny glow around you. Easy jumps, but you have to REMEMBER them.',
+    enemies: ['Shadow Crawler', 'Shadow Bat', 'Shadow Skull'],
+    boss: 'The Light Eater (Level 110)',
+    pal: {
+      sky: ['#020204', '#06060c', '#0c0c18', '#040408'], star: '#8a8aa8', moon: [150, 150, 190],
+      far: ['#0c0c16', '#08080e'], mid: ['#08080e', '#050508'], near: ['#040406', '#020203'],
+      castle: '#08080e', windows: '#8a9aff', tree: '#050508', bgTree: '#0a0a12',
+      fog: [100, 100, 140], haze: [60, 60, 100],
+      stone: [52, 52, 64], grass: ['#3a3a52', '#2a2a3c', '#4a4a64', '#1e1e2c', '#34344a'], grassTop: ['#3a3a52', '#1e1e2c'], moss: [80, 80, 130],
+      leaves: ['#4a4a6a', '#2a2a40', '#6a6a8a', '#1a1a2a'], dark: [1, 1, 3], ambient: 0.5,
+    },
+  },
 ];
 
 function worldForLevel(n) { return WORLDS.find((w) => n >= w.levels[0] && n <= w.levels[1]) || WORLDS[WORLDS.length - 1]; }
@@ -175,6 +190,8 @@ const HAZARD_LOOK = {
        spike: ['#ffffff', '#9a9aaa', '#2a2a34', 'rgba(212,175,55,0.45)'], under: 'chess', drop: 'piece', chase: 'rook', chess: true, crystal: '#d4af37' },
   10: { liquid: ['#8a7a5a', '#4a3e2a', '#2a2014', '#0e0a06'], bubble: [150, 130, 100], fire: ['#fff0c0', '#ff8a2a', '#a02a08'], fireGlow: '#ff6a10',
        spike: ['#a8a8a8', '#5a5a5a', '#1e1e1e', 'rgba(80,70,50,0.4)'], chase: 'tank', geysers: true, war: true, crystal: '#ffb040' },
+  11: { liquid: ['#c0c8ff', '#5a6ad0', '#1a2060', '#05061a'], bubble: [190, 200, 255], fire: ['#ffffff', '#9ab0ff', '#3a4ad0'], fireGlow: '#7a8aff',
+       spike: ['#d8d8f0', '#8a8aa8', '#24243a', 'rgba(140,150,255,0.4)'], blackout: true, crystal: '#9ab0ff' },
   6: { liquid: ['#f0d0ff', '#a050ff', '#40108a', '#10022a'], bubble: [230, 190, 255], fire: ['#ffffff', '#d080ff', '#6a1ad0'], fireGlow: '#b050ff',
        spike: ['#e8d8ff', '#9a7ad8', '#2e1a5a', 'rgba(180,120,255,0.4)'], under: 'void', drop: 'shard', chase: 'void', crystal: '#d080ff' },
 };
@@ -240,5 +257,6 @@ const LEVEL_NAMES = [null,
   'Carnival Gates', 'Big Top Blues', 'Clown Alley', 'Ferris Wheel Fright', 'Balloon Panic', 'Funhouse Frenzy', 'Jack-in-the-Box Junction', 'Clown Car Chaos', 'The Big Top', 'Mr. Giggles',
   'Opening Move', 'Pawn Storm', "Knight's Leap", "Bishop's Diagonal", 'Castle Walls', 'En Passant', 'Fork in the Road', 'Discovered Attack', 'Endgame', 'The Living Board',
   'No Man\'s Land', 'The Trenches', 'Barbed Wire Ridge', 'Searchlight Alley', 'Minefield', 'Ruined Town', 'Bomb Shelter', 'The Foggy Front', 'Tank Graveyard', 'The Iron Beast',
+  'Lights Out', 'Remember the Way', 'Blind Steps', 'The Long Dark', 'Tiny Light', 'Whispering Black', 'No Moon', 'Pitch Black Path', 'The Last Candle', 'The Light Eater',
 ];
 function levelName(n) { return LEVEL_NAMES[n] || ''; }
