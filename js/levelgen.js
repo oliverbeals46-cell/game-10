@@ -257,7 +257,7 @@ function generateLevel(n) {
     41: 'A burning cathedral, deep underground. Chandeliers fall, and a wall of fire will chase you.',
     51: 'The Void. Nothing down here is real... except the darkness that chases you.',
     65: 'The Olive Grove... the olives here are ALIVE. They waddle, they scream like GOATS, and they run from you. Watch out for falling olives!',
-    81: 'Through the funhouse mirror... a giant marble chess hall. The pieces wear army gear, and they SHOOT. Dodge the bullets, or slash them out of the air!',
+    81: 'Through the funhouse mirror... a giant marble chess hall. The pieces wear army gear and march back and forth. Touching one kills you! Jump over them or slash them.',
     71: 'Past the swamp, tinny music plays... a clown carnival. The rides move by themselves, and the clowns are still here. Watch the swinging blades!',
     61: 'You climb out of the Void into open air... but the moon has turned blood red, and the swamp is alive. Watch the bubbling geysers!',
   };

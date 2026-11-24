@@ -118,10 +118,10 @@ const WORLDS = [
       leaves: ['#ff4a6a', '#ffd040', '#4ac8ff', '#ffffff'], dark: [6, 2, 6], ambient: 0.58,
     },
   },
-  // ---- Levels 81–90: a giant marble chess hall. Military chess pieces shoot at you; Level 90 is a real game of chess. ----
+  // ---- Levels 81–90: a giant marble chess hall. Military chess pieces patrol back and forth; Level 90 is a real game of chess. ----
   {
     id: 9, levels: [81, 90],
-    look: 'A giant marble chess hall: checkerboard floors, towering pieces, and chess pieces in army gear that shoot at you.',
+    look: 'A giant marble chess hall: checkerboard floors, towering pieces, and chess pieces in army gear that march back and forth.',
     enemies: ['Soldier Pawn', 'Commando Knight', 'Sniper Bishop'],
     boss: 'The Living Board (Level 90): beat it at chess!',
     pal: {
