@@ -65,11 +65,11 @@ function generateLevel(n) {
   const chaseStyle = ['boulder', 'gears', 'fire', 'void', 'serpent', 'clowncar', 'rook', 'tank'][Math.min(group, 9) - 2];
   const L = { shards: [], bigShards: [], enemies: [], platforms: [], pads: [], firebars: [], signs: [], decor: [], checkpoints: [], route: [], droppers: [], chases: [], geysers: [], pendulums: [] };
   // falling hazards hang from the ceiling over open stretches (never right where you'd stand still)
-  const vents = (x1, x2) => { if (!geysers) return; for (let dx = x1; dx <= x2; dx += 4) if (r() < 0.4 * hz) {
+  const vents = (x1, x2) => { if (!geysers) return; if (bombs) x1 += 4; /* never right where you land after a jump */ for (let dx = x1; dx <= x2; dx += 4) if (r() < 0.4 * hz) {
     if (bombs && !L.mineSign) { L.mineSign = true; L.signs.push({ x: dx - 3, y: g - 1, text: 'LANDMINE! When its red light blinks fast and beeps, it is about to BLOW UP. Wait for the blast, then run past.' }); }
     L.geysers.push({ x: dx, g, phase: r() * 3 }); } };
   const swings = (x1, x2) => { if (!blades) return; for (let dx = x1; dx <= x2; dx += 5) if (r() < 0.45 * hz) L.pendulums.push({ x: dx, g, phase: r() * 3 }); };
-  const drops = (x1, x2) => { vents(x1, x2); swings(x1, x2); if (!under && !olive && !bombs) return; for (let dx = x1; dx <= x2; dx += 3) if (r() < (bombs ? 0.25 : 0.32 + n * 0.006)) (bombs && !L.bombSign && (L.bombSign = true) && L.signs.push({ x: dx - 3, y: g - 1, text: 'Hear a WHISTLE? A bomb is falling! A red circle shows where it will land. Keep moving!' })), L.droppers.push({ x: dx, y: olive || bombs ? 6 : 4, style: olive ? 'olive' : bombs ? 'bomb' : dropStyle, big: !bombs && r() < 0.3 }); };
+  const drops = (x1, x2) => { vents(x1, x2); swings(x1, x2); if (!under && !olive && !bombs) return; for (let dx = x1 + (bombs ? 4 : 0); dx <= x2; dx += 3) if (r() < (bombs ? 0.25 : 0.32 + n * 0.006)) (bombs && !L.bombSign && (L.bombSign = true) && L.signs.push({ x: dx - 3, y: g - 1, text: 'Hear a WHISTLE? A bomb is falling! A red circle shows where it will land. Keep moving!' })), L.droppers.push({ x: dx, y: olive || bombs ? 6 : 4, style: olive ? 'olive' : bombs ? 'bomb' : dropStyle, big: !bombs && r() < 0.3 }); };
   // remember where each route step starts (used by the automated playtest)
   L.route.push = (o) => Array.prototype.push.call(L.route, Object.assign({ sx: x, sg: g }, o));
   const sh = (x, y) => L.shards.push([x, y]);
