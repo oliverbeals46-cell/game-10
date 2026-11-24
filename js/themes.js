@@ -118,6 +118,21 @@ const WORLDS = [
       leaves: ['#ff4a6a', '#ffd040', '#4ac8ff', '#ffffff'], dark: [6, 2, 6], ambient: 0.58,
     },
   },
+  // ---- Levels 81–90: a giant marble chess hall. Military chess pieces shoot at you; Level 90 is a real game of chess. ----
+  {
+    id: 9, levels: [81, 90],
+    look: 'A giant marble chess hall: checkerboard floors, towering pieces, and chess pieces in army gear that shoot at you.',
+    enemies: ['Soldier Pawn', 'Commando Knight', 'Sniper Bishop'],
+    boss: 'The Living Board (Level 90): beat it at chess!',
+    pal: {
+      sky: ['#04040a', '#10101c', '#1c1c2a', '#14141e'], star: '#ffffff', moon: [230, 230, 255],
+      far: ['#1c1c28', '#12121a'], mid: ['#14141e', '#0c0c14'], near: ['#08080e', '#050508'],
+      castle: '#14141e', windows: '#d4af37', tree: '#0a0a10', bgTree: '#14141c',
+      fog: [170, 170, 200], haze: [120, 120, 150],
+      stone: [72, 70, 82], grass: ['#d8d8e0', '#2a2a34'], grassTop: ['#d8d8e0', '#2a2a34'], moss: [180, 160, 90],
+      leaves: ['#ffffff', '#c8c8d0', '#d4af37', '#8a8a9a'], dark: [4, 4, 8], ambient: 0.55,
+    },
+  },
 ];
 
 function worldForLevel(n) { return WORLDS.find((w) => n >= w.levels[0] && n <= w.levels[1]) || WORLDS[WORLDS.length - 1]; }
@@ -141,6 +156,8 @@ const HAZARD_LOOK = {
        spike: ['#8a7a5a', '#5a4a30', '#1e160c', 'rgba(90,140,40,0.4)'], chase: 'serpent', geysers: true, crystal: '#9aff4a' },
   8: { liquid: ['#ffe080', '#ff6a2a', '#a01020', '#2a0408'], bubble: [255, 220, 140], fire: ['#fff8d0', '#ff8a2a', '#c01020'], fireGlow: '#ff4a2a',
        spike: ['#f0e8e0', '#c8102e', '#3a0810', 'rgba(255,255,255,0.4)'], chase: 'clowncar', pendulums: true, carnival: true, crystal: '#ffd060' },
+  9: { liquid: ['#d8d8f0', '#6a6a8a', '#1a1a2a', '#05050a'], bubble: [220, 220, 255], fire: ['#fffbe0', '#e8c040', '#8a6a10'], fireGlow: '#d4af37',
+       spike: ['#ffffff', '#9a9aaa', '#2a2a34', 'rgba(212,175,55,0.45)'], under: 'chess', drop: 'piece', chase: 'rook', chess: true, crystal: '#d4af37' },
   6: { liquid: ['#f0d0ff', '#a050ff', '#40108a', '#10022a'], bubble: [230, 190, 255], fire: ['#ffffff', '#d080ff', '#6a1ad0'], fireGlow: '#b050ff',
        spike: ['#e8d8ff', '#9a7ad8', '#2e1a5a', 'rgba(180,120,255,0.4)'], under: 'void', drop: 'shard', chase: 'void', crystal: '#d080ff' },
 };
@@ -172,6 +189,7 @@ let THEME = null;
 // One new attack every 20 levels. Each one helps against the boss that comes after it.
 const ATTACKS = [
   { level: 20, id: 'wisp', name: 'Wisp Bolt', key: 'V', desc: 'Fire a ghostly bolt that zips through monsters. Great for hitting bosses from far away.' },
+  { level: 80, id: 'phantom', name: 'Phantom Dash', key: 'Q', desc: 'A long ghostly dash that passes straight through monsters and bullets, hurting every monster you pass.' },
   { level: 60, id: 'slam', name: 'Ground Slam', key: 'G', desc: 'Slam the ground to send shockwaves rolling both ways. Hits everything on the floor, even bosses.' },
   { level: 40, id: 'spin', name: 'Spin Slash', key: 'B', desc: 'Spin your sword all the way around you, hitting everything close by. Perfect when bosses get close.' },
   // { level: 40, ... }, { level: 60, ... } — added as those levels are built.
@@ -202,5 +220,6 @@ const LEVEL_NAMES = [null,
   'Into the Void', 'Floating Ruins', 'Purple Nothing', 'Void Shards', 'The Watching Eye', 'Broken Stars', 'Darkness Run', 'Edge of Nowhere', 'The Void Throne', 'The Void King',
   'Blood Moon Rising', 'Toxic Bog', 'Geyser Fields', 'Serpent Swamp', 'The Olive Grove', 'Screaming Olives', 'Olive Stampede', 'Goat Scream Valley', 'The Last Olive', 'The Mire Hag',
   'Carnival Gates', 'Big Top Blues', 'Clown Alley', 'Ferris Wheel Fright', 'Balloon Panic', 'Funhouse Frenzy', 'Jack-in-the-Box Junction', 'Clown Car Chaos', 'The Big Top', 'Mr. Giggles',
+  'Opening Move', 'Pawn Storm', "Knight's Leap", "Bishop's Diagonal", 'Castle Walls', 'En Passant', 'Fork in the Road', 'Discovered Attack', 'Endgame', 'The Living Board',
 ];
 function levelName(n) { return LEVEL_NAMES[n] || ''; }

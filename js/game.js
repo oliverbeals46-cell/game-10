@@ -68,6 +68,7 @@ const Game = {
     const D = difficultyForLevel(def.number);
     this.difficulty = D;
     this.enemies = def.enemies.map((e) => {
+      if (e.type === 'milpawn' || e.type === 'milknight' || e.type === 'milbishop') { const s = new ChessSoldier(e.type.slice(3), e.x * TILE + 4, (e.y + 1) * TILE); s.speedMul = (this.diff && this.diff.enemy) || 1; return s; }
       if (e.type === 'clown') return new CreepyClown(e.x * TILE + 4, (e.y + 1) * TILE);
       if (e.type === 'screamolive') return new ScreamingOlive(e.x * TILE + 4, (e.y + 1) * TILE);
       if (ENEMY_SKINS[e.type]) return makeSkinnedEnemy(e.type, e.x, e.y);
@@ -188,6 +189,7 @@ const Game = {
       if (e.dead) continue;
       if (Math.abs(e.x - p.x) > 1200) continue;
       e.update(dt, this);
+      if (!e.dead && p.phantomT > 0 && !p.phantomHits.has(e) && rectsOverlap(pbox, e)) { p.phantomHits.add(e); e.hurt(3 * p.st.dmg, p.dashDir, this); }
       if (!e.dead && rectsOverlap(pbox, e)) p.hurt(this, e.contact, e.x + e.w / 2);
     }
     this.enemies = this.enemies.filter((e) => !e.dead);
@@ -202,13 +204,17 @@ const Game = {
     const A = this.def.arena;
     if (A && !this.bossStarted && !this.bossDefeated && p.x > A.triggerX) {
       this.bossStarted = true;
+      if (A.chess) { this.startBoss(new ChessKing(0, 0, A)); this.bossTitleT = 3.4; }
+      else {
       const Cls = { giggles: MrGiggles, hag: MireHag, widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing }[A.boss] || GraveWarden;
       this.startBoss(new Cls(A.bossSpawn.x, A.bossSpawn.y, A));
       this.bossTitleT = 3.4;
+      }
     }
     if (this.boss) {
       this.boss.update(dt, this);
       const b = this.boss;
+      if (p.phantomT > 0 && !p.phantomHits.has(b) && rectsOverlap(pbox, b.hitbox())) { p.phantomHits.add(b); b.hurt(4 * p.st.dmg, this); }
       if (!b.dead && !b.dying && b.state !== 'intro' && rectsOverlap(pbox, b.hitbox())) p.hurt(this, 1, b.x + b.w / 2);
       if (b.dead) this.boss = null;
     }
@@ -365,7 +371,7 @@ const Game = {
     e.dead = true;
     Sfx.play('kill');
     // the monster shatters into pieces, with a puff of ash and a shock ring
-    const col = e.skin ? (e.skin.shell || e.skin.body || e.skin.skull)[1] : (ENEMY_COLORS[e.constructor.name] || (e instanceof ScreamingOlive ? '#6a8a2a' : e instanceof CreepyClown ? '#9a5aff' : '#a99cc8'));
+    const col = e.skin ? (e.skin.shell || e.skin.body || e.skin.skull)[1] : (ENEMY_COLORS[e.constructor.name] || (e instanceof ScreamingOlive ? '#6a8a2a' : e instanceof CreepyClown ? '#9a5aff' : e instanceof ChessSoldier ? (e.white ? '#e8e4dc' : '#2a2a32') : '#a99cc8'));
     this.shatter(e.x + e.w / 2, e.y + e.h / 2, col, 9, e.y + e.h);
     this.smoke(e.x + e.w / 2, e.y + e.h / 2, 7, 'rgba(60,50,80,0.5)');
     this.ring(e.x + e.w / 2, e.y + e.h / 2, '#ffffff', 34);
@@ -459,6 +465,21 @@ const Game = {
       d.warn = 0.6 + i * 0.12; d.skin = this.boss ? this.boss.debrisSkin : null;
       this.projectiles.push(d);
     }
+  },
+  // Level 90: the fight is a real game of chess. You must checkmate the King to open the exit.
+  startChess() {
+    this.state = 'chess';
+    ChessUI.open(() => this.chessWon());
+  },
+  chessWon() {
+    UI.show(null); this.state = 'playing'; this.last = performance.now();
+    if (document.activeElement) document.activeElement.blur();
+    const b = this.boss;
+    this.bossDefeated = true; this.bossLock = false; this.world.gateClosed = false; this.world.exitOpen = true; this.projectiles = [];
+    this.toast('CHECKMATE! THE LIVING BOARD HAS FALLEN!', 3.5);
+    this.shake = 16; Sfx.stopMusic(); Sfx.play('victory');
+    if (b) { for (let i = 0; i < 12; i++) this.pickups.push(new Shard(b.x + b.w / 2, b.floor - 120, { drop: true, big: i < 4 })); this.smoke(b.x + b.w / 2, b.floor - 100, 30); }
+    this.boss = null;
   },
   onBossDefeated(b) {
     this.bossDefeated = true;

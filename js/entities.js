@@ -58,6 +58,7 @@ class Player {
   hurt(g, dmg, srcX) {
     if (this.dead || this.invuln > 0) return false; // brief protection right after respawning
     if (this.st.dashSafe && this.dashT > 0) return false;   // Cranberry Blob: can't be hurt while dashing
+    if (this.phantomT > 0) return false;                     // Phantom Dash passes straight through
     if (this.shield > 0) {                                  // Nutcracker: one free hit per checkpoint
       this.shield--; this.invuln = 1;
       this.vx = (this.x + this.w / 2 < (srcX || 0) ? -1 : 1) * 300; this.vy = -320; this.ctrlLock = 0.2;
@@ -85,7 +86,7 @@ class Player {
     this.wallSlide = 0;
     if (this.dashT > 0) {
       this.dashT -= dt;
-      this.vx = this.dashDir * PHYS.DASH_SPEED;
+      this.vx = this.dashDir * PHYS.DASH_SPEED * (this.phantomT > 0 ? 1.3 : 1);
       this.vy = 0;
       g.afterimages.push({ x: this.x, y: this.y, facing: this.facing, head: this.head, life: 0.25 });
       if (this.dashT <= 0) this.vx = this.dashDir * PHYS.RUN * this.st.speed;
@@ -158,6 +159,17 @@ class Player {
     if (I.pressed('spin')) {
       if (!Save.data.unlocks.spin) g.toast('Spin Slash unlocks after Level 40!', 1.8);
       else if (this.spinCd <= 0 && this.dashT <= 0) { this.spinT = 0.32; this.spinCd = 1.4 * this.st.spinCd; this.spinHits = new Set(); Sfx.play('spin'); }
+    }
+
+    // Phantom Dash (unlocks after Level 80): a long ghostly dash through monsters and bullets
+    this.phantomCd = (this.phantomCd || 0) - dt; this.phantomT = (this.phantomT || 0) - dt;
+    if (I.pressed('phantom')) {
+      if (!Save.data.unlocks.phantom) g.toast('Phantom Dash unlocks after Level 80!', 1.8);
+      else if (this.phantomCd <= 0) {
+        this.dashDir = ix || this.facing; this.facing = this.dashDir;
+        this.dashT = 0.3; this.phantomT = 0.36; this.phantomCd = 1.3; this.phantomHits = new Set(); this.jumping = false; this.platform = null;
+        Sfx.play('dash'); Sfx.play('bolt');
+      }
     }
 
     // Ground Slam (unlocks after Level 60): shockwaves roll both ways along the ground
@@ -849,6 +861,123 @@ class Pendulum {
   }
 }
 
+// Levels 81–89: chess pieces in army gear. They aim (red laser sight) for a moment, then fire a 3-round
+// burst of bullets. Jump over the bullets, dash through, or slash them out of the air!
+//   Pawn  - marches forward only, never backward (chess rules!)
+//   Knight - leaps in big L-shaped hops toward you
+//   Bishop - flies only on diagonals, bouncing around its post
+class ChessSoldier {
+  constructor(kind, x, y) {
+    this.kind = kind; this.white = Math.random() < 0.5;
+    this.w = kind === 'pawn' ? 28 : 32; this.h = kind === 'pawn' ? 42 : 50;
+    this.x = x; this.y = y - this.h; this.home = { x, y: y - this.h };
+    this.vx = 0; this.vy = 0; this.hp = kind === 'pawn' ? 2 : 4; this.flash = 0; this.dead = false;
+    this.anim = Math.random() * 10; this.shards = 4; this.contact = 1;
+    this.dir = -1; this.facing = -1; this.state = 'patrol'; this.timer = 1 + Math.random(); this.shots = 0; this.hopT = 1 + Math.random();
+    if (kind === 'bishop') { this.vx = -85; this.vy = -85; this.y -= 3 * TILE; this.home.y = this.y; }
+  }
+  update(dt, g) {
+    this.anim += dt; this.flash -= dt; this.timer -= dt;
+    const p = g.player, dx = (p.x + p.w / 2) - (this.x + this.w / 2), dy = (p.y + p.h / 2) - (this.y + this.h / 2);
+    const sees = !p.dead && Math.abs(dx) < 440 && Math.abs(dy) < 150;
+    if (this.state !== 'aim' && this.state !== 'fire') this.facing = this.kind === 'pawn' ? -1 : Math.sign(dx) || this.facing;
+    // shooting
+    if (this.state === 'patrol' && sees && this.timer <= 0 && Math.sign(dx) === this.facing) { this.state = 'aim'; this.timer = 0.6; Sfx.play('aim'); }
+    else if (this.state === 'aim' && this.timer <= 0) { this.state = 'fire'; this.shots = 3; this.timer = 0; }
+    else if (this.state === 'fire' && this.timer <= 0) {
+      if (this.shots > 0) {
+        const gx = this.x + this.w / 2 + this.facing * 20, gy = this.y + this.h * 0.55;
+        const b = new Projectile('bullet', gx - 5, gy - 2, this.facing * 330, 0); g.projectiles.push(b);
+        this.muzzle = 0.06; Sfx.play('shot'); this.shots--; this.timer = 0.13;
+      } else { this.state = 'patrol'; this.timer = 2.2 + Math.random() * 0.8; }
+    }
+    this.muzzle = (this.muzzle || 0) - dt;
+    const busy = this.state === 'aim' || this.state === 'fire';
+    // movement
+    if (this.kind === 'bishop') {
+      if (!busy) {
+        if (Math.abs(this.x - this.home.x) > 140) this.vx = -Math.sign(this.x - this.home.x) * 85;
+        if (Math.abs(this.y - this.home.y) > 70) this.vy = -Math.sign(this.y - this.home.y) * 85;
+        const vx = this.vx, vy = this.vy; moveEntity(g.world, this, dt);
+        if (this.hitWallL || this.hitWallR) this.vx = -vx; else this.vx = vx;
+        if (this.onGround || this.hitCeil) this.vy = -vy; else this.vy = vy;
+      }
+      return;
+    }
+    this.vy = Math.min(this.vy + PHYS.GRAV * dt, PHYS.MAXFALL);
+    if (this.kind === 'pawn') {
+      let sp = busy ? 0 : 32 * (this.speedMul || 1);
+      if (this.onGround) {
+        const tx = Math.floor((this.x - 3) / TILE), fy = Math.floor((this.y + this.h + 2) / TILE), my = Math.floor((this.y + this.h / 2) / TILE);
+        if (!g.world.standable(tx, fy) || g.world.solid(tx, my) || g.world.isHazard(tx, fy - 1)) sp = 0; // pawns can't go back, so they just stop
+      }
+      this.vx = -sp;
+    } else { // knight: L-shaped leaps
+      if (this.onGround) {
+        this.vx = approach(this.vx, 0, 900 * dt); this.hopT -= dt;
+        if (!busy && this.hopT <= 0) {
+          const d = sees ? Math.sign(dx) || 1 : (this.x > this.home.x ? -1 : 1);
+          const tx = Math.floor((this.x + this.w / 2 + d * 90) / TILE), fy = Math.floor((this.y + this.h + 4) / TILE);
+          if (g.world.standable(tx, fy) && !g.world.isHazard(tx, fy - 1)) { this.vy = -560; this.vx = d * 150; this.facing = d; Sfx.play('skitter'); }
+          this.hopT = 1.5;
+        }
+      }
+    }
+    moveEntity(g.world, this, dt);
+  }
+  hurt(dmg, dir, g) {
+    this.hp -= dmg; this.flash = 0.12;
+    if (dir && this.kind !== 'bishop') { this.vx = dir * 200; this.vy = -180; }
+    g.sparks(this.x + this.w / 2, this.y + this.h / 2, 8, dir > 0 ? 0 : Math.PI, '#ffffff');
+    if (this.hp <= 0) g.killEnemy(this);
+  }
+  draw(ctx, t) {
+    const f = this.flash > 0, cx = this.x + this.w / 2, by = this.y + this.h;
+    const body = this.white ? ['#ffffff', '#d8d4cc', '#7a766e'] : ['#5a5a66', '#1e1e26', '#000000'];
+    const B = (x, y, r) => (f ? '#fff' : shade(ctx, x, y, r, body[0], body[1], body[2]));
+    if (this.kind !== 'bishop' && this.onGround) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; Draw.ell(ctx, cx, by, 13, 3); }
+    // red laser sight while aiming
+    if (this.state === 'aim') {
+      ctx.strokeStyle = `rgba(255,30,30,${0.4 + Math.sin(t * 40) * 0.3})`; ctx.lineWidth = 1.2;
+      Draw.line(ctx, cx + this.facing * 20, this.y + this.h * 0.55, cx + this.facing * 440, this.y + this.h * 0.55);
+    }
+    ctx.save(); ctx.translate(cx, by); ctx.scale(this.facing * 1.32, 1.32);
+    // base + body by piece type
+    ctx.fillStyle = B(0, -4, 12); Draw.rr(ctx, -11, -6, 22, 6, 2); ctx.fill();
+    if (this.kind === 'pawn') {
+      ctx.fillStyle = B(0, -14, 10); Draw.poly(ctx, [-8, -6, 8, -6, 5, -20, -5, -20]);
+      ctx.fillStyle = B(-2, -26, 8); Draw.circ(ctx, 0, -25, 7);
+    } else if (this.kind === 'knight') {
+      ctx.fillStyle = B(0, -14, 12); Draw.poly(ctx, [-9, -6, 9, -6, 7, -18, -7, -18]);
+      ctx.fillStyle = B(2, -28, 13);
+      ctx.beginPath(); ctx.moveTo(-6, -18); ctx.lineTo(-7, -30); ctx.quadraticCurveTo(-4, -40, 4, -38); ctx.lineTo(12, -30); ctx.lineTo(13, -25); ctx.lineTo(6, -24); ctx.lineTo(7, -18); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = f ? '#fff' : (this.white ? '#8a8478' : '#000'); Draw.circ(ctx, 4, -31, 1.3);
+    } else {
+      ctx.fillStyle = B(0, -14, 12); Draw.poly(ctx, [-8, -6, 8, -6, 4, -22, -4, -22]);
+      ctx.fillStyle = B(0, -30, 10); Draw.ell(ctx, 0, -29, 6.5, 9); Draw.circ(ctx, 0, -39, 2.2);
+      ctx.strokeStyle = f ? '#fff' : (this.white ? '#7a766e' : '#000'); ctx.lineWidth = 1.2; Draw.line(ctx, -2, -33, 3, -27);
+    }
+    if (!f) {
+      // camo band + bandolier
+      ctx.fillStyle = '#4a5a2a'; ctx.fillRect(-8, -14, 16, 4); ctx.fillStyle = '#2e3a16'; ctx.fillRect(-6, -14, 3, 4); ctx.fillRect(1, -13, 4, 2);
+      ctx.strokeStyle = '#6a4a1a'; ctx.lineWidth = 2; Draw.line(ctx, -7, -20, 7, -9);
+      // army helmet
+      const hy = this.kind === 'pawn' ? -30 : this.kind === 'knight' ? -37 : -36;
+      ctx.fillStyle = shade(ctx, -2, hy, 9, '#6a7a3a', '#3e4a1e', '#141a08');
+      ctx.beginPath(); ctx.arc(this.kind === 'knight' ? 0 : 0, hy + 4, 8.5, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.fillRect(-10, hy + 3, 20, 2.4);
+      ctx.strokeStyle = '#1a1a10'; ctx.lineWidth = 0.8; Draw.line(ctx, 6, hy + 5, 4, hy + 11);
+      // assault rifle: dark receiver, wooden stock, curved magazine
+      const gy = -this.h * 0.45 / 1.32;
+      ctx.fillStyle = '#6a3a1a'; Draw.poly(ctx, [-6, gy - 1, 0, gy - 2, 0, gy + 3, -7, gy + 5]);
+      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(0, gy - 2.5, 14, 4.5); ctx.fillRect(14, gy - 1.5, 8, 2);
+      ctx.fillStyle = '#6a3a1a'; ctx.fillRect(9, gy - 2.5, 5, 3);
+      ctx.fillStyle = '#1e1e22'; ctx.beginPath(); ctx.moveTo(4, gy + 2); ctx.quadraticCurveTo(5, gy + 8, 9, gy + 9); ctx.lineTo(10, gy + 7); ctx.quadraticCurveTo(7, gy + 6, 7, gy + 2); ctx.fill();
+      if (this.muzzle > 0) { setGlow(ctx, '#ffcc40', 12); ctx.fillStyle = '#fff0a0'; Draw.poly(ctx, [22, gy - 1, 30, gy - 5, 28, gy - 0.5, 32, gy + 1, 22, gy + 1]); clearGlow(ctx); }
+    }
+    ctx.restore();
+  }
+}
+
 /* ---------- Levels 11–20 mini enemies (frozen) ---------- */
 // Frost Mite: an icy beetle that crawls faster than a Grave Mite.
 class FrostMite extends Crawler {
@@ -1064,7 +1193,7 @@ class Dropper {
       const bx = this.x + this.w / 2, byy = this.y + this.h;
       if (g.world.solidAt(bx, byy) || g.world.isHazard(Math.floor(bx / TILE), Math.floor(byy / TILE)) || this.y > g.world.h * TILE) {
         this.state = 'gone'; this.timer = 2.8;
-        const col = { stalactite: '#9a8a78', gear: '#c8a040', chandelier: '#ffb040', shard: '#c890ff', olive: '#6a8a2a' }[this.style] || '#9a8a78';
+        const col = { stalactite: '#9a8a78', gear: '#c8a040', chandelier: '#ffb040', shard: '#c890ff', olive: '#6a8a2a', piece: '#e8e4dc' }[this.style] || '#9a8a78';
         g.shatter(bx, byy - 6, col, 8, byy); g.smoke(bx, byy - 4, 4); Sfx.play('crash'); g.shake = Math.max(g.shake, 4);
       }
     } else if (this.state === 'gone' && this.timer <= 0) this.reset();
@@ -1091,6 +1220,12 @@ class Dropper {
       setGlow(ctx, '#ffa000', 12); ctx.fillStyle = '#ffd060';
       for (const dx of [-7, 0, 7]) { ctx.beginPath(); ctx.moveTo(cx + dx - 2, y + h - 14); ctx.quadraticCurveTo(cx + dx, y + h - 24 - Math.sin(t * 12 + dx) * 2, cx + dx + 2, y + h - 14); ctx.fill(); }
       clearGlow(ctx);
+    } else if (this.style === 'piece') {
+      // a falling chess pawn
+      ctx.fillStyle = shade(ctx, cx, y + h * 0.4, 16, '#ffffff', '#cfcac0', '#6a665e');
+      Draw.circ(ctx, cx, y + 9, 7); Draw.poly(ctx, [cx - 5, y + 14, cx + 5, y + 14, cx + 8, y + h - 6, cx - 8, y + h - 6]);
+      Draw.rr(ctx, cx - 11, y + h - 7, 22, 7, 2); ctx.fill();
+      if (this.state !== 'fall') { ctx.strokeStyle = '#8a8a9a'; ctx.lineWidth = 1.2; Draw.line(ctx, cx, this.y0, cx, y + 2); }
     } else if (this.style === 'olive') {
       if (this.state !== 'fall') { // olive branch above
         ctx.strokeStyle = '#2a2010'; ctx.lineWidth = 4; Draw.line(ctx, cx - 40, this.y0 - 30, cx + 40, this.y0 - 22);
@@ -1213,6 +1348,18 @@ class Chaser {
         ctx.beginPath(); ctx.moveTo(fx - 40, y); ctx.quadraticCurveTo(fx - 10, y - 12, fx - 40 + h * 0.6, y - 18); ctx.quadraticCurveTo(fx - 30, y - 8, fx - 40, y - 24); ctx.fill();
       }
       clearGlow(ctx);
+    } else if (this.style === 'rook') {
+      // a giant rook sliding along its file, straight at you
+      const W = 150, H = 260, x0 = fx - W;
+      ctx.fillStyle = 'rgba(0,0,0,0.45)'; Draw.ell(ctx, fx - W / 2, fy, W * 0.6, 10);
+      ctx.fillStyle = shade(ctx, x0 + W * 0.35, fy - H * 0.6, H, '#ffffff', '#cfcac0', '#5a564e');
+      Draw.rr(ctx, x0 - 10, fy - 24, W + 20, 24, 6); ctx.fill();
+      Draw.poly(ctx, [x0 + 8, fy - 24, x0 + W - 8, fy - 24, x0 + W - 22, fy - H + 50, x0 + 22, fy - H + 50]);
+      ctx.fillRect(x0 + 6, fy - H + 10, W - 12, 44);
+      for (let i = 0; i < 4; i++) ctx.fillRect(x0 + 6 + i * ((W - 12) / 4) + 4, fy - H - 14, (W - 12) / 4 - 10, 26);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; for (let yy = fy - H + 70; yy < fy - 30; yy += 22) ctx.fillRect(x0 + 24, yy, W - 48, 3);
+      ctx.fillStyle = '#ff3030'; setGlow(ctx, '#ff0000', 14); Draw.ell(ctx, x0 + W * 0.38, fy - H + 32, 9, 5); Draw.ell(ctx, x0 + W * 0.68, fy - H + 32, 9, 5); clearGlow(ctx);
+      ctx.fillStyle = 'rgba(200,200,220,0.5)'; for (let i = 0; i < 6; i++) Draw.circ(ctx, x0 - 20 - i * 18, fy - 8 - Math.abs(Math.sin(t * 8 + i)) * 12, 6 - i * 0.6);
     } else if (this.style === 'clowncar') {
       // a tiny clown car, impossibly packed, honking after you
       const cx = fx - 120, cy = fy - 60, bump = Math.abs(Math.sin(t * 14)) * 4;
@@ -1286,6 +1433,7 @@ class Projectile {
     if (type === 'wave') { this.w = 26; this.h = 26; this.grav = 0; this.life = 3.5; }
     if (type === 'debris') { this.w = 18; this.h = 18; this.grav = 0; this.warn = 0.7; }
     if (type === 'wisp') { this.w = 30; this.h = 18; this.grav = 0; this.life = 1.3; this.dmg = 6; }
+    if (type === 'bullet') { this.w = 10; this.h = 4; this.grav = 0; this.life = 2.2; this.hostile = true; this.breakable = true; }
     if (type === 'pwave') { this.w = 26; this.h = 26; this.grav = 0; this.life = 0.75; this.dmg = 4; this.hostile = false; }
   }
   update(dt, g) {
@@ -1333,6 +1481,9 @@ class Projectile {
       setGlow(ctx, '#7ae0ff', 10);
       ctx.fillStyle = lin(ctx, -4, 0, 4, 0, ['#ffffff', '#9fe8ff', '#3a8ac0']);
       Draw.poly(ctx, [-4, -8, 4, -8, 0, 10]);
+    } else if (this.type === 'bullet') {
+      ctx.fillStyle = 'rgba(255,200,80,0.35)'; ctx.fillRect(this.vx > 0 ? this.x - 14 : this.x + this.w, this.y + 1, 14, 2); // tracer
+      ctx.fillStyle = '#e8c060'; Draw.rr(ctx, this.x, this.y, this.w, this.h, 2); ctx.fill();
     } else if (this.type === 'pwave') {
       const base = this.y + this.h; const k = this.life / 0.75;
       ctx.globalAlpha = Math.min(1, k * 1.5);

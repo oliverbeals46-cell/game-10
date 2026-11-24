@@ -11,6 +11,7 @@ const Input = (() => {
     spell: ['KeyL', 'KeyV'],
     spin: ['KeyB', 'KeyN'],
     slam: ['KeyG', 'KeyH'],
+    phantom: ['KeyQ'],
   };
   const held = new Set();
   const pressed = new Set();

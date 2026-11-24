@@ -142,6 +142,12 @@ class World {
 
   paintGrass(ctx, tx, ty) {
     const px = tx * TILE, py = ty * TILE;
+    if (THEME.chess) { // checkerboard marble floor
+      ctx.fillStyle = (tx + ty) % 2 ? '#e8e4d8' : '#2a2a32'; ctx.fillRect(px, py, TILE, 7);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(px, py, TILE, 1.5);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(px, py + 7, TILE, 2);
+      return;
+    }
     // soil band
     ctx.fillStyle = lin(ctx, 0, py, 0, py + 10, ['#3a2c22', '#241a14', 'rgba(20,14,10,0)']);
     ctx.fillRect(px, py, TILE, 10);

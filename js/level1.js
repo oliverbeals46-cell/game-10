@@ -138,4 +138,4 @@ function buildLevel1() {
 
 // Registry of built levels. Add LEVELS[2] = buildLevel2, etc. as new levels are made.
 const LEVELS = { 1: buildLevel1 };
-const PLANNED_LEVELS = 80;
+const PLANNED_LEVELS = 90;

@@ -28,6 +28,7 @@ const BOSSES = {
   30: { id: 'troll', name: 'THE TROLL', sign: 'THE TROLL lives past this gate. It swings its club, throws boulders, and its roar brings down stalactites. Touching it kills you!' },
   40: { id: 'clock', name: 'THE GRANDFATHER CLOCK', sign: 'THE GRANDFATHER CLOCK ticks beyond the gate. Dodge its gears and slash its face!' },
   50: { id: 'saint', name: 'THE HOLLOW SAINT', sign: 'THE HOLLOW SAINT burns past the gate. Jump the fire and strike when it lands!' },
+  90: { id: 'chess', chess: true, name: 'THE LIVING BOARD', sign: 'THE LIVING BOARD waits past the gate. Beat it at a real game of chess: you must get CHECKMATE to move on. (It is a very easy opponent.)' },
   80: { id: 'giggles', name: 'MR. GIGGLES', sign: 'MR. GIGGLES waits in the big top. Dodge his juggling clubs, jump his fire breath, and do not laugh!' },
   70: { id: 'hag', name: 'THE MIRE HAG', sign: 'THE MIRE HAG brews poison past the gate. Dodge her bubbles, jump her mud waves, and strike!' },
   60: { id: 'voidking', name: 'THE VOID KING', sign: 'THE VOID KING waits at the bottom of everything. This is it. Good luck.' },
@@ -49,15 +50,15 @@ function generateLevel(n) {
   const enemyTypes = [
     ['crawler', 'skitter', 'bat'], ['frostmite', 'snowskull', 'icewisp'], ['rockcrawler', 'pebbleimp', 'cavebat'],
     ['gearspider', 'ticktock', 'chainghoul'], ['ashcrawler', 'cinderskull', 'emberbat'], ['voidcrawler', 'voidskull', 'voideye'],
-    ['bogleech', 'croakskull', 'swamplantern'], ['clown', 'jackclown', 'clownballoon'],
-  ][Math.min(group, 7)];
+    ['bogleech', 'croakskull', 'swamplantern'], ['clown', 'jackclown', 'clownballoon'], ['milpawn', 'milknight', 'milbishop'],
+  ][Math.min(group, 8)];
   if (olive) enemyTypes.splice(0, 3, 'screamolive', 'screamolive', 'oliveskitter', 'olivebat');
-  const under = group >= 2 && group <= 5;  // Levels 21–60: underground, with a ceiling and falling droppers
+  const under = (group >= 2 && group <= 5) || group === 8;  // Levels 21–60 and 81–90: a ceiling and falling droppers
   const hunted = group >= 2;               // Levels 21+: something chases you once per level
   const geysers = group === 6;             // Levels 61–70: toxic bog geysers
   const blades = group === 7;              // Levels 71–80: swinging pendulum blades
-  const dropStyle = ['stalactite', 'gear', 'chandelier', 'shard'][Math.min(group, 5) - 2];
-  const chaseStyle = ['boulder', 'gears', 'fire', 'void', 'serpent', 'clowncar'][Math.min(group, 7) - 2];
+  const dropStyle = group === 8 ? 'piece' : ['stalactite', 'gear', 'chandelier', 'shard'][Math.min(group, 5) - 2];
+  const chaseStyle = ['boulder', 'gears', 'fire', 'void', 'serpent', 'clowncar', 'rook'][Math.min(group, 8) - 2];
   const L = { shards: [], bigShards: [], enemies: [], platforms: [], pads: [], firebars: [], signs: [], decor: [], checkpoints: [], route: [], droppers: [], chases: [], geysers: [], pendulums: [] };
   // falling hazards hang from the ceiling over open stretches (never right where you'd stand still)
   const vents = (x1, x2) => { if (!geysers) return; for (let dx = x1; dx <= x2; dx += 4) if (r() < 0.4) L.geysers.push({ x: dx, g, phase: r() * 3 }); };
@@ -256,6 +257,7 @@ function generateLevel(n) {
     41: 'A burning cathedral, deep underground. Chandeliers fall, and a wall of fire will chase you.',
     51: 'The Void. Nothing down here is real... except the darkness that chases you.',
     65: 'The Olive Grove... the olives here are ALIVE. They waddle, they scream like GOATS, and they run from you. Watch out for falling olives!',
+    81: 'Through the funhouse mirror... a giant marble chess hall. The pieces wear army gear, and they SHOOT. Dodge the bullets, or slash them out of the air!',
     71: 'Past the swamp, tinny music plays... a clown carnival. The rides move by themselves, and the clowns are still here. Watch the swinging blades!',
     61: 'You climb out of the Void into open air... but the moon has turned blood red, and the swamp is alive. Watch the bubbling geysers!',
   };
@@ -298,7 +300,7 @@ function generateLevel(n) {
     arena = {
       gateX: A, triggerX: (A + 3) * TILE, x1: (A + 1) * TILE, x2: (A + 29) * TILE,
       floorY: 30 * TILE, ceilY: 15 * TILE, camX: A * TILE - 16, camY: 14 * TILE + 16,
-      bossSpawn: { x: (A + 19) * TILE, y: 16 * TILE }, boss: boss.id, name: boss.name,
+      bossSpawn: { x: (A + 19) * TILE, y: 16 * TILE }, boss: boss.id, name: boss.name, chess: !!boss.chess,
     };
     L.route.push({ t: 'boss' });
     x = A + 30;
@@ -336,4 +338,4 @@ function generateLevel(n) {
   };
 }
 
-for (let n = 3; n <= 80; n++) LEVELS[n] = () => generateLevel(n);
+for (let n = 3; n <= 90; n++) LEVELS[n] = () => generateLevel(n);

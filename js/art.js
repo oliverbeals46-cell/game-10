@@ -254,6 +254,9 @@ function drawDecor(ctx, d, t) {
         Draw.poly(ctx, [x + ox - w, y, x + ox + w, y, x + ox + w * 0.6, y - h * 0.7, x + ox, y - h, x + ox - w * 0.6, y - h * 0.7]);
       }
       clearGlow(ctx);
+    } else if (THEME.chess) { // a small marble pawn statue
+      ctx.fillStyle = lin(ctx, x - 12, 0, x + 12, 0, ['#ffffff', '#bdb8b0', '#5a564e']);
+      Draw.rr(ctx, x - 13, y - 8, 26, 8, 2); ctx.fill(); Draw.poly(ctx, [x - 9, y - 8, x + 9, y - 8, x + 5, y - 30, x - 5, y - 30]); Draw.circ(ctx, x, y - 36, 9);
     } else { // rock stalagmite
       const h = 50 + hash2(seed, 3) * 50;
       ctx.fillStyle = lin(ctx, x - 14, 0, x + 14, 0, [`rgb(${THEME.stone[0] + 40},${THEME.stone[1] + 36},${THEME.stone[2] + 30})`, `rgb(${THEME.stone[0]},${THEME.stone[1]},${THEME.stone[2]})`, '#0a0806']);
@@ -431,6 +434,18 @@ function drawShardIcon(ctx, x, y, t) {
 // Boss arena: a dark crypt hall with arches, chains and torches (colours follow the level's theme).
 function drawArenaBackdrop(ctx, A, t) {
   const x = (A.gateX + 1) * TILE, y = A.ceilY, w = A.x2 - x, h = A.floorY - y;
+  if (A.chess) {
+    // a huge chessboard wall, standing up behind the King
+    const sz = 60, n = Math.ceil(w / sz), m = Math.ceil(h / sz);
+    for (let r = 0; r < m; r++) for (let c = 0; c < n; c++) {
+      ctx.fillStyle = (r + c) % 2 ? '#3e5a2c' : '#8a8c74';
+      ctx.fillRect(x + c * sz, y + r * sz, Math.min(sz, x + w - (x + c * sz)), Math.min(sz, y + h - (y + r * sz)));
+    }
+    const sh = ctx.createLinearGradient(0, y, 0, y + h); sh.addColorStop(0, 'rgba(0,0,0,0.65)'); sh.addColorStop(1, 'rgba(0,0,0,0.25)');
+    ctx.fillStyle = sh; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(212,175,55,0.6)'; ctx.fillRect(x, y, w, 4); ctx.fillRect(x, A.floorY - 4, w, 4);
+    return;
+  }
   const S = THEME.stone;
   const g = ctx.createLinearGradient(0, y, 0, y + h);
   g.addColorStop(0, `rgb(${S[0] - 30},${S[1] - 30},${S[2] - 30})`); g.addColorStop(1, `rgb(${S[0] - 20},${S[1] - 20},${S[2] - 18})`);
@@ -559,6 +574,28 @@ function drawUnderground(ctx, camX, camY, t, TH) {
         for (let k = 0; k < 12; k++) { ctx.rotate(Math.PI / 6); ctx.fillRect(R - 4, -6, 14, 12); }
         Draw.circ(ctx, 0, 0, R); ctx.fillStyle = TH.sky[1]; Draw.circ(ctx, 0, 0, R * 0.45);
         ctx.restore();
+      }
+    } else if (style === 'chess') {
+      // giant chess pieces standing in the dark hall, lit from above
+      const shapes = ['king', 'rook', 'knight', 'bishop', 'queen', 'pawn'];
+      for (let i = 0; i < 6; i++) {
+        const px = ((i * 330 - camX * 0.18) % 1980 + 1980) % 1980 - 200, base = VIEW_H + 20 - camY * 0.08, s = 1.3 + (i % 3) * 0.35;
+        ctx.save(); ctx.translate(px, base); ctx.scale(s, s);
+        ctx.fillStyle = i % 2 ? 'rgba(200,196,210,0.16)' : 'rgba(10,10,16,0.55)';
+        Draw.rr(ctx, -50, -24, 100, 24, 6); ctx.fill(); Draw.poly(ctx, [-36, -24, 36, -24, 22, -150, -22, -150]);
+        const k = shapes[i];
+        if (k === 'rook') { ctx.fillRect(-32, -190, 64, 42); for (let j = 0; j < 3; j++) ctx.fillRect(-32 + j * 24, -206, 16, 18); }
+        else if (k === 'knight') { ctx.beginPath(); ctx.moveTo(-26, -150); ctx.lineTo(-30, -200); ctx.quadraticCurveTo(-14, -240, 20, -226); ctx.lineTo(44, -196); ctx.lineTo(20, -186); ctx.lineTo(26, -150); ctx.fill(); }
+        else if (k === 'bishop') { Draw.ell(ctx, 0, -180, 26, 38); Draw.circ(ctx, 0, -224, 8); }
+        else if (k === 'pawn') { Draw.circ(ctx, 0, -172, 28); }
+        else { Draw.ell(ctx, 0, -172, 32, 26); ctx.fillRect(-34, -204, 68, 12); if (k === 'king') { ctx.fillRect(-6, -250, 12, 48); ctx.fillRect(-18, -238, 36, 10); } else for (let j = -2; j <= 2; j++) Draw.circ(ctx, j * 14, -212, 6); }
+        ctx.restore();
+      }
+      // shafts of light
+      for (let i = 0; i < 4; i++) {
+        const lx = ((i * 460 - camX * 0.12) % 1840 + 1840) % 1840 - 200;
+        const lg = ctx.createLinearGradient(lx, 0, lx + 60, VIEW_H); lg.addColorStop(0, 'rgba(255,240,200,0.12)'); lg.addColorStop(1, 'rgba(255,240,200,0)');
+        ctx.fillStyle = lg; Draw.poly(ctx, [lx - 20, 0, lx + 40, 0, lx + 140, VIEW_H, lx + 40, VIEW_H]);
       }
     } else if (style === 'cathedral') {
       for (let i = 0; i < 4; i++) { // glowing stained-glass windows

@@ -7,7 +7,7 @@
   <title>Hallow Heads</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=202611222245">
+  <link rel="stylesheet" href="css/style.css?v=202611240122">
 </head>
 <body>
   <div id="stage">
@@ -96,6 +96,7 @@
           <tr><td>Wisp Bolt (unlocks after Level 20)</td><td><kbd>V</kbd> or <kbd>L</kbd></td></tr>
           <tr><td>Spin Slash (unlocks after Level 40)</td><td><kbd>B</kbd> or <kbd>N</kbd></td></tr>
           <tr><td>Ground Slam (unlocks after Level 60)</td><td><kbd>G</kbd> or <kbd>H</kbd></td></tr>
+          <tr><td>Phantom Dash (unlocks after Level 80)</td><td><kbd>Q</kbd></td></tr>
           <tr><td>Pause / Exit</td><td><kbd>Esc</kbd> or <kbd>P</kbd>, or the buttons in the top-left</td></tr>
           <tr><td>Mute sound</td><td><kbd>M</kbd></td></tr>
         </table>
@@ -165,21 +166,46 @@
         </nav>
       </div>
     </div>
+
+    <!-- CHESS (Level 90 boss: The Living Board) -->
+    <div id="screen-chess" class="screen panel hidden">
+      <div class="chess-wrap">
+        <div class="chess-left">
+          <div class="chess-who black-who">♚ The Living Board <span id="chess-cap-b" class="chess-cap"></span></div>
+          <div id="chess-board"></div>
+          <div class="chess-who">♔ You <span id="chess-cap-w" class="chess-cap"></span></div>
+          <div id="chess-promo" class="hidden"></div>
+        </div>
+        <div class="chess-side card">
+          <h2>THE LIVING BOARD</h2>
+          <p id="chess-status" class="chess-status">Your move!</p>
+          <div id="chess-moves"></div>
+          <nav class="menu">
+            <button id="chess-hint">Hint</button>
+            <button id="chess-undo">Take Back</button>
+            <button id="chess-restart">Restart Game</button>
+            <button id="chess-leave">Leave (Level Select)</button>
+          </nav>
+          <p class="chess-tip">Click a piece, then click a dot to move it. Regular chess rules: castling, en passant and promotion all work. Get CHECKMATE to win!</p>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script src="js/audio.js?v=202611222245"></script>
-  <script src="js/input.js?v=202611222245"></script>
-  <script src="js/save.js?v=202611222245"></script>
-  <script src="js/heads.js?v=202611222245"></script>
-  <script src="js/art.js?v=202611222245"></script>
-  <script src="js/themes.js?v=202611222245"></script>
-  <script src="js/world.js?v=202611222245"></script>
-  <script src="js/level1.js?v=202611222245"></script>
-  <script src="js/level2.js?v=202611222245"></script>
-  <script src="js/levelgen.js?v=202611222245"></script>
-  <script src="js/entities.js?v=202611222245"></script>
-  <script src="js/boss.js?v=202611222245"></script>
-  <script src="js/game.js?v=202611222245"></script>
-  <script src="js/ui.js?v=202611222245"></script>
+  <script src="js/audio.js?v=202611240122"></script>
+  <script src="js/input.js?v=202611240122"></script>
+  <script src="js/save.js?v=202611240122"></script>
+  <script src="js/heads.js?v=202611240122"></script>
+  <script src="js/art.js?v=202611240122"></script>
+  <script src="js/themes.js?v=202611240122"></script>
+  <script src="js/world.js?v=202611240122"></script>
+  <script src="js/level1.js?v=202611240122"></script>
+  <script src="js/level2.js?v=202611240122"></script>
+  <script src="js/levelgen.js?v=202611240122"></script>
+  <script src="js/entities.js?v=202611240122"></script>
+  <script src="js/boss.js?v=202611240122"></script>
+  <script src="js/game.js?v=202611240122"></script>
+  <script src="js/chess.js?v=202611240122"></script>
+  <script src="js/ui.js?v=202611240122"></script>
 </body>
 </html>

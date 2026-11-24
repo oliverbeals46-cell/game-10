@@ -553,3 +553,68 @@ class MrGiggles extends GraveWarden {
     ctx.restore();
   }
 }
+
+// BOSS OF LEVEL 90 — The Living Board. A HUGE black chess king rises from the floor, gives his challenge,
+// and then the fight is a real game of chess (see chess.js). He can't be hurt with your sword.
+class ChessKing {
+  constructor(x, y, arena) {
+    this.arena = arena; this.w = 140; this.h = 330;
+    this.x = arena.x2 - 260; this.floor = arena.floorY; this.y = this.floor; // starts sunk below the floor
+    this.state = 'intro'; this.landedIntro = false; this.t = 0; this.phase = 1;
+    this.maxHp = 1; this.hp = 1; this.dead = false; this.dying = false; this.facing = -1;
+    this.name = 'THE LIVING BOARD'; this.said = 0; this.started = false; this.hurtMsg = 0;
+    this.lines = ['You have made it this far...', 'but now I challenge you with my BIGGEST STRENGTH.', 'CHESS!'];
+  }
+  hitbox() { return { x: -9999, y: -9999, w: 0, h: 0 }; } // touching him is safe: this fight is chess
+  hurt(dmg, g) {
+    if (this.hurtMsg <= 0) { g.toast('Your sword is useless here. Beat the King at CHESS!', 2); this.hurtMsg = 2; }
+    return false;
+  }
+  update(dt, g) {
+    this.t += dt; this.hurtMsg -= dt;
+    const p = g.player; p.ctrlLock = 0.2; p.vx = 0;           // you stand and listen
+    const top = this.floor - this.h;
+    if (this.y > top) { this.y = Math.max(top, this.y - 170 * dt); g.shake = Math.max(g.shake, 3); if (Math.random() < 0.3) g.dust(this.x + Math.random() * this.w, this.floor, 1); return; }
+    const k = Math.floor((this.t - 2) / 2.6);
+    this.said = Math.max(0, Math.min(this.lines.length - 1, k));
+    if (k === this.lines.length - 1 && !this.boomed) { this.boomed = true; g.shake = 14; Sfx.play('roar'); }
+    if (k >= this.lines.length && !this.started) { this.started = true; g.startChess(); }
+  }
+  draw(ctx, t) {
+    const cx = this.x + this.w / 2, by = this.floor, top = this.y, H = this.h;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(this.x - 200, top - 400, this.w + 400, by - top + 400); ctx.clip(); // hidden below floor
+    const S = (x, y, r) => shade(ctx, x, y, r, '#5a5a6a', '#1c1c24', '#000000');
+    const y0 = top;
+    // base
+    ctx.fillStyle = S(cx - 20, y0 + H - 30, 120); Draw.rr(ctx, cx - 80, y0 + H - 36, 160, 36, 8); ctx.fill();
+    Draw.rr(ctx, cx - 64, y0 + H - 60, 128, 28, 8); ctx.fill();
+    // body
+    ctx.fillStyle = S(cx - 20, y0 + H * 0.55, 160);
+    Draw.poly(ctx, [cx - 54, y0 + H - 58, cx + 54, y0 + H - 58, cx + 34, y0 + 120, cx - 34, y0 + 120]);
+    Draw.rr(ctx, cx - 52, y0 + 104, 104, 22, 8); ctx.fill();
+    // head
+    ctx.fillStyle = S(cx - 14, y0 + 76, 60); Draw.ell(ctx, cx, y0 + 78, 44, 32);
+    Draw.rr(ctx, cx - 50, y0 + 38, 100, 16, 6); ctx.fill();
+    // cross on top
+    ctx.fillStyle = '#d4af37'; ctx.fillRect(cx - 7, y0 - 8, 14, 48); ctx.fillRect(cx - 22, y0 + 4, 44, 12);
+    // glowing eyes + mouth that moves when he talks
+    const talking = this.y <= this.floor - this.h && this.t > 2 && !this.started;
+    setGlow(ctx, '#ff2020', 18); ctx.fillStyle = '#ff3a3a';
+    Draw.ell(ctx, cx - 16, y0 + 72, 8, 5); Draw.ell(ctx, cx + 16, y0 + 72, 8, 5); clearGlow(ctx);
+    ctx.fillStyle = '#000'; Draw.ell(ctx, cx, y0 + 92, 14, talking ? 3 + Math.abs(Math.sin(t * 14)) * 6 : 2);
+    // gold trim
+    ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 3; Draw.line(ctx, cx - 50, y0 + 115, cx + 50, y0 + 115); Draw.line(ctx, cx - 60, y0 + H - 46, cx + 60, y0 + H - 46);
+    ctx.restore();
+    // speech bubble
+    if (talking) {
+      const text = this.lines[this.said];
+      ctx.font = this.said === 2 ? '40px Creepster, Nunito, cursive' : '700 17px Nunito, sans-serif';
+      const tw = ctx.measureText(text).width + 32, bx = Math.max(this.arena.x1 + 10, cx - tw - 30), byy = y0 + 10;
+      ctx.fillStyle = 'rgba(245,240,230,0.96)'; Draw.rr(ctx, bx, byy, tw, this.said === 2 ? 60 : 44, 12); ctx.fill();
+      Draw.poly(ctx, [bx + tw - 30, byy + 30, bx + tw + 24, byy + 60, bx + tw - 10, byy + 30]);
+      ctx.fillStyle = this.said === 2 ? '#a00' : '#111'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, bx + tw / 2, byy + (this.said === 2 ? 32 : 23));
+    }
+  }
+}

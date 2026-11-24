@@ -1,6 +1,6 @@
 // Menus, shop and overlays (HTML on top of the canvas).
 const UI = {
-  screens: ['menu', 'code', 'levels', 'howto', 'controls', 'credits', 'shop', 'pause', 'victory'],
+  screens: ['menu', 'code', 'levels', 'howto', 'controls', 'credits', 'shop', 'pause', 'victory', 'chess'],
   shopAnim: null,
 
   init() {
@@ -223,6 +223,7 @@ const UI = {
       60: 'The Void King is gone. Far above, a crack of light... you start to climb.',
       70: 'The Mire Hag sinks into the bog. Somewhere ahead, carnival music starts to play...',
       80: 'Mr. Giggles stops laughing. The tents fold into darkness... but the blood moon is still watching.',
+      90: 'CHECKMATE. The giant King topples over and cracks in half. The board goes dark... for now.',
     };
     document.querySelector('#screen-victory .sub').textContent = STORY_END[Game.levelNum] || 'You made it to the portal!';
     this.show('victory');
