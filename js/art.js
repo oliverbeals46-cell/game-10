@@ -176,6 +176,7 @@ function drawBackground(ctx, camX, camY, t) {
   ridge(ctx, camX * 0.08, camY * 0.05, 330, 38, 0.003, TH.far, 0.9);
   const cx = ((TH.castleX - camX * 0.08) % 2600 + 2600) % 2600 - 500;
   if (TH.carnival) drawCarnivalBack(ctx, cx, 340 - camY * 0.05, t, TH);
+  else if (TH.war) drawWarBack(ctx, camX, 345 - camY * 0.05, t, TH);
   else {
     ctx.globalAlpha = 0.9;
     ctx.drawImage(Art.castle.cv, cx, 320 - camY * 0.05 - 260 + 20, 420, 260);
@@ -246,6 +247,19 @@ function drawDecor(ctx, d, t) {
   const y = d.py !== undefined ? d.py : (d.y + 1) * TILE;
   // a fixed number per decoration, so its look never changes while it moves across the screen
   const seed = d.seed !== undefined ? d.seed : (d.x || 0) * 7 + (d.y || 0);
+  if (THEME && THEME.war && (d.type === 'grave' || d.type === 'skulls' || d.type === 'shroom')) {
+    if (d.type === 'grave') { // barbed wire on wooden posts
+      ctx.fillStyle = '#3a2e1e'; ctx.fillRect(x - 22, y - 26, 4, 26); ctx.fillRect(x + 18, y - 24, 4, 24);
+      ctx.strokeStyle = '#7a7a72'; ctx.lineWidth = 1;
+      for (const yy of [-20, -11]) { ctx.beginPath(); for (let k = 0; k <= 10; k++) ctx.lineTo(x - 20 + k * 4, y + yy + Math.sin(k * 2 + seed) * 2); ctx.stroke(); }
+      ctx.strokeStyle = '#9a9a90'; for (let k = 0; k < 9; k++) { const bx = x - 18 + k * 4.5; Draw.line(ctx, bx - 1.5, y - 22, bx + 1.5, y - 18); Draw.line(ctx, bx - 1.5, y - 13, bx + 1.5, y - 9); }
+    } else if (d.type === 'skulls') { // sandbags
+      for (const [ox, oy] of [[-14, 0], [0, 0], [14, 0], [-7, -9], [7, -9]]) { ctx.fillStyle = shade(ctx, x + ox - 3, y + oy - 6, 10, '#a8986a', '#6a5a3a', '#2a2014'); Draw.ell(ctx, x + ox, y + oy - 4, 8, 5); }
+    } else { // an old helmet on the ground
+      ctx.fillStyle = shade(ctx, x - 2, y - 8, 9, '#6a6a4a', '#3a3a26', '#121208'); ctx.beginPath(); ctx.arc(x, y - 1, 8, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.fillRect(x - 10, y - 2, 20, 2);
+    }
+    return;
+  }
   if (THEME && THEME.under && (d.type === 'grave' || d.type === 'tree')) {
     if (d.type === 'grave') { // glowing crystal cluster
       setGlow(ctx, THEME.crystal, 14);
@@ -617,6 +631,32 @@ function drawUnderground(ctx, camX, camY, t, TH) {
   for (let i = 0; i < 30; i++) {
     const mx = ((i * 97 + t * (6 + i % 5) - camX * 0.3) % VIEW_W + VIEW_W) % VIEW_W, my = ((i * 61 - t * (4 + i % 3) * (style === 'cathedral' ? 4 : 1)) % VIEW_H + VIEW_H) % VIEW_H;
     ctx.fillRect(mx, my, 2, 2);
+  }
+}
+
+// Battlefield skyline (Levels 91–100): a bombed-out town, sweeping searchlights and distant flashes.
+function drawWarBack(ctx, camX, base, t, TH) {
+  // searchlights sweeping the clouds
+  for (let i = 0; i < 3; i++) {
+    const sx = ((i * 520 + 200 - camX * 0.06) % 1560 + 1560) % 1560 - 200, a = -Math.PI / 2 + Math.sin(t * (0.35 + i * 0.12) + i * 2) * 0.6;
+    const L = 700, w = 0.06;
+    const gr = ctx.createLinearGradient(sx, base, sx + Math.cos(a) * L, base + Math.sin(a) * L); gr.addColorStop(0, 'rgba(255,240,200,0.22)'); gr.addColorStop(1, 'rgba(255,240,200,0)');
+    ctx.fillStyle = gr; Draw.poly(ctx, [sx, base, sx + Math.cos(a - w) * L, base + Math.sin(a - w) * L, sx + Math.cos(a + w) * L, base + Math.sin(a + w) * L]);
+  }
+  // far-off flashes on the horizon
+  const fl = Math.sin(t * 1.7) * Math.sin(t * 2.9);
+  if (fl > 0.8) { ctx.fillStyle = `rgba(255,170,80,${(fl - 0.8) * 1.5})`; ctx.fillRect(0, base - 60, VIEW_W, 60); }
+  // ruined buildings with broken walls and empty windows
+  const step = 170, ox = camX * 0.1, start = Math.floor(ox / step) - 1;
+  for (let i = start; i < start + VIEW_W / step + 3; i++) {
+    const r = hash2(i, 41), sx = i * step - ox, bw = 90 + r * 60, bh = 70 + hash2(i, 9) * 120;
+    ctx.fillStyle = TH.castle;
+    ctx.beginPath(); ctx.moveTo(sx, base); ctx.lineTo(sx, base - bh);
+    for (let k = 1; k <= 5; k++) ctx.lineTo(sx + bw * k / 5, base - bh + (hash2(i, k) - 0.3) * 50); // jagged broken top
+    ctx.lineTo(sx + bw, base); ctx.fill();
+    for (let wy = base - bh + 40; wy < base - 20; wy += 30) for (let wx = sx + 12; wx < sx + bw - 16; wx += 26) {
+      const lit = hash2(wx, wy) > 0.93; ctx.fillStyle = lit ? `rgba(255,176,64,${0.5 + Math.sin(t * 3 + wx) * 0.2})` : 'rgba(0,0,0,0.6)'; ctx.fillRect(wx, wy, 9, 13);
+    }
   }
 }
 

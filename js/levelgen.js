@@ -28,6 +28,7 @@ const BOSSES = {
   30: { id: 'troll', name: 'THE TROLL', sign: 'THE TROLL lives past this gate. It swings its club, throws boulders, and its roar brings down stalactites. Touching it kills you!' },
   40: { id: 'clock', name: 'THE GRANDFATHER CLOCK', sign: 'THE GRANDFATHER CLOCK ticks beyond the gate. Dodge its gears and slash its face!' },
   50: { id: 'saint', name: 'THE HOLLOW SAINT', sign: 'THE HOLLOW SAINT burns past the gate. Jump the fire and strike when it lands!' },
+  100: { id: 'tank', name: 'THE IRON BEAST', sign: 'THE IRON BEAST is a haunted tank with nobody inside. It rams the walls, lobs shells, and calls down falling bombs. Jump its shockwaves and slash it!' },
   90: { id: 'chess', chess: true, name: 'THE LIVING BOARD', sign: 'THE LIVING BOARD waits past the gate. Beat it at a real game of chess: you must get CHECKMATE to move on. (It is a very easy opponent.)' },
   80: { id: 'giggles', name: 'MR. GIGGLES', sign: 'MR. GIGGLES waits in the big top. Dodge his juggling clubs, jump his fire breath, and do not laugh!' },
   70: { id: 'hag', name: 'THE MIRE HAG', sign: 'THE MIRE HAG brews poison past the gate. Dodge her bubbles, jump her mud waves, and strike!' },
@@ -51,19 +52,24 @@ function generateLevel(n) {
     ['crawler', 'skitter', 'bat'], ['frostmite', 'snowskull', 'icewisp'], ['rockcrawler', 'pebbleimp', 'cavebat'],
     ['gearspider', 'ticktock', 'chainghoul'], ['ashcrawler', 'cinderskull', 'emberbat'], ['voidcrawler', 'voidskull', 'voideye'],
     ['bogleech', 'croakskull', 'swamplantern'], ['clown', 'jackclown', 'clownballoon'], ['milpawn', 'milknight', 'milbishop'],
-  ][Math.min(group, 8)];
+    ['gasghost', 'warcrow', 'helmetskull'],
+  ][Math.min(group, 9)];
   if (olive) enemyTypes.splice(0, 3, 'screamolive', 'screamolive', 'oliveskitter', 'olivebat');
   const under = (group >= 2 && group <= 5) || group === 8;  // Levels 21–60 and 81–90: a ceiling and falling droppers
   const hunted = group >= 2;               // Levels 21+: something chases you once per level
-  const geysers = group === 6;             // Levels 61–70: toxic bog geysers
-  const blades = group === 7;              // Levels 71–80: swinging pendulum blades
+  const geysers = group === 6 || group === 9;   // Levels 61–70: toxic bog geysers; 91–100: buried landmines
+  const blades = group === 7;                   // Levels 71–80: swinging pendulum blades
+  const bombs = group === 9;                    // Levels 91–100: bombs whistle down from the sky
+  const hz = group === 9 ? 0.7 : 1;
   const dropStyle = group === 8 ? 'piece' : ['stalactite', 'gear', 'chandelier', 'shard'][Math.min(group, 5) - 2];
-  const chaseStyle = ['boulder', 'gears', 'fire', 'void', 'serpent', 'clowncar', 'rook'][Math.min(group, 8) - 2];
+  const chaseStyle = ['boulder', 'gears', 'fire', 'void', 'serpent', 'clowncar', 'rook', 'tank'][Math.min(group, 9) - 2];
   const L = { shards: [], bigShards: [], enemies: [], platforms: [], pads: [], firebars: [], signs: [], decor: [], checkpoints: [], route: [], droppers: [], chases: [], geysers: [], pendulums: [] };
   // falling hazards hang from the ceiling over open stretches (never right where you'd stand still)
-  const vents = (x1, x2) => { if (!geysers) return; for (let dx = x1; dx <= x2; dx += 4) if (r() < 0.4) L.geysers.push({ x: dx, g, phase: r() * 3 }); };
-  const swings = (x1, x2) => { if (!blades) return; for (let dx = x1; dx <= x2; dx += 5) if (r() < 0.45) L.pendulums.push({ x: dx, g, phase: r() * 3 }); };
-  const drops = (x1, x2) => { vents(x1, x2); swings(x1, x2); if (!under && !olive) return; for (let dx = x1; dx <= x2; dx += 3) if (r() < 0.32 + n * 0.006) L.droppers.push({ x: dx, y: olive ? 6 : 4, style: olive ? 'olive' : dropStyle, big: r() < 0.3 }); };
+  const vents = (x1, x2) => { if (!geysers) return; for (let dx = x1; dx <= x2; dx += 4) if (r() < 0.4 * hz) {
+    if (bombs && !L.mineSign) { L.mineSign = true; L.signs.push({ x: dx - 3, y: g - 1, text: 'LANDMINE! When its red light blinks fast and beeps, it is about to BLOW UP. Wait for the blast, then run past.' }); }
+    L.geysers.push({ x: dx, g, phase: r() * 3 }); } };
+  const swings = (x1, x2) => { if (!blades) return; for (let dx = x1; dx <= x2; dx += 5) if (r() < 0.45 * hz) L.pendulums.push({ x: dx, g, phase: r() * 3 }); };
+  const drops = (x1, x2) => { vents(x1, x2); swings(x1, x2); if (!under && !olive && !bombs) return; for (let dx = x1; dx <= x2; dx += 3) if (r() < (bombs ? 0.25 : 0.32 + n * 0.006)) (bombs && !L.bombSign && (L.bombSign = true) && L.signs.push({ x: dx - 3, y: g - 1, text: 'Hear a WHISTLE? A bomb is falling! A red circle shows where it will land. Keep moving!' })), L.droppers.push({ x: dx, y: olive || bombs ? 6 : 4, style: olive ? 'olive' : bombs ? 'bomb' : dropStyle, big: !bombs && r() < 0.3 }); };
   // remember where each route step starts (used by the automated playtest)
   L.route.push = (o) => Array.prototype.push.call(L.route, Object.assign({ sx: x, sg: g }, o));
   const sh = (x, y) => L.shards.push([x, y]);
@@ -257,6 +263,7 @@ function generateLevel(n) {
     41: 'A burning cathedral, deep underground. Chandeliers fall, and a wall of fire will chase you.',
     51: 'The Void. Nothing down here is real... except the darkness that chases you.',
     65: 'The Olive Grove... the olives here are ALIVE. They waddle, they scream like GOATS, and they run from you. Watch out for falling olives!',
+    91: 'The chess board cracks open... and you land in the mud of an old WW2 battlefield. The war ended long ago, but the ghosts never left. Watch the sky for falling BOMBS, and do not step on a blinking LANDMINE!',
     81: 'Through the funhouse mirror... a giant marble chess hall. The pieces wear army gear and march back and forth. Touching one kills you! Jump over them or slash them.',
     71: 'Past the swamp, tinny music plays... a clown carnival. The rides move by themselves, and the clowns are still here. Watch the swinging blades!',
     61: 'You climb out of the Void into open air... but the moon has turned blood red, and the swamp is alive. Watch the bubbling geysers!',
@@ -325,7 +332,7 @@ function generateLevel(n) {
   L.shards = L.shards.filter(okSpot);
   L.bigShards = L.bigShards.filter(okSpot).slice(0, 4);
 
-  delete L.oliveSign;
+  delete L.oliveSign; delete L.mineSign; delete L.bombSign;
   const route = Array.from(L.route);
   return {
     number: n,
@@ -338,4 +345,4 @@ function generateLevel(n) {
   };
 }
 
-for (let n = 3; n <= 90; n++) LEVELS[n] = () => generateLevel(n);
+for (let n = 3; n <= 100; n++) LEVELS[n] = () => generateLevel(n);

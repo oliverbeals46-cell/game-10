@@ -133,6 +133,21 @@ const WORLDS = [
       leaves: ['#ffffff', '#c8c8d0', '#d4af37', '#8a8a9a'], dark: [4, 4, 8], ambient: 0.55,
     },
   },
+  // ---- Levels 91–100: a haunted WW2 battlefield at night. Ghost soldiers of a forgotten war. ----
+  {
+    id: 10, levels: [91, 100],
+    look: 'A haunted WW2 battlefield at night: muddy trenches, barbed wire, ruined towns, sweeping searchlights, falling bombs and buried landmines.',
+    enemies: ['Gas Mask Ghost', 'War Crow', 'Helmet Skull'],
+    boss: 'The Iron Beast, a haunted tank (Level 100)',
+    pal: {
+      sky: ['#05060a', '#14161a', '#3a2a1e', '#1a1208'], star: '#e8e0d0', moon: [230, 200, 150],
+      far: ['#1e1c18', '#141210'], mid: ['#141210', '#0c0a08'], near: ['#080706', '#040403'],
+      castle: '#100e0c', windows: '#ffb040', tree: '#0a0806', bgTree: '#16130e',
+      fog: [150, 140, 110], haze: [120, 90, 60],
+      stone: [62, 56, 46], grass: ['#4a4030', '#33291c', '#5a4e38', '#241c12', '#3e3424'], grassTop: ['#4a3e2a', '#1e180e'], moss: [90, 90, 60],
+      leaves: ['#5a4a30', '#3a2e1e', '#6a5a3a', '#2a2014'], dark: [4, 4, 3], ambient: 0.54,
+    },
+  },
 ];
 
 function worldForLevel(n) { return WORLDS.find((w) => n >= w.levels[0] && n <= w.levels[1]) || WORLDS[WORLDS.length - 1]; }
@@ -158,6 +173,8 @@ const HAZARD_LOOK = {
        spike: ['#f0e8e0', '#c8102e', '#3a0810', 'rgba(255,255,255,0.4)'], chase: 'clowncar', pendulums: true, carnival: true, crystal: '#ffd060' },
   9: { liquid: ['#d8d8f0', '#6a6a8a', '#1a1a2a', '#05050a'], bubble: [220, 220, 255], fire: ['#fffbe0', '#e8c040', '#8a6a10'], fireGlow: '#d4af37',
        spike: ['#ffffff', '#9a9aaa', '#2a2a34', 'rgba(212,175,55,0.45)'], under: 'chess', drop: 'piece', chase: 'rook', chess: true, crystal: '#d4af37' },
+  10: { liquid: ['#8a7a5a', '#4a3e2a', '#2a2014', '#0e0a06'], bubble: [150, 130, 100], fire: ['#fff0c0', '#ff8a2a', '#a02a08'], fireGlow: '#ff6a10',
+       spike: ['#a8a8a8', '#5a5a5a', '#1e1e1e', 'rgba(80,70,50,0.4)'], chase: 'tank', geysers: true, war: true, crystal: '#ffb040' },
   6: { liquid: ['#f0d0ff', '#a050ff', '#40108a', '#10022a'], bubble: [230, 190, 255], fire: ['#ffffff', '#d080ff', '#6a1ad0'], fireGlow: '#b050ff',
        spike: ['#e8d8ff', '#9a7ad8', '#2e1a5a', 'rgba(180,120,255,0.4)'], under: 'void', drop: 'shard', chase: 'void', crystal: '#d080ff' },
 };
@@ -189,6 +206,7 @@ let THEME = null;
 // One new attack every 20 levels. Each one helps against the boss that comes after it.
 const ATTACKS = [
   { level: 20, id: 'wisp', name: 'Wisp Bolt', key: 'V', desc: 'Fire a ghostly bolt that zips through monsters. Great for hitting bosses from far away.' },
+  { level: 100, id: 'batswarm', name: 'Spirit Swarm', key: 'E', desc: 'Release a swarm of ghostly spirits that fly out and hunt down the closest monsters.' },
   { level: 80, id: 'phantom', name: 'Phantom Dash', key: 'Q', desc: 'A long ghostly dash that passes straight through monsters and bullets, hurting every monster you pass.' },
   { level: 60, id: 'slam', name: 'Ground Slam', key: 'G', desc: 'Slam the ground to send shockwaves rolling both ways. Hits everything on the floor, even bosses.' },
   { level: 40, id: 'spin', name: 'Spin Slash', key: 'B', desc: 'Spin your sword all the way around you, hitting everything close by. Perfect when bosses get close.' },
@@ -221,5 +239,6 @@ const LEVEL_NAMES = [null,
   'Blood Moon Rising', 'Toxic Bog', 'Geyser Fields', 'Serpent Swamp', 'The Olive Grove', 'Screaming Olives', 'Olive Stampede', 'Goat Scream Valley', 'The Last Olive', 'The Mire Hag',
   'Carnival Gates', 'Big Top Blues', 'Clown Alley', 'Ferris Wheel Fright', 'Balloon Panic', 'Funhouse Frenzy', 'Jack-in-the-Box Junction', 'Clown Car Chaos', 'The Big Top', 'Mr. Giggles',
   'Opening Move', 'Pawn Storm', "Knight's Leap", "Bishop's Diagonal", 'Castle Walls', 'En Passant', 'Fork in the Road', 'Discovered Attack', 'Endgame', 'The Living Board',
+  'No Man\'s Land', 'The Trenches', 'Barbed Wire Ridge', 'Searchlight Alley', 'Minefield', 'Ruined Town', 'Bomb Shelter', 'The Foggy Front', 'Tank Graveyard', 'The Iron Beast',
 ];
 function levelName(n) { return LEVEL_NAMES[n] || ''; }

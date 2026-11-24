@@ -4,7 +4,8 @@
 // a Hint button, Takeback, and Restart. The opponent is very easy on purpose.
 const Chess = (() => {
   const VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
-  const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
+  // \uFE0E = "show as plain text, not emoji", so every piece takes its own colour (all white vs all black)
+  const GLYPH = { k: '♚\uFE0E', q: '♛\uFE0E', r: '♜\uFE0E', b: '♝\uFE0E', n: '♞\uFE0E', p: '♟\uFE0E' };
   const isW = (pc) => pc && pc === pc.toUpperCase();
   const colorOf = (pc) => (pc ? (isW(pc) ? 'w' : 'b') : null);
   const rc = (sq) => [Math.floor(sq / 8), sq % 8];

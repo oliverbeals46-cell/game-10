@@ -223,6 +223,7 @@ const UI = {
       60: 'The Void King is gone. Far above, a crack of light... you start to climb.',
       70: 'The Mire Hag sinks into the bog. Somewhere ahead, carnival music starts to play...',
       80: 'Mr. Giggles stops laughing. The tents fold into darkness... but the blood moon is still watching.',
+      100: 'The Iron Beast rolls to a stop, and its red light goes out. The fog lifts... for the first time, you can see the sun coming up. LEVEL 100! You are a legend.',
       90: 'CHECKMATE. The giant King topples over and cracks in half. The board goes dark... for now.',
     };
     document.querySelector('#screen-victory .sub').textContent = STORY_END[Game.levelNum] || 'You made it to the portal!';

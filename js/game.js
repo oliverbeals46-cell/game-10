@@ -68,6 +68,7 @@ const Game = {
     const D = difficultyForLevel(def.number);
     this.difficulty = D;
     this.enemies = def.enemies.map((e) => {
+      if (e.type === 'gasghost') { const s = new GasGhost(e.x * TILE + 4, (e.y + 1) * TILE); s.speedMul = 1; return s; }
       if (e.type === 'milpawn' || e.type === 'milknight' || e.type === 'milbishop') { const s = new ChessSoldier(e.type.slice(3), e.x * TILE + 4, (e.y + 1) * TILE); s.speedMul = (this.diff && this.diff.enemy) || 1; return s; }
       if (e.type === 'clown') return new CreepyClown(e.x * TILE + 4, (e.y + 1) * TILE);
       if (e.type === 'screamolive') return new ScreamingOlive(e.x * TILE + 4, (e.y + 1) * TILE);
@@ -206,7 +207,7 @@ const Game = {
       this.bossStarted = true;
       if (A.chess) { this.startBoss(new ChessKing(0, 0, A)); this.bossTitleT = 3.4; }
       else {
-      const Cls = { giggles: MrGiggles, hag: MireHag, widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing }[A.boss] || GraveWarden;
+      const Cls = { giggles: MrGiggles, hag: MireHag, widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing, tank: IronBeast }[A.boss] || GraveWarden;
       this.startBoss(new Cls(A.bossSpawn.x, A.bossSpawn.y, A));
       this.bossTitleT = 3.4;
       }
@@ -371,7 +372,7 @@ const Game = {
     e.dead = true;
     Sfx.play('kill');
     // the monster shatters into pieces, with a puff of ash and a shock ring
-    const col = e.skin ? (e.skin.shell || e.skin.body || e.skin.skull)[1] : (ENEMY_COLORS[e.constructor.name] || (e instanceof ScreamingOlive ? '#6a8a2a' : e instanceof CreepyClown ? '#9a5aff' : e instanceof ChessSoldier ? (e.white ? '#e8e4dc' : '#2a2a32') : '#a99cc8'));
+    const col = e.skin ? (e.skin.shell || e.skin.body || e.skin.skull)[1] : (ENEMY_COLORS[e.constructor.name] || (e instanceof ScreamingOlive ? '#6a8a2a' : e instanceof CreepyClown ? '#9a5aff' : e instanceof GasGhost ? '#c8e8c0' : e instanceof ChessSoldier ? (e.white ? '#e8e4dc' : '#2a2a32') : '#a99cc8'));
     this.shatter(e.x + e.w / 2, e.y + e.h / 2, col, 9, e.y + e.h);
     this.smoke(e.x + e.w / 2, e.y + e.h / 2, 7, 'rgba(60,50,80,0.5)');
     this.ring(e.x + e.w / 2, e.y + e.h / 2, '#ffffff', 34);

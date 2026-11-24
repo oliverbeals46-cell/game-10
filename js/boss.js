@@ -618,3 +618,63 @@ class ChessKing {
     }
   }
 }
+
+// BOSS OF LEVEL 100 — The Iron Beast: a haunted tank from a war that ended long ago. Nobody is inside.
+// Attacks: Ram (charges into the wall), Shell Lob (arcing shells), Air Raid (bombs fall from the sky —
+// watch for their shadows). Phase 2: faster, more shells, more bombs, and rams shake down even more.
+class IronBeast extends GraveWarden {
+  constructor(x, y, arena) {
+    super(x, y, arena);
+    this.name = 'THE IRON BEAST'; this.maxHp = this.hp = 100; this.w = 150; this.h = 96;
+    this.shotSkin = 'shell'; this.debrisSkin = 'bomb'; this.tread = 0;
+  }
+  hitbox() { return { x: this.x + 10, y: this.y + 20, w: this.w - 20, h: this.h - 20 }; }
+  chooseAttack() {
+    const opts = ['charge', 'spit', 'raid'].filter((a) => a !== this.last);
+    const a = opts[Math.floor(Math.random() * opts.length)];
+    this.last = a;
+    if (a === 'charge') { this.state = 'tele_charge'; this.timer = 0.8 / this.spd; }
+    if (a === 'spit') { this.state = 'tele_spit'; this.timer = 0.6 / this.spd; }
+    if (a === 'raid') { this.state = 'raid'; this.timer = 0.7; this.raided = false; Sfx.play('whistle'); }
+  }
+  update(dt, g) {
+    super.update(dt, g);
+    this.tread += this.vx * dt;
+    if (this.state === 'raid' && !this.raided && this.timer <= 0.3) { this.raided = true; g.spawnDebris(this.phase === 2 ? 8 : 5); g.toast('AIR RAID! Watch for falling bombs!', 1.4); }
+    if (this.state === 'raid' && this.timer <= 0) { this.state = 'recover'; this.timer = 1.4; }
+  }
+  hurt(dmg, g) {
+    const p1 = this.phase === 1, r = super.hurt(dmg, g);
+    if (p1 && this.phase === 2) { g.toasts = g.toasts.filter((m) => !m.text.includes('Warden')); g.toast('The Iron Beast is burning... and it is ANGRY!', 2.4); }
+    return r;
+  }
+  draw(ctx, t) {
+    const f = this.flash > 0, c = (col) => (f ? '#ffffff' : col), p2 = this.phase === 2;
+    const shakeX = (this.state.startsWith('tele') || this.state === 'roar' || this.dying) ? Math.sin(t * 60) * 2.5 : 0;
+    const cx = this.x + this.w / 2 + shakeX, by = this.y + this.h;
+    ctx.save(); ctx.translate(cx, by); ctx.scale(this.facing, 1);
+    if (this.dying) ctx.globalAlpha = Math.max(0.2, this.timer / 2.6);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; Draw.ell(ctx, 0, 0, 84, 10);
+    // tracks
+    ctx.fillStyle = c('#1a1a16'); Draw.rr(ctx, -76, -36, 152, 36, 18); ctx.fill();
+    ctx.fillStyle = c('#3a3a32'); for (let i = 0; i < 6; i++) Draw.circ(ctx, -62 + i * 25, -18, 10);
+    if (!f) { ctx.strokeStyle = '#0a0a08'; ctx.lineWidth = 2; for (let k = 0; k < 12; k++) { const xx = -76 + (((k * 13 - this.tread * this.facing) % 152) + 152) % 152; Draw.line(ctx, xx, -36, xx, -32); } }
+    // hull
+    ctx.fillStyle = f ? '#fff' : shade(ctx, -10, -60, 110, '#7a7a5a', '#4a4a34', '#1a1a10');
+    Draw.poly(ctx, [-82, -32, 86, -32, 72, -62, -66, -62]);
+    // turret + long gun barrel
+    const recoil = this.state === 'spit' ? -6 : 0;
+    Draw.rr(ctx, -40, -96, 76, 38, 12); ctx.fill();
+    ctx.fillStyle = c('#3a3a28'); ctx.fillRect(30 + recoil, -84, 78, 10); ctx.fillRect(102 + recoil, -87, 12, 16);
+    if (!f) {
+      ctx.fillStyle = 'rgba(120,60,20,0.55)'; for (let i = 0; i < 7; i++) Draw.circ(ctx, -60 + i * 20, -46 + (i % 2) * 8, 5); // rust
+      ctx.fillStyle = '#2a2a1e'; Draw.circ(ctx, -8, -98, 9); // hatch
+      // the glowing eye-slit: there is no driver
+      setGlow(ctx, '#ff2a1a', 18); ctx.fillStyle = p2 ? '#ff6a3a' : '#ff3a2a'; ctx.fillRect(0, -84, 28, 5); clearGlow(ctx);
+      if (this.state === 'tele_spit' || this.state === 'tele_charge') { setGlow(ctx, '#ffb040', 16); ctx.fillStyle = 'rgba(255,180,60,0.8)'; Draw.circ(ctx, 114, -79, 5); clearGlow(ctx); }
+      if (p2) for (let i = 0; i < 3; i++) { ctx.fillStyle = `rgba(255,${120 + i * 40},40,0.8)`; Draw.ell(ctx, -50 + i * 30, -66 - Math.abs(Math.sin(t * 9 + i)) * 12, 6, 10); }
+    }
+    ctx.restore();
+    if (!this.dying && Math.random() < 0.15) { /* exhaust puffs are drawn as particles by the game */ }
+  }
+}

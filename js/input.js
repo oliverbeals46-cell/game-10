@@ -12,6 +12,7 @@ const Input = (() => {
     spin: ['KeyB', 'KeyN'],
     slam: ['KeyG', 'KeyH'],
     phantom: ['KeyQ'],
+    batswarm: ['KeyE'],
   };
   const held = new Set();
   const pressed = new Set();
