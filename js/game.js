@@ -21,6 +21,7 @@ const Game = {
         if (this.state === 'playing') this.pause();
         else if (this.state === 'paused') this.resume();
       }
+      if (e.code === 'KeyT' && this.state === 'playing') this.teleportToBoss();
       if (e.code === 'KeyM') {
         const m = Sfx.toggle();
         if (this.world) this.toast(m ? 'Sound off' : 'Sound on', 1.2);
@@ -467,6 +468,22 @@ const Game = {
       this.projectiles.push(d);
     }
   },
+  // Secret code only: jump right to the boss gate of this level (if it has a boss).
+  teleportToBoss() {
+    const A = this.def && this.def.arena;
+    if (!Save.data.devUnlock || !A || this.bossStarted || this.bossDefeated || this.completed) return;
+    for (const c of this.chasers) { c.state = 'done'; c.alpha = 0; }
+    const x = (A.gateX - 3) * TILE, y = A.floorY;
+    this.checkpoint = { x, y: y - 40 };
+    for (const c of this.checkpoints) c.lit = true;
+    const p = this.player;
+    p.dead = false; p.x = x; p.y = y - p.h - 1; p.vx = p.vy = 0; p.invuln = 1; p.platform = null;
+    this.projectiles = [];
+    this.updateCamera(1, true);
+    Sfx.play('bolt'); this.toast('Teleported to the boss!', 1.6);
+    if (document.activeElement) document.activeElement.blur();
+  },
+
   // Level 90: the fight is a real game of chess. You must checkmate the King to open the exit.
   startChess() {
     this.state = 'chess';

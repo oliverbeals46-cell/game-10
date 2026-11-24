@@ -16,6 +16,8 @@ const UI = {
     if (id) document.getElementById('screen-' + id).classList.remove('hidden');
     if (id !== 'shop' && this.shopAnim) { cancelAnimationFrame(this.shopAnim); this.shopAnim = null; }
     document.getElementById('hud-buttons').classList.toggle('hidden', id !== null || Game.state !== 'playing');
+    // secret code only: a button that jumps straight to this level's boss
+    document.getElementById('btn-toboss').classList.toggle('hidden', !(Save.data.devUnlock && Game.def && Game.def.arena && !Game.bossDefeated));
   },
 
   action(a) {
@@ -26,6 +28,7 @@ const UI = {
       case 'levels': Game.exitToLevels(); break;
       case 'next': this.show(null); Game.startLevel(Game.levelNum + 1); this.show(null); break;
       case 'pausebtn': Game.pause(); break;
+      case 'toboss': Game.teleportToBoss(); break;
       case 'code': this.openCode(); break;
       case 'code-submit': this.submitCode(); break;
       case 'shop':
