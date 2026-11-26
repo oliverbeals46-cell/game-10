@@ -51,7 +51,7 @@ const UI = {
     const done = Save.data.holiday || {};
     for (const [n, H] of Object.entries(HOLIDAY)) {
       const card = document.createElement('div'); card.className = 'holiday-card';
-      card.innerHTML = `<div class="hol-icon">🦃</div><h3>${H.title}</h3><p>${H.blurb}</p><p class="hol-gift">${done[H.id] ? 'Beaten! You got the holiday gift.' : `First win gift: +${H.reward} shards`}</p>`;
+      card.innerHTML = `<div class="hol-icon">🦃</div><h3>${H.title}</h3><p>${H.blurb}</p><p class="hol-gift">${done[H.id] ? 'Beaten! Shards only come the first time, but you can still play for fun.' : `First win: +${H.reward} shard gift (shards only the first time!)`}</p>`;
       const b = document.createElement('button'); b.textContent = 'Play'; b.onclick = () => { Sfx.play('click'); this.show(null); Game.startLevel(+n, true); this.show(null); };
       card.appendChild(b); grid.appendChild(card);
     }

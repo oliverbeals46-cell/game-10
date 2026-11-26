@@ -114,6 +114,9 @@ const Game = {
       this.titleT = 0;
       this.toast(cp ? `Welcome back! Continuing from checkpoint ${r.checkpoint}` : 'Welcome back!', 2.6);
     }
+    // Holiday bosses only give shards the FIRST time you beat them. After that you play just for fun.
+    this.noShards = !!(def.holiday && (Save.data.holiday || {})[HOLIDAY[n].id]);
+    if (this.noShards) { this.pickups = []; this.shardTotal = 0; }
     // Levels 101–110: fly over the whole level once so you can memorize it, then the lights go out
     this.dark = !!THEME.blackout;
     this.preview = this.dark && !(r && r.level === n) ? { t: 0, dur: Math.max(7, this.world.w * TILE / 900) } : null;
@@ -559,7 +562,7 @@ const Game = {
     } else this.toast(`${b.name} HAS FALLEN!`, 3);
     this.shake = 12;
     Sfx.stopMusic(); Sfx.play('victory');
-    for (let i = 0; i < 12; i++) this.pickups.push(new Shard(b.x + b.w / 2, b.y + 30, { drop: true, big: i < 4 }));
+    if (!this.noShards) for (let i = 0; i < 12; i++) this.pickups.push(new Shard(b.x + b.w / 2, b.y + 30, { drop: true, big: i < 4 }));
   },
 
   // ---- effects ----
