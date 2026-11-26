@@ -230,7 +230,8 @@ const Game = {
       this.boss.update(dt, this);
       const b = this.boss;
       if (p.phantomT > 0 && !p.phantomHits.has(b) && rectsOverlap(pbox, b.hitbox())) { p.phantomHits.add(b); b.hurt(4 * p.st.dmg, this); }
-      if (!b.dead && !b.dying && b.state !== 'intro' && rectsOverlap(pbox, b.hitbox())) p.hurt(this, 1, b.x + b.w / 2);
+      if (b.friendly) { if (!b.dead && !b.dying && b.state !== 'intro' && rectsOverlap(pbox, b.hitbox())) b.tag(this); }
+      else if (!b.dead && !b.dying && b.state !== 'intro' && rectsOverlap(pbox, b.hitbox())) p.hurt(this, 1, b.x + b.w / 2);
       if (b.dead) this.boss = null;
     }
 
@@ -758,6 +759,13 @@ const Game = {
       ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x, y, w * k, 3);
       ctx.fillStyle = '#e8e0cc'; ctx.font = '22px Creepster, Nunito, cursive';
       ctx.fillText(b.friendly ? `${b.name}  ·  FUN METER` : b.name, VIEW_W / 2, y - 16);
+      if (b.friendly && b.sad > 0) { // the SAD METER shows up next to the fun meter once you attack him
+        const sw = 160, sx = x + w + 14, sy = y - 4;
+        ctx.fillStyle = 'rgba(8,5,16,0.85)'; Draw.rr(ctx, sx - 4, sy, sw + 8, 18, 6); ctx.fill();
+        ctx.fillStyle = '#0a1a2a'; ctx.fillRect(sx, sy + 4, sw, 10);
+        ctx.fillStyle = '#4aa8ff'; ctx.fillRect(sx, sy + 4, sw * b.sad / 100, 10);
+        ctx.fillStyle = '#bfe4ff'; ctx.font = '700 12px Nunito, sans-serif'; ctx.fillText(`SAD METER ${b.sad}%`, sx + sw / 2, sy - 8);
+      }
     }
     if (this.bossTitleT > 0 && this.bossTitleT < 3) {
       const a = Math.min(1, this.bossTitleT, (3 - this.bossTitleT) * 2);

@@ -85,6 +85,7 @@ const Sfx = (() => {
     farshot() { const n = 1 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) noise(0.05, 0.05, 1600, i * 0.11); },
     farboom() { noise(0.9, 0.12, 120); tone(50, 0.7, 'sine', 0.08, -20); },
     gobble() { [520, 680, 500, 700, 480].forEach((f, i) => tone(f, 0.07, 'square', 0.06, -120, i * 0.06)); },
+    sad() { tone(440, 0.25, 'sine', 0.1, -120); tone(330, 0.35, 'sine', 0.08, -90, 0.2); },
     splat() { noise(0.18, 0.25, 600); tone(200, 0.12, 'sine', 0.12, -120); },
     beep() { tone(1600, 0.05, 'square', 0.05); },
     geyser() { noise(0.6, 0.25, 500); tone(120, 0.4, 'sawtooth', 0.08, 200); },
