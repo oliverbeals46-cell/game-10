@@ -87,7 +87,7 @@ class SirGobbles extends GraveWarden {
     if (this.dying) {
       // be nice after he took your shards (4+ tags AND a full fun meter) and he gives them back, once ever
       const hol = Save.data.holiday = Save.data.holiday || {};
-      if (this.owed && this.niceTags >= 4 && !hol.thanksRefund) {
+      if (this.owed && this.niceTags >= 4) {
         hol.thanksRefund = true; Save.data.shards += this.owed; Save.write();
         g.toast(`You were so jolly! Sir Gobbles gave your ${this.owed} shards back!`, 4);
         this.say('You were SO jolly! Here are your shards back. Gobble gobble!', 3.5);
@@ -95,7 +95,7 @@ class SirGobbles extends GraveWarden {
       }
       this.say('Gobble gobble! You win! Thank you for playing with me!', 3); return;
     }
-    if (this.owed && this.niceTags < 4 && !(Save.data.holiday || {}).thanksRefund) { this.say(`That is more like it! ${4 - this.niceTags} more nice tag${4 - this.niceTags === 1 ? '' : 's'}!`, 1.6); return; }
+    if (this.owed && this.niceTags < 4) { this.say(`That is more like it! ${4 - this.niceTags} more nice tag${4 - this.niceTags === 1 ? '' : 's'}!`, 1.6); return; }
     if (!this.dying) this.say(this.tagLines[Math.floor(Math.random() * this.tagLines.length)], 1.4);
   }
   say(text, dur = 2) { this.line = text; this.lineT = dur; }
@@ -117,7 +117,9 @@ class SirGobbles extends GraveWarden {
       this.say('Maybe next time be a bit more jolly.', 3.5); this.sadT = 3.5;
       g.toast(took ? `Sir Gobbles took ${took} shards. Maybe next time be a bit more jolly.` : 'Maybe next time be a bit more jolly.', 3.5);
       this.sad = 0;
-      if (took && !(Save.data.holiday || {}).thanksRefund) {
+      const hol = Save.data.holiday = Save.data.holiday || {};
+      if (took && !hol.thanksOffer) {   // only the FIRST time he ever takes your shards can you win them back
+        hol.thanksOffer = true; Save.write();
         this.owed += took; this.niceTags = 0;
         setTimeout(() => { if (!this.dying) { this.say('Be jolly: tag me 4 more times and fill my Fun Meter, and I will give them back!', 3.5); g.toast('Tag him 4 more times and fill the Fun Meter to get your shards back (only once)!', 3.5); } }, 3600);
       }
