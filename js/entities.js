@@ -59,6 +59,12 @@ class Player {
     if (this.dead || this.invuln > 0) return false; // brief protection right after respawning
     if (this.st.dashSafe && this.dashT > 0) return false;   // Cranberry Blob: can't be hurt while dashing
     if (this.phantomT > 0) return false;                     // Phantom Dash passes straight through
+    if (g.def && g.def.friendly) {                           // holiday fun: you just get SPLATTED, you never die
+      this.invuln = 0.9; this.ctrlLock = 0.35; this.vx = (this.x + this.w / 2 < (srcX || 0) ? -1 : 1) * 320; this.vy = -300;
+      Sfx.play('splat'); g.burst(this.x + this.w / 2, this.y + 10, 14, '#f0c080', 200);
+      g.popups.push({ x: this.x + this.w / 2, y: this.y - 10, t: 1, text: 'SPLAT!' });
+      return true;
+    }
     if (this.shield > 0) {                                  // Nutcracker: one free hit per checkpoint
       this.shield--; this.invuln = 1;
       this.vx = (this.x + this.w / 2 < (srcX || 0) ? -1 : 1) * 300; this.vy = -320; this.ctrlLock = 0.2;
@@ -1578,6 +1584,7 @@ class Projectile {
       if (this.skin === 'rock') { ctx.fillStyle = shade(ctx, -2, -2, 10, '#c8b8a0', '#7a6a58', '#2a221c'); Draw.poly(ctx, [-9, -4, -3, -9, 6, -7, 9, 2, 3, 9, -7, 6]); }
       else if (this.skin === 'gear') { ctx.fillStyle = shade(ctx, 0, 0, 9, '#fff0b0', '#c8a040', '#4a3a10'); for (let k = 0; k < 8; k++) { ctx.rotate(Math.PI / 4); ctx.fillRect(5, -2, 4, 4); } Draw.circ(ctx, 0, 0, 6); ctx.fillStyle = '#2a2008'; Draw.circ(ctx, 0, 0, 2); }
       else if (this.skin === 'shell') { ctx.rotate(-this.t * 8 + Math.atan2(this.vy, this.vx)); ctx.fillStyle = shade(ctx, 0, -2, 9, '#e8c070', '#a07a2a', '#3a2808'); Draw.rr(ctx, -8, -4, 12, 8, 2); ctx.fill(); Draw.ell(ctx, 4, 0, 6, 4); }
+      else if (this.skin === 'pie') { ctx.rotate(-this.t * 8 + this.t * 2); ctx.fillStyle = '#d89a50'; Draw.ell(ctx, 0, 2, 10, 5); ctx.fillStyle = '#e07a20'; Draw.ell(ctx, 0, 0, 8, 3.5); ctx.fillStyle = '#fff8e8'; Draw.circ(ctx, 0, -2, 3); }
       else if (this.skin === 'pin') { ctx.fillStyle = shade(ctx, 0, -2, 10, '#ffffff', '#e8e0d8', '#8a8078'); Draw.ell(ctx, 0, 2, 5, 7); Draw.ell(ctx, 0, -6, 2.5, 4); ctx.fillStyle = '#c8102e'; ctx.fillRect(-3, -3, 6, 2); ctx.fillRect(-3.2, 0, 6.4, 1.5); }
       else if (this.skin === 'bubble') { setGlow(ctx, '#9aff4a', 12); ctx.fillStyle = shade(ctx, -2, -2, 9, '#f0ffd0', '#8ad83a', '#1a4008'); Draw.circ(ctx, 0, 0, 7); clearGlow(ctx); ctx.fillStyle = 'rgba(255,255,255,0.7)'; Draw.circ(ctx, -2, -2, 1.8); }
       else if (this.skin === 'ember') { setGlow(ctx, '#ff6a00', 14); ctx.fillStyle = shade(ctx, 0, 0, 8, '#fff8c0', '#ffa020', '#c02800'); Draw.circ(ctx, 0, 0, 7); clearGlow(ctx); }
@@ -1617,7 +1624,10 @@ class Projectile {
       ctx.fillStyle = 'rgba(220,245,255,0.5)'; ctx.fillRect(this.x - 4, base - 2, this.w + 8, 2);
     } else if (this.type === 'wave' && this.skin && this.skin !== 'fire') {
       const base = this.y + this.h;
-      if (this.skin === 'mud') {
+      if (this.skin === 'leaves') {
+        const cols = ['#ff7a1a', '#ffb030', '#c8401a', '#ffd060'];
+        for (let i = 0; i < 8; i++) { ctx.fillStyle = cols[i % 4]; Draw.ell(ctx, this.x + 2 + (i * 4) % 26, base - 4 - Math.abs(Math.sin(this.t * 12 + i * 1.7)) * 20, 5, 3, this.t * 6 + i); }
+      } else if (this.skin === 'mud') {
         for (let i = 0; i < 6; i++) { const sx = this.x + i * 5, hg = 10 + Math.abs(Math.sin(this.t * 14 + i * 1.3)) * 18; ctx.fillStyle = i % 2 ? '#5a6a22' : '#3a4a14'; ctx.beginPath(); ctx.moveTo(sx - 4, base); ctx.quadraticCurveTo(sx, base - hg * 1.3, sx + 5, base); ctx.fill(); }
         ctx.fillStyle = '#9aff4a'; for (let i = 0; i < 3; i++) Draw.circ(ctx, this.x + 4 + i * 9, base - 8 - Math.abs(Math.sin(this.t * 9 + i)) * 14, 1.6);
       } else if (this.skin === 'rock') {
@@ -1652,6 +1662,7 @@ class Projectile {
       if (this.skin && this.skin !== 'stalactite' && this.skin !== 'bomb') {
         ctx.translate(cx, cy);
         if (this.skin === 'gear') { ctx.rotate(this.t * 10); ctx.fillStyle = shade(ctx, 0, 0, 11, '#fff0b0', '#c8a040', '#4a3a10'); for (let k = 0; k < 8; k++) { ctx.rotate(Math.PI / 4); ctx.fillRect(6, -2.5, 5, 5); } Draw.circ(ctx, 0, 0, 8); }
+        else if (this.skin === 'corn') { ctx.rotate(this.t * 5); ctx.fillStyle = '#ffd040'; Draw.ell(ctx, 0, 0, 5, 10); ctx.fillStyle = '#c8a020'; for (let k = -2; k <= 2; k++) Draw.circ(ctx, 0, k * 3.5, 1.2); ctx.fillStyle = '#7aa040'; Draw.poly(ctx, [-5, 6, 0, 14, -1, 4]); Draw.poly(ctx, [5, 6, 0, 14, 1, 4]); }
         else if (this.skin === 'chandelier') { setGlow(ctx, '#ffa000', 12); ctx.fillStyle = '#c8a050'; Draw.rr(ctx, -10, 0, 20, 4, 2); ctx.fill(); ctx.fillStyle = '#ffd060'; for (const d of [-6, 0, 6]) Draw.circ(ctx, d, -3, 2.5); clearGlow(ctx); }
         else { setGlow(ctx, '#b050ff', 12); ctx.fillStyle = lin(ctx, -6, 0, 6, 0, ['#f8e8ff', '#b070ff', '#3a0a8a']); Draw.poly(ctx, [-6, -10, 6, -10, 0, 12]); clearGlow(ctx); }
       } else if (this.skin === 'bomb') {

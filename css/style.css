@@ -35,7 +35,7 @@ html, body {
 
 .menu { display: flex; flex-direction: column; gap: 8px; }
 .menu.row { flex-direction: row; justify-content: center; }
-.menu button, .back, .shop-card button {
+.menu button, .back, .shop-card button, .holiday-card button {
   font-family: inherit; font-weight: 900; font-size: 18px;
   color: #f4eeff; background: linear-gradient(#3a2560, #24163f);
   border: 2px solid #6a4aa3; border-radius: 10px;
@@ -44,7 +44,7 @@ html, body {
   transition: transform .08s, border-color .15s, box-shadow .15s;
 }
 .menu.row button { min-width: 0; text-align: center; }
-.menu button:hover, .menu button:focus-visible, .back:hover, .back:focus-visible {
+.menu button:hover, .holiday-card button:hover, .menu button:focus-visible, .back:hover, .back:focus-visible {
   border-color: #c8323c; box-shadow: 0 0 14px rgba(200, 30, 50, 0.5); transform: translateX(4px); outline: none;
 }
 .menu-foot {
@@ -214,3 +214,13 @@ kbd {
 #chess-moves span { color: #8a80a0; }
 .chess-side .menu button { padding: 6px 12px; font-size: 15px; }
 .chess-tip { font-size: 12px; color: #a89cc0; margin-top: 6px; }
+
+/* ---------- Holiday Exclusives ---------- */
+.holiday-btn { background: linear-gradient(180deg, #ff9a3a, #c8501a) !important; color: #fff8e8 !important; }
+.holiday-grid { display: flex; gap: 18px; justify-content: center; margin: 14px 0; flex-wrap: wrap; }
+.holiday-card { width: 300px; background: rgba(255, 160, 60, 0.12); border: 2px solid #ffb030; border-radius: 14px; padding: 14px 16px; text-align: center; }
+.holiday-card.soon { opacity: 0.55; border-style: dashed; border-color: #8a7aa8; background: rgba(255,255,255,0.04); }
+.holiday-card h3 { color: #ffd080; margin: 4px 0 6px; font-size: 20px; }
+.holiday-card p { color: #f0e0c8; font-size: 14px; margin: 4px 0; }
+.holiday-card .hol-gift { color: #ffd060; font-weight: 700; }
+.holiday-card .hol-icon { font-size: 40px; }

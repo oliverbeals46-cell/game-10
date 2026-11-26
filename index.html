@@ -7,7 +7,7 @@
   <title>Hallow Heads</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=202611240153">
+  <link rel="stylesheet" href="css/style.css?v=202611261728">
 </head>
 <body>
   <div id="stage">
@@ -20,6 +20,7 @@
       <nav class="menu">
         <button data-action="play">Play</button>
         <button data-action="shop">Heads Shop</button>
+        <button data-action="holiday" class="holiday-btn">Holiday Exclusives</button>
         <button data-action="howto">How to Play</button>
         <button data-action="controls">Controls</button>
         <button data-action="credits">Credits</button>
@@ -37,6 +38,16 @@
       <button data-action="pausebtn" title="Pause (Esc)">&#10073;&#10073;</button>
       <button data-action="levels" title="Exit to level select">Exit</button>
       <button data-action="toboss" id="btn-toboss" class="hidden" title="Secret code: jump to the boss (T)">Boss</button>
+    </div>
+
+    <!-- HOLIDAY EXCLUSIVES: special bosses anyone can play -->
+    <div id="screen-holiday" class="screen panel hidden">
+      <div class="card wide center">
+        <h2>Holiday Exclusives</h2>
+        <p class="sub">Special holiday bosses. Anyone can play them, no levels needed!</p>
+        <div id="holiday-grid" class="holiday-grid"></div>
+        <nav class="menu row"><button data-action="menu">Back</button></nav>
+      </div>
     </div>
 
     <!-- CODE -->
@@ -194,20 +205,21 @@
     </div>
   </div>
 
-  <script src="js/audio.js?v=202611240153"></script>
-  <script src="js/input.js?v=202611240153"></script>
-  <script src="js/save.js?v=202611240153"></script>
-  <script src="js/heads.js?v=202611240153"></script>
-  <script src="js/art.js?v=202611240153"></script>
-  <script src="js/themes.js?v=202611240153"></script>
-  <script src="js/world.js?v=202611240153"></script>
-  <script src="js/level1.js?v=202611240153"></script>
-  <script src="js/level2.js?v=202611240153"></script>
-  <script src="js/levelgen.js?v=202611240153"></script>
-  <script src="js/entities.js?v=202611240153"></script>
-  <script src="js/boss.js?v=202611240153"></script>
-  <script src="js/game.js?v=202611240153"></script>
-  <script src="js/chess.js?v=202611240153"></script>
-  <script src="js/ui.js?v=202611240153"></script>
+  <script src="js/audio.js?v=202611261728"></script>
+  <script src="js/input.js?v=202611261728"></script>
+  <script src="js/save.js?v=202611261728"></script>
+  <script src="js/heads.js?v=202611261728"></script>
+  <script src="js/art.js?v=202611261728"></script>
+  <script src="js/themes.js?v=202611261728"></script>
+  <script src="js/world.js?v=202611261728"></script>
+  <script src="js/level1.js?v=202611261728"></script>
+  <script src="js/level2.js?v=202611261728"></script>
+  <script src="js/levelgen.js?v=202611261728"></script>
+  <script src="js/entities.js?v=202611261728"></script>
+  <script src="js/boss.js?v=202611261728"></script>
+  <script src="js/holiday.js?v=202611261728"></script>
+  <script src="js/game.js?v=202611261728"></script>
+  <script src="js/chess.js?v=202611261728"></script>
+  <script src="js/ui.js?v=202611261728"></script>
 </body>
 </html>

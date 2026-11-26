@@ -247,6 +247,11 @@ function drawDecor(ctx, d, t) {
   const y = d.py !== undefined ? d.py : (d.y + 1) * TILE;
   // a fixed number per decoration, so its look never changes while it moves across the screen
   const seed = d.seed !== undefined ? d.seed : (d.x || 0) * 7 + (d.y || 0);
+  if (THEME && THEME.cozy && d.type === 'shroom') { // a pumpkin
+    ctx.fillStyle = shade(ctx, x - 4, y - 14, 16, '#ffb050', '#ff7a1a', '#8a3a08'); Draw.ell(ctx, x - 6, y - 9, 8, 9); Draw.ell(ctx, x + 6, y - 9, 8, 9); Draw.ell(ctx, x, y - 10, 9, 10);
+    ctx.fillStyle = '#4a7a2a'; ctx.fillRect(x - 1.5, y - 24, 3, 6);
+    return;
+  }
   if (THEME && THEME.war && (d.type === 'grave' || d.type === 'skulls' || d.type === 'shroom')) {
     if (d.type === 'grave') { // barbed wire on wooden posts
       ctx.fillStyle = '#3a2e1e'; ctx.fillRect(x - 22, y - 26, 4, 26); ctx.fillRect(x + 18, y - 24, 4, 24);
@@ -448,6 +453,23 @@ function drawShardIcon(ctx, x, y, t) {
 // Boss arena: a dark crypt hall with arches, chains and torches (colours follow the level's theme).
 function drawArenaBackdrop(ctx, A, t) {
   const x = (A.gateX + 1) * TILE, y = A.ceilY, w = A.x2 - x, h = A.floorY - y;
+  if (A.cozy) {
+    // a warm wooden barn: planks, hay bales, a leaf garland and a little feast table
+    ctx.fillStyle = '#6a3a1a'; ctx.fillRect(x, y, w, h);
+    for (let px = x; px < x + w; px += 40) { ctx.fillStyle = (px / 40) % 2 ? '#7a4422' : '#6e3e1e'; ctx.fillRect(px, y, 38, h); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(px + 38, y, 2, h); }
+    const glow = ctx.createRadialGradient(x + w / 2, y + 40, 10, x + w / 2, y + 40, 420); glow.addColorStop(0, 'rgba(255,200,100,0.35)'); glow.addColorStop(1, 'rgba(255,200,100,0)');
+    ctx.fillStyle = glow; ctx.fillRect(x, y, w, h);
+    const cols = ['#ff7a1a', '#ffb030', '#c8401a', '#ffd060'];
+    for (let i = 0; i < w / 22; i++) { const gx = x + i * 22, gy = y + 20 + Math.sin(i * 0.6) * 10; ctx.fillStyle = cols[i % 4]; Draw.ell(ctx, gx, gy, 8, 5, i); }
+    for (const hx of [x + 70, x + w - 130]) { ctx.fillStyle = '#e0b850'; Draw.rr(ctx, hx, A.floorY - 46, 70, 46, 6); ctx.fill(); ctx.strokeStyle = '#a07a2a'; ctx.lineWidth = 2; for (let k = 1; k < 4; k++) Draw.line(ctx, hx + 4, A.floorY - 46 + k * 11, hx + 66, A.floorY - 46 + k * 11); }
+    const tx = x + w / 2 - 80, ty = A.floorY - 60;
+    ctx.fillStyle = '#4a2410'; ctx.fillRect(tx, ty, 160, 8); ctx.fillRect(tx + 10, ty + 8, 6, 52); ctx.fillRect(tx + 144, ty + 8, 6, 52);
+    ctx.fillStyle = '#e8a040'; Draw.ell(ctx, tx + 40, ty - 6, 18, 8); ctx.fillStyle = '#e07a20'; Draw.ell(ctx, tx + 40, ty - 8, 14, 5);
+    ctx.fillStyle = '#ff8a1a'; Draw.circ(ctx, tx + 90, ty - 12, 13); ctx.fillStyle = '#4a7a2a'; ctx.fillRect(tx + 88, ty - 28, 4, 6);
+    ctx.fillStyle = '#ffd040'; Draw.ell(ctx, tx + 128, ty - 8, 7, 12);
+    for (let i = 0; i < 3; i++) { const cx2 = x + 120 + i * 300; ctx.fillStyle = '#c8a050'; ctx.fillRect(cx2 - 3, y + 60, 6, 20); setGlow(ctx, '#ffb040', 16); ctx.fillStyle = '#ffd060'; ctx.beginPath(); ctx.moveTo(cx2 - 4, y + 60); ctx.quadraticCurveTo(cx2, y + 44 - Math.sin(t * 10 + i) * 3, cx2 + 4, y + 60); ctx.fill(); clearGlow(ctx); }
+    return;
+  }
   if (A.chess) {
     // a huge chessboard wall, standing up behind the King
     const sz = 60, n = Math.ceil(w / sz), m = Math.ceil(h / sz);

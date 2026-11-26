@@ -129,7 +129,7 @@ const Game = {
   resume() { this.state = 'playing'; UI.show(null); this.last = performance.now(); if (document.activeElement) document.activeElement.blur(); },
   // Save mid-level progress so closing the tab never loses it.
   saveResume() {
-    if (!this.world || this.completed) return;
+    if (!this.world || this.completed || this.def.holiday) return;
     const lit = this.checkpoints.filter((c) => c.lit).length;
     Save.setResume({ level: this.levelNum, checkpoint: lit, time: this.stats.time, deaths: this.stats.deaths, shards: this.stats.shards, taken: this.taken });
   },
@@ -218,7 +218,7 @@ const Game = {
       this.bossStarted = true;
       if (A.chess) { this.startBoss(new ChessKing(0, 0, A)); this.bossTitleT = 3.4; }
       else {
-      const Cls = { giggles: MrGiggles, hag: MireHag, widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing, tank: IronBeast, lighteater: LightEater }[A.boss] || GraveWarden;
+      const Cls = { giggles: MrGiggles, hag: MireHag, widow: FrozenWidow, troll: Troll, clock: ClockBoss, saint: SaintBoss, voidking: VoidKing, tank: IronBeast, lighteater: LightEater, gobbles: SirGobbles }[A.boss] || GraveWarden;
       this.startBoss(new Cls(A.bossSpawn.x, A.bossSpawn.y, A));
       this.bossTitleT = 3.4;
       }
@@ -551,7 +551,12 @@ const Game = {
   onBossDefeated(b) {
     this.bossDefeated = true;
     this.bossLock = false; this.world.gateClosed = false; this.world.exitOpen = true; this.projectiles = [];
-    this.toast(`${b.name} HAS FALLEN!`, 3);
+    const H0 = HOLIDAY[this.def.number];
+    if (b.friendly && H0) {
+      this.toast('FUN METER FULL! You won! Happy Thanksgiving!', 3.5);
+      Save.data.holiday = Save.data.holiday || {};
+      if (!Save.data.holiday[H0.id]) { Save.data.holiday[H0.id] = true; Save.data.shards += H0.reward; this.toast(`Holiday gift: +${H0.reward} shards!`, 3.5); Save.write(); }
+    } else this.toast(`${b.name} HAS FALLEN!`, 3);
     this.shake = 12;
     Sfx.stopMusic(); Sfx.play('victory');
     for (let i = 0; i < 12; i++) this.pickups.push(new Shard(b.x + b.w / 2, b.y + 30, { drop: true, big: i < 4 }));
@@ -715,7 +720,7 @@ const Game = {
     // level + checkpoint label (top-center)
     const lit = this.checkpoints.filter((c) => c.lit).length;
     ctx.font = '700 12px Nunito, sans-serif'; ctx.textAlign = 'center';
-    const label = `Level ${this.def.number}   ·   Checkpoint ${lit} / ${this.checkpoints.length}   ·   Shards ${this.stats.shards} / ${this.shardTotal}`;
+    const label = this.def.holiday ? `${this.def.title}   ·   Shards ${this.stats.shards} / ${this.shardTotal}` : `Level ${this.def.number}   ·   Checkpoint ${lit} / ${this.checkpoints.length}   ·   Shards ${this.stats.shards} / ${this.shardTotal}`;
     const lw = ctx.measureText(label).width + 24;
     ctx.fillStyle = 'rgba(8,5,16,0.55)'; Draw.rr(ctx, VIEW_W / 2 - lw / 2, 14, lw, 26, 9); ctx.fill();
     ctx.fillStyle = '#d8ccf0'; ctx.fillText(label, VIEW_W / 2, 28);
@@ -744,11 +749,12 @@ const Game = {
       const w = 520, x = (VIEW_W - w) / 2, y = VIEW_H - 40;
       ctx.fillStyle = 'rgba(8,5,16,0.85)'; Draw.rr(ctx, x - 4, y - 4, w + 8, 18, 6); ctx.fill();
       ctx.fillStyle = '#2a0810'; ctx.fillRect(x, y, w, 10);
-      ctx.fillStyle = b.phase === 2 ? '#ff2a3a' : '#c8102e';
-      ctx.fillRect(x, y, w * (b.hp / b.maxHp), 10);
-      ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x, y, w * (b.hp / b.maxHp), 3);
+      const k = b.friendly ? 1 - b.hp / b.maxHp : b.hp / b.maxHp;   // friendly bosses fill a FUN METER instead
+      ctx.fillStyle = b.friendly ? '#ffb030' : b.phase === 2 ? '#ff2a3a' : '#c8102e';
+      ctx.fillRect(x, y, w * k, 10);
+      ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x, y, w * k, 3);
       ctx.fillStyle = '#e8e0cc'; ctx.font = '22px Creepster, Nunito, cursive';
-      ctx.fillText(b.name, VIEW_W / 2, y - 16);
+      ctx.fillText(b.friendly ? `${b.name}  ·  FUN METER` : b.name, VIEW_W / 2, y - 16);
     }
     if (this.bossTitleT > 0 && this.bossTitleT < 3) {
       const a = Math.min(1, this.bossTitleT, (3 - this.bossTitleT) * 2);
@@ -758,7 +764,7 @@ const Game = {
       ctx.fillText(this.def.arena.name, VIEW_W / 2, 180);
       clearGlow(ctx);
       ctx.fillStyle = '#c9b8f0'; ctx.font = '700 15px Nunito, sans-serif';
-      ctx.fillText(`Boss of Level ${this.def.number}`, VIEW_W / 2, 225);
+      ctx.fillText(this.def.holiday ? 'Holiday Exclusive Boss' : `Boss of Level ${this.def.number}`, VIEW_W / 2, 225);
       ctx.globalAlpha = 1;
     }
     if (this.titleT > 0) {

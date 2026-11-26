@@ -205,6 +205,7 @@ const OLIVE_LOOK = {
 };
 
 function themeForLevel(n) {
+  if (typeof HOLIDAY_THEME !== 'undefined' && HOLIDAY_THEME[n]) return Object.assign({}, HAZARD_LOOK[1], HOLIDAY_THEME[n], { world: WORLDS[0], level: n, moonX: 700, moonY: 110, fogMul: 0.8, tint: 'rgba(255,140,40,0.05)', castleX: 1200 });
   const w = worldForLevel(n);
   const v = (n - 1) % 10;
   const r = mulberry32(n * 97);
